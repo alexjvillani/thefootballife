@@ -1,0 +1,8 @@
+namespace thefootballife
+{
+    [default_interface]
+    runtimeclass MainMenuPage : Microsoft.UI.Xaml.Controls.Page
+    {
+        MainMenuPage();
+    }
+}

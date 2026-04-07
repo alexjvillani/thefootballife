@@ -5,9 +5,13 @@
   </ItemGroup>
   <ItemGroup>
     <Page Include="MainWindow.xaml" />
+    <Page Include="MainMenuPage.xaml" />
+    <Page Include="PlayerCreationPage.xaml" />
   </ItemGroup>
   <ItemGroup>
     <Midl Include="MainWindow.idl" />
+    <Midl Include="MainMenuPage.idl" />
+    <Midl Include="PlayerCreationPage.idl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
