@@ -23,7 +23,9 @@ namespace winrt::thefootballife::implementation
     PlayerCreationPage::PlayerCreationPage()
     {
         InitializeComponent();
+        NavigationCacheMode(Microsoft::UI::Xaml::Navigation::NavigationCacheMode::Required);
         m_isPageReady = true;
+        SetRandomProfileImage();
     }
 
     hstring PlayerCreationPage::GetComboBoxValue(ComboBox const& comboBox)
@@ -159,19 +161,8 @@ namespace winrt::thefootballife::implementation
 
     void PlayerCreationPage::SetRandomProfileImage()
     {
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<> imageDist(1, 4);
-
-        int imageIndex = imageDist(gen);
-
-        std::wstring imagePath =
-            L"ms-appx:///Assets/Prospects/prospect" +
-            std::to_wstring(imageIndex) +
-            L".png";
-
         BitmapImage bitmap;
-        bitmap.UriSource(Uri(hstring(imagePath)));
+        bitmap.UriSource(Uri(L"ms-appx:///Assets/StoreLogo.png"));
         ProfileImage().Source(bitmap);
     }
 
@@ -323,6 +314,16 @@ namespace winrt::thefootballife::implementation
         WeightTextBox().IsEnabled(manual);
 
         UpdateGeneratedProfile();
+    }
+
+    void PlayerCreationPage::NameField_Changed(IInspectable const&, RoutedEventArgs const&)
+    {
+        if (!m_isPageReady)
+        {
+            return;
+        }
+
+        SummaryNameText().Text(L"Name: " + GetFullName());
     }
 
     void PlayerCreationPage::PlayerField_Changed(IInspectable const&, RoutedEventArgs const&)
