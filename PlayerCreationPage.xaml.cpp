@@ -421,14 +421,25 @@ namespace winrt::thefootballife::implementation
         dialog.PrimaryButtonText(L"Continue");
         dialog.CloseButtonText(L"Back");
         dialog.XamlRoot(this->XamlRoot());
-        dialog.ShowAsync();
 
-        // Next step:
-        // Frame().Navigate(
-        //     winrt::Windows::UI::Xaml::Interop::TypeName{
-        //         L"thefootballife.XFactorPage",
-        //         winrt::Windows::UI::Xaml::Interop::TypeKind::Custom
-        //     }
-        // );
+        auto weakThis = get_weak();
+
+        dialog.ShowAsync().Completed(
+            [weakThis](auto const& operation, auto const&)
+            {
+                if (auto self = weakThis.get())
+                {
+                    if (operation.GetResults() == ContentDialogResult::Primary)
+                    {
+                        self->Frame().Navigate(
+                            winrt::Windows::UI::Xaml::Interop::TypeName{
+                                L"thefootballife.XFactorPage",
+                                winrt::Windows::UI::Xaml::Interop::TypeKind::Custom
+                            }
+                        );
+                    }
+                }
+            }
+        );
     }
 }

@@ -130,6 +130,9 @@
     <ClInclude Include="PlayerCreationPage.xaml.h">
       <DependentUpon>PlayerCreationPage.xaml</DependentUpon>
     </ClInclude>
+    <ClInclude Include="XFactorPage.xaml.h">
+      <DependentUpon>XFactorPage.xaml</DependentUpon>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml" />
@@ -140,6 +143,7 @@
     <Page Include="PlayerCreationPage.xaml">
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="XFactorPage.xaml" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MainMenuPage.xaml.cpp">
@@ -158,6 +162,9 @@
     <ClCompile Include="PlayerCreationPage.xaml.cpp">
       <DependentUpon>PlayerCreationPage.xaml</DependentUpon>
     </ClCompile>
+    <ClCompile Include="XFactorPage.xaml.cpp">
+      <DependentUpon>XFactorPage.xaml</DependentUpon>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Midl Include="MainMenuPage.idl" />
@@ -166,6 +173,7 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </Midl>
     <Midl Include="PlayerCreationPage.idl" />
+    <Midl Include="XFactorPage.idl" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="readme.txt">
