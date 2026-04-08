@@ -1,8 +1,11 @@
 #include "pch.h"
 #include "XFactorPage.xaml.h"
+#include "PlayerProfileState.h"
 #if __has_include("XFactorPage.g.cpp")
 #include "XFactorPage.g.cpp"
 #endif
+
+#include <winrt/Windows.UI.Xaml.Interop.h>
 
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
@@ -128,6 +131,43 @@ namespace winrt::thefootballife::implementation
         UpdateTraitSummary();
     }
 
+    hstring XFactorPage::GetSelectedComboValue(ComboBox const& comboBox)
+    {
+        if (!comboBox || !comboBox.SelectedItem())
+        {
+            return L"";
+        }
+
+        if (auto item = comboBox.SelectedItem().try_as<ComboBoxItem>())
+        {
+            return unbox_value<hstring>(item.Content());
+        }
+
+        return L"";
+    }
+
+    hstring XFactorPage::BuildWeaknessSummary()
+    {
+        std::wstring weaknesses;
+
+        if (WeaknessKick().IsChecked() && WeaknessKick().IsChecked().Value())
+            weaknesses += L"Inconsistent Kicking, ";
+        if (WeaknessFitness().IsChecked() && WeaknessFitness().IsChecked().Value())
+            weaknesses += L"Low Endurance, ";
+        if (WeaknessDecision().IsChecked() && WeaknessDecision().IsChecked().Value())
+            weaknesses += L"Poor Decision Making, ";
+        if (WeaknessPressure().IsChecked() && WeaknessPressure().IsChecked().Value())
+            weaknesses += L"Struggles Under Pressure, ";
+
+        if (weaknesses.empty())
+        {
+            return L"None selected";
+        }
+
+        weaknesses.erase(weaknesses.size() - 2);
+        return hstring(weaknesses);
+    }
+
     void XFactorPage::UpdateTraitSummary()
     {
         if (!TraitSummaryText())
@@ -137,8 +177,6 @@ namespace winrt::thefootballife::implementation
 
         std::wstring mentality = L"Composed";
         std::wstring physical = L"Explosive Speed";
-        std::wstring weaknesses;
-
         if (MentalityComboBox() && MentalityComboBox().SelectedItem())
         {
             if (auto item = MentalityComboBox().SelectedItem().try_as<ComboBoxItem>())
@@ -155,21 +193,12 @@ namespace winrt::thefootballife::implementation
             }
         }
 
-        if (WeaknessKick().IsChecked() && WeaknessKick().IsChecked().Value())
-            weaknesses += L"Inconsistent Kicking, ";
-        if (WeaknessFitness().IsChecked() && WeaknessFitness().IsChecked().Value())
-            weaknesses += L"Low Endurance, ";
-        if (WeaknessDecision().IsChecked() && WeaknessDecision().IsChecked().Value())
-            weaknesses += L"Poor Decision Making, ";
-        if (WeaknessPressure().IsChecked() && WeaknessPressure().IsChecked().Value())
-            weaknesses += L"Struggles Under Pressure, ";
-
         std::wstring summary = L"Mentality: " + mentality + L"\nPhysical: " + physical;
+        auto weaknesses = BuildWeaknessSummary();
 
-        if (!weaknesses.empty())
+        if (weaknesses != L"None selected")
         {
-            weaknesses.erase(weaknesses.size() - 2);
-            summary += L"\nWeaknesses: " + weaknesses;
+            summary += L"\nWeaknesses: " + std::wstring(weaknesses);
         }
         else
         {
@@ -189,11 +218,15 @@ namespace winrt::thefootballife::implementation
 
     void XFactorPage::ContinueButton_Click(IInspectable const&, RoutedEventArgs const&)
     {
-        ContentDialog dialog;
-        dialog.Title(box_value(L"X-Factors Saved"));
-        dialog.Content(box_value(L"Next step: connect these traits into your player data and move to the career hub."));
-        dialog.CloseButtonText(L"OK");
-        dialog.XamlRoot(this->XamlRoot());
-        dialog.ShowAsync();
+        thefootballife::g_playerProfileState.mentalityXFactor = GetSelectedComboValue(MentalityComboBox());
+        thefootballife::g_playerProfileState.physicalXFactor = GetSelectedComboValue(PhysicalComboBox());
+        thefootballife::g_playerProfileState.weaknesses = BuildWeaknessSummary();
+
+        Frame().Navigate(
+            winrt::Windows::UI::Xaml::Interop::TypeName{
+                L"thefootballife.ConfirmPlayerPage",
+                winrt::Windows::UI::Xaml::Interop::TypeKind::Custom
+            }
+        );
     }
 }

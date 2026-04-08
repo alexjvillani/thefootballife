@@ -31,6 +31,8 @@ namespace winrt::thefootballife::implementation
             winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
 
     private:
+        winrt::hstring GetSelectedComboValue(winrt::Microsoft::UI::Xaml::Controls::ComboBox const& comboBox);
+        winrt::hstring BuildWeaknessSummary();
         void UpdateTraitSummary();
 
     private:
