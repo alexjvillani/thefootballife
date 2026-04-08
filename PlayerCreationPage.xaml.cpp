@@ -23,6 +23,7 @@ namespace winrt::thefootballife::implementation
     PlayerCreationPage::PlayerCreationPage()
     {
         InitializeComponent();
+        NavigationCacheMode(Microsoft::UI::Xaml::Navigation::NavigationCacheMode::Required);
         m_isPageReady = true;
         SetRandomProfileImage();
     }
