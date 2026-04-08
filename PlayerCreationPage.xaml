@@ -58,14 +58,14 @@
                                     <TextBlock Text="First Name" Foreground="White"/>
                                     <TextBox x:Name="FirstNameTextBox"
                                              PlaceholderText="Enter first name"
-                                             TextChanged="PlayerField_Changed"/>
+                                             TextChanged="NameField_Changed"/>
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="1" Spacing="6">
                                     <TextBlock Text="Last Name" Foreground="White"/>
                                     <TextBox x:Name="LastNameTextBox"
                                              PlaceholderText="Enter last name"
-                                             TextChanged="PlayerField_Changed"/>
+                                             TextChanged="NameField_Changed"/>
                                 </StackPanel>
                             </Grid>
 
