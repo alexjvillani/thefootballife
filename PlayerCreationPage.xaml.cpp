@@ -325,6 +325,16 @@ namespace winrt::thefootballife::implementation
         UpdateGeneratedProfile();
     }
 
+    void PlayerCreationPage::NameField_Changed(IInspectable const&, RoutedEventArgs const&)
+    {
+        if (!m_isPageReady)
+        {
+            return;
+        }
+
+        SummaryNameText().Text(L"Name: " + GetFullName());
+    }
+
     void PlayerCreationPage::PlayerField_Changed(IInspectable const&, RoutedEventArgs const&)
     {
         if (!m_isPageReady)
