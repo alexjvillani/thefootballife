@@ -24,6 +24,7 @@ namespace winrt::thefootballife::implementation
     {
         InitializeComponent();
         m_isPageReady = true;
+        SetRandomProfileImage();
     }
 
     hstring PlayerCreationPage::GetComboBoxValue(ComboBox const& comboBox)
@@ -159,19 +160,8 @@ namespace winrt::thefootballife::implementation
 
     void PlayerCreationPage::SetRandomProfileImage()
     {
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<> imageDist(1, 4);
-
-        int imageIndex = imageDist(gen);
-
-        std::wstring imagePath =
-            L"ms-appx:///Assets/Prospects/prospect" +
-            std::to_wstring(imageIndex) +
-            L".png";
-
         BitmapImage bitmap;
-        bitmap.UriSource(Uri(hstring(imagePath)));
+        bitmap.UriSource(Uri(L"ms-appx:///Assets/MainMenuBackground.png"));
         ProfileImage().Source(bitmap);
     }
 
