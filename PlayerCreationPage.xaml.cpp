@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "PlayerCreationPage.xaml.h"
+#include "PlayerProfileState.h"
 #if __has_include("PlayerCreationPage.g.cpp")
 #include "PlayerCreationPage.g.cpp"
 #endif
@@ -403,6 +404,23 @@ namespace winrt::thefootballife::implementation
         }
 
         UpdateGeneratedProfile();
+
+        thefootballife::g_playerProfileState.firstName = firstName;
+        thefootballife::g_playerProfileState.lastName = lastName;
+        thefootballife::g_playerProfileState.position = GetComboBoxValue(PositionComboBox());
+        thefootballife::g_playerProfileState.preferredFoot = GetComboBoxValue(FootComboBox());
+        thefootballife::g_playerProfileState.number = NumberTextBox().Text();
+        thefootballife::g_playerProfileState.team = GetComboBoxValue(TeamComboBox());
+        thefootballife::g_playerProfileState.state = GetComboBoxValue(StateComboBox());
+        thefootballife::g_playerProfileState.school = GetComboBoxValue(SchoolComboBox());
+        thefootballife::g_playerProfileState.region = GetComboBoxValue(RegionComboBox());
+        thefootballife::g_playerProfileState.height = FormatHeightFeet(m_generatedHeightCm);
+        thefootballife::g_playerProfileState.weightKg = to_hstring(m_generatedWeightKg) + L" kg";
+        thefootballife::g_playerProfileState.potentialHeight = FormatHeightFeet(m_potentialHeightCm);
+        thefootballife::g_playerProfileState.familySituation = m_familySituation;
+        thefootballife::g_playerProfileState.finances = m_finances;
+        thefootballife::g_playerProfileState.schoolQuality = m_schoolQuality;
+        thefootballife::g_playerProfileState.distanceToClubKm = to_hstring(m_distanceToClubKm) + L" km";
 
         std::wstring summary =
             L"Player Created!\n\nName: " + std::wstring(GetFullName()) +
