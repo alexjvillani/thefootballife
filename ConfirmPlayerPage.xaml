@@ -1,0 +1,225 @@
+<Page
+    x:Class="thefootballife.ConfirmPlayerPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:thefootballife"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="#111111">
+
+    <Grid Padding="28">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="Confirm Your Player"
+                       FontSize="32"
+                       FontWeight="Bold"
+                       Foreground="White"/>
+            <TextBlock Text="Review your prospect before starting your career."
+                       Foreground="#BBBBBB"
+                       Margin="0,6,0,0"/>
+        </StackPanel>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1" ColumnSpacing="20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.1*"/>
+                <ColumnDefinition Width="1.4*"/>
+                <ColumnDefinition Width="1.2*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left: Profile Image -->
+            <Border Grid.Column="0"
+                    Background="#1C1C1C"
+                    CornerRadius="12"
+                    Padding="20">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="Prospect Profile"
+                               FontSize="20"
+                               FontWeight="SemiBold"
+                               Foreground="White"/>
+
+                    <Border Height="260"
+                            Background="#2A2A2A"
+                            CornerRadius="10">
+                        <Image x:Name="ProfileImage"
+                               Stretch="UniformToFill"/>
+                    </Border>
+
+                    <TextBlock x:Name="OverallBlurbText"
+                               Text="A promising young player with strong upside and a unique development path ahead."
+                               Foreground="#DDDDDD"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Middle: Identity + Background -->
+            <Border Grid.Column="1"
+                    Background="#1C1C1C"
+                    CornerRadius="12"
+                    Padding="20">
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Spacing="14">
+                        <TextBlock Text="Player Summary"
+                                   FontSize="20"
+                                   FontWeight="SemiBold"
+                                   Foreground="White"/>
+
+                        <TextBlock x:Name="NameText"
+                                   Text="Name: Alex Villani"
+                                   Foreground="White"
+                                   FontSize="16"/>
+
+                        <TextBlock x:Name="PositionText"
+                                   Text="Position: Midfielder"
+                                   Foreground="White"
+                                   FontSize="16"/>
+
+                        <TextBlock x:Name="FootText"
+                                   Text="Preferred Foot: Right"
+                                   Foreground="White"
+                                   FontSize="16"/>
+
+                        <TextBlock x:Name="NumberText"
+                                   Text="Number: 9"
+                                   Foreground="White"
+                                   FontSize="16"/>
+
+                        <TextBlock x:Name="TeamText"
+                                   Text="Supported Team: Carlton"
+                                   Foreground="White"
+                                   FontSize="16"/>
+
+                        <TextBlock x:Name="StateText"
+                                   Text="State of Origin: Victoria"
+                                   Foreground="White"
+                                   FontSize="16"/>
+
+                        <TextBlock x:Name="SchoolText"
+                                   Text="School Type: Public School"
+                                   Foreground="White"
+                                   FontSize="16"/>
+
+                        <TextBlock x:Name="RegionText"
+                                   Text="Region: Metro"
+                                   Foreground="White"
+                                   FontSize="16"/>
+
+                        <TextBlock x:Name="FamilyText"
+                                   Text="Family Situation: Stable Home"
+                                   Foreground="White"
+                                   FontSize="16"/>
+
+                        <TextBlock x:Name="HeightWeightText"
+                                   Text="Height / Weight: 6'1&quot; / 82 kg"
+                                   Foreground="White"
+                                   FontSize="16"/>
+
+                        <TextBlock x:Name="PotentialHeightText"
+                                   Text="Potential Height: 6'3&quot;"
+                                   Foreground="White"
+                                   FontSize="16"/>
+
+                        <TextBlock x:Name="DistanceText"
+                                   Text="Distance to Club: 24 km"
+                                   Foreground="White"
+                                   FontSize="16"/>
+
+                        <TextBlock x:Name="FinancesText"
+                                   Text="Finances: Stable"
+                                   Foreground="White"
+                                   FontSize="16"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Right: Traits -->
+            <Border Grid.Column="2"
+                    Background="#1C1C1C"
+                    CornerRadius="12"
+                    Padding="20">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="X-Factors &amp; Weaknesses"
+                               FontSize="20"
+                               FontWeight="SemiBold"
+                               Foreground="White"/>
+
+                    <Border Background="#262626"
+                            CornerRadius="10"
+                            Padding="14">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Mentality X-Factor"
+                                       Foreground="#BBBBBB"/>
+                            <TextBlock x:Name="MentalityText"
+                                       Text="Composed"
+                                       Foreground="White"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="#262626"
+                            CornerRadius="10"
+                            Padding="14">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Physical X-Factor"
+                                       Foreground="#BBBBBB"/>
+                            <TextBlock x:Name="PhysicalText"
+                                       Text="Explosive Speed"
+                                       Foreground="White"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="#262626"
+                            CornerRadius="10"
+                            Padding="14">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Weaknesses"
+                                       Foreground="#BBBBBB"/>
+                            <TextBlock x:Name="WeaknessesText"
+                                       Text="Inconsistent Kicking, Low Endurance"
+                                       Foreground="White"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="#262626"
+                            CornerRadius="10"
+                            Padding="14">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Scout View"
+                                       Foreground="#BBBBBB"/>
+                            <TextBlock x:Name="ScoutViewText"
+                                       Text="An intriguing prospect with genuine upside if development is handled well."
+                                       Foreground="#DDDDDD"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="10"
+                    Margin="0,20,0,0">
+
+            <Button Content="Back"
+                    Click="BackButton_Click"/>
+
+            <Button Content="Start Career"
+                    Click="StartCareerButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Page>

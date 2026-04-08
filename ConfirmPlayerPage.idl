@@ -1,0 +1,8 @@
+namespace thefootballife
+{
+    runtimeclass ConfirmPlayerPage : Microsoft.UI.Xaml.Controls.Page
+    {
+        ConfirmPlayerPage();
+        String PageTitle;
+    }
+}

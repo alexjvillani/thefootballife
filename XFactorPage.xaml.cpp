@@ -2,6 +2,7 @@
 #include "XFactorPage.xaml.h"
 #if __has_include("XFactorPage.g.cpp")
 #include "XFactorPage.g.cpp"
+#include <winrt/Windows.UI.Xaml.Interop.h>
 #endif
 
 using namespace winrt;
@@ -187,11 +188,11 @@ namespace winrt::thefootballife::implementation
 
     void XFactorPage::ContinueButton_Click(IInspectable const&, RoutedEventArgs const&)
     {
-        ContentDialog dialog;
-        dialog.Title(box_value(L"X-Factors Saved"));
-        dialog.Content(box_value(L"Next step: connect these traits into your player data and move to the career hub."));
-        dialog.CloseButtonText(L"OK");
-        dialog.XamlRoot(this->XamlRoot());
-        dialog.ShowAsync();
+        Frame().Navigate(
+            winrt::Windows::UI::Xaml::Interop::TypeName{
+                L"thefootballife.ConfirmPlayerPage",
+                winrt::Windows::UI::Xaml::Interop::TypeKind::Custom
+            }
+        );
     }
 }

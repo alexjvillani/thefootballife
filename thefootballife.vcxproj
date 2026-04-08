@@ -117,6 +117,9 @@
     <Manifest Include="app.manifest" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ConfirmPlayerPage.xaml.h">
+      <DependentUpon>ConfirmPlayerPage.xaml</DependentUpon>
+    </ClInclude>
     <ClInclude Include="MainMenuPage.xaml.h">
       <DependentUpon>MainMenuPage.xaml</DependentUpon>
     </ClInclude>
@@ -136,6 +139,7 @@
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml" />
+    <Page Include="ConfirmPlayerPage.xaml" />
     <Page Include="MainMenuPage.xaml">
       <SubType>Designer</SubType>
     </Page>
@@ -146,6 +150,9 @@
     <Page Include="XFactorPage.xaml" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ConfirmPlayerPage.xaml.cpp">
+      <DependentUpon>ConfirmPlayerPage.xaml</DependentUpon>
+    </ClCompile>
     <ClCompile Include="MainMenuPage.xaml.cpp">
       <DependentUpon>MainMenuPage.xaml</DependentUpon>
     </ClCompile>
@@ -167,6 +174,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <Midl Include="ConfirmPlayerPage.idl" />
     <Midl Include="MainMenuPage.idl" />
     <Midl Include="MainWindow.idl">
       <SubType>Code</SubType>
