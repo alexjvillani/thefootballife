@@ -225,6 +225,7 @@
                             <CheckBox x:Name="ManualPhysicalCheckBox"
                                       Content="Choose height and weight manually"
                                       Foreground="White"
+                                      RequestedTheme="Dark"
                                       Checked="ManualPhysicalCheckBox_Changed"
                                       Unchecked="ManualPhysicalCheckBox_Changed"/>
 
@@ -252,7 +253,7 @@
                             </Grid>
 
                             <TextBlock Text="If left unchecked, height and weight will be randomised for this player."
-                                       Foreground="#AAAAAA"
+                                       Foreground="White"
                                        TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
