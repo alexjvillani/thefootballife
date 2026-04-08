@@ -161,7 +161,7 @@ namespace winrt::thefootballife::implementation
     void PlayerCreationPage::SetRandomProfileImage()
     {
         BitmapImage bitmap;
-        bitmap.UriSource(Uri(L"ms-appx:///Assets/MainMenuBackground.png"));
+        bitmap.UriSource(Uri(L"ms-appx:///Assets/StoreLogo.png"));
         ProfileImage().Source(bitmap);
     }
 

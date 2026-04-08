@@ -306,7 +306,9 @@
                                         Background="#3A3A3A"
                                         Clip="{x:Null}">
                                     <Image x:Name="ProfileImage"
-                                           Stretch="UniformToFill"/>
+                                           Stretch="Uniform"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
                                 </Border>
                             </StackPanel>
                         </Border>
