@@ -64,16 +64,14 @@ namespace winrt::thefootballife::implementation
 
         auto value = unbox_value<hstring>(item.Content());
 
-        if (value == L"Composed")
-            MentalityDescriptionText().Text(L"Keeps control under pressure.");
-        else if (value == L"Aggressive")
-            MentalityDescriptionText().Text(L"Attacks contests hard.");
-        else if (value == L"Clutch Performer")
-            MentalityDescriptionText().Text(L"Performs in big moments.");
-        else if (value == L"Natural Leader")
-            MentalityDescriptionText().Text(L"Leads teammates naturally.");
-        else if (value == L"High Work Rate")
-            MentalityDescriptionText().Text(L"Always involved in play.");
+        if (value == L"Extroverted")
+            MentalityDescriptionText().Text(L"Social, popular, high morale");
+        else if (value == L"Outspoken")
+            MentalityDescriptionText().Text(L"Bold, controversial and high risk personality");
+        else if (value == L"Introverted")
+            MentalityDescriptionText().Text(L"Quiet, focused, intelligent");
+        else if (value == L"Professional")
+            MentalityDescriptionText().Text(L"Extremely disciplined");
 
         UpdateTraitSummary();
     }
@@ -112,8 +110,8 @@ namespace winrt::thefootballife::implementation
             PhysicalDescriptionText().Text(L"Dominates aerial contests.");
         else if (value == L"Powerful Frame")
             PhysicalDescriptionText().Text(L"Strong in contact.");
-        else if (value == L"Agility")
-            PhysicalDescriptionText().Text(L"Quick directional changes.");
+        else if (value == L"Booming Kick")
+            PhysicalDescriptionText().Text(L"Huge distance kicking");
 
         UpdateTraitSummary();
     }
