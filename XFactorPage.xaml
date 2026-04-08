@@ -42,15 +42,14 @@
 					<ComboBox x:Name="MentalityComboBox"
                               SelectedIndex="0"
                               SelectionChanged="MentalityComboBox_SelectionChanged">
-						<ComboBoxItem Content="Composed"/>
-						<ComboBoxItem Content="Aggressive"/>
-						<ComboBoxItem Content="Clutch Performer"/>
-						<ComboBoxItem Content="Natural Leader"/>
-						<ComboBoxItem Content="High Work Rate"/>
+						<ComboBoxItem Content="Extroverted"/>
+						<ComboBoxItem Content="Outspoken"/>
+						<ComboBoxItem Content="Introverted"/>
+						<ComboBoxItem Content="Professional"/>
 					</ComboBox>
 
 					<TextBlock x:Name="MentalityDescriptionText"
-                               Text="Keeps control under pressure."
+                               Text="Social, popular, high morale"
                                Foreground="#DDDDDD"
                                TextWrapping="Wrap"/>
 				</StackPanel>
@@ -70,11 +69,11 @@
 						<ComboBoxItem Content="Elite Endurance"/>
 						<ComboBoxItem Content="Strong Marking"/>
 						<ComboBoxItem Content="Powerful Frame"/>
-						<ComboBoxItem Content="Agility"/>
+						<ComboBoxItem Content="Booming Kick"/>
 					</ComboBox>
 
 					<TextBlock x:Name="PhysicalDescriptionText"
-                               Text="Breaks away from contests quickly."
+                               Text="Explosive, fast player"
                                Foreground="#DDDDDD"
                                TextWrapping="Wrap"/>
 				</StackPanel>
@@ -91,25 +90,30 @@
                               Content="Inconsistent Kicking"
                               Checked="WeaknessCheckBox_Changed"
                               Unchecked="WeaknessCheckBox_Changed"
-                              Foreground="White"/>
+                              Foreground="White"
+							  RequestedTheme="Dark"/>
 
 					<CheckBox x:Name="WeaknessFitness"
                               Content="Low Endurance"
                               Checked="WeaknessCheckBox_Changed"
                               Unchecked="WeaknessCheckBox_Changed"
-                              Foreground="White"/>
+                              Foreground="White"
+							  RequestedTheme="Dark"/>
 
 					<CheckBox x:Name="WeaknessDecision"
                               Content="Poor Decision Making"
                               Checked="WeaknessCheckBox_Changed"
                               Unchecked="WeaknessCheckBox_Changed"
-                              Foreground="White"/>
+                              Foreground="White"
+							  RequestedTheme="Dark"/>
+							 
 
 					<CheckBox x:Name="WeaknessPressure"
                               Content="Struggles Under Pressure"
                               Checked="WeaknessCheckBox_Changed"
                               Unchecked="WeaknessCheckBox_Changed"
-                              Foreground="White"/>
+                              Foreground="White"
+							  RequestedTheme="Dark"/>
 
 					<Border Background="#262626" CornerRadius="10" Padding="12" Margin="0,10,0,0">
 						<TextBlock x:Name="TraitSummaryText"
