@@ -134,7 +134,7 @@ namespace winrt::thefootballife::implementation
             return;
         }
 
-        std::wstring mentality = L"Composed";
+        std::wstring mentality = L"Extroverted";
         std::wstring physical = L"Explosive Speed";
         std::wstring weaknesses;
 
