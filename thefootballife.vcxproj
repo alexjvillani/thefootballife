@@ -120,6 +120,7 @@
     <ClInclude Include="ConfirmPlayerPage.xaml.h">
       <DependentUpon>ConfirmPlayerPage.xaml</DependentUpon>
     </ClInclude>
+    <ClInclude Include="Gamestate.h" />
     <ClInclude Include="MainMenuPage.xaml.h">
       <DependentUpon>MainMenuPage.xaml</DependentUpon>
     </ClInclude>
@@ -133,6 +134,7 @@
     <ClInclude Include="PlayerCreationPage.xaml.h">
       <DependentUpon>PlayerCreationPage.xaml</DependentUpon>
     </ClInclude>
+    <ClInclude Include="PlayerData.h" />
     <ClInclude Include="XFactorPage.xaml.h">
       <DependentUpon>XFactorPage.xaml</DependentUpon>
     </ClInclude>
@@ -153,6 +155,7 @@
     <ClCompile Include="ConfirmPlayerPage.xaml.cpp">
       <DependentUpon>ConfirmPlayerPage.xaml</DependentUpon>
     </ClCompile>
+    <ClCompile Include="Gamestate.cpp" />
     <ClCompile Include="MainMenuPage.xaml.cpp">
       <DependentUpon>MainMenuPage.xaml</DependentUpon>
     </ClCompile>

@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "PlayerCreationPage.xaml.h"
+#include "GameState.h"
 #if __has_include("PlayerCreationPage.g.cpp")
 #include "PlayerCreationPage.g.cpp"
 #endif
@@ -403,6 +404,26 @@ namespace winrt::thefootballife::implementation
         }
 
         UpdateGeneratedProfile();
+
+        GameState::CurrentPlayer.firstName = firstName.c_str();
+        GameState::CurrentPlayer.lastName = lastName.c_str();
+        GameState::CurrentPlayer.position = GetComboBoxValue(PositionComboBox()).c_str();
+        GameState::CurrentPlayer.foot = GetComboBoxValue(FootComboBox()).c_str();
+        GameState::CurrentPlayer.number = NumberTextBox().Text().c_str();
+        GameState::CurrentPlayer.team = GetComboBoxValue(TeamComboBox()).c_str();
+        GameState::CurrentPlayer.state = GetComboBoxValue(StateComboBox()).c_str();
+        GameState::CurrentPlayer.schoolType = GetComboBoxValue(SchoolComboBox()).c_str();
+        GameState::CurrentPlayer.region = GetComboBoxValue(RegionComboBox()).c_str();
+        GameState::CurrentPlayer.familySituation = m_familySituation.c_str();
+        GameState::CurrentPlayer.finances = m_finances.c_str();
+
+        GameState::CurrentPlayer.heightCm = m_generatedHeightCm;
+        GameState::CurrentPlayer.weightKg = m_generatedWeightKg;
+        GameState::CurrentPlayer.potentialHeightCm = m_potentialHeightCm;
+        GameState::CurrentPlayer.distanceToClubKm = m_distanceToClubKm;
+
+        // Replace this later if you store the actual random prospect image path
+        GameState::CurrentPlayer.profileImagePath = L"ms-appx:///Assets/StoreLogo.png";
 
         std::wstring summary =
             L"Player Created!\n\nName: " + std::wstring(GetFullName()) +

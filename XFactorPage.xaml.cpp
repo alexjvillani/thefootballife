@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "XFactorPage.xaml.h"
+#include "Gamestate.h"
 #if __has_include("XFactorPage.g.cpp")
 #include "XFactorPage.g.cpp"
 #include <winrt/Windows.UI.Xaml.Interop.h>
@@ -188,6 +189,44 @@ namespace winrt::thefootballife::implementation
 
     void XFactorPage::ContinueButton_Click(IInspectable const&, RoutedEventArgs const&)
     {
+        std::wstring mentality = L"";
+        std::wstring physical = L"";
+        std::wstring weaknesses;
+
+        if (MentalityComboBox() && MentalityComboBox().SelectedItem())
+        {
+            if (auto item = MentalityComboBox().SelectedItem().try_as<ComboBoxItem>())
+            {
+                mentality = unbox_value<hstring>(item.Content()).c_str();
+            }
+        }
+
+        if (PhysicalComboBox() && PhysicalComboBox().SelectedItem())
+        {
+            if (auto item = PhysicalComboBox().SelectedItem().try_as<ComboBoxItem>())
+            {
+                physical = unbox_value<hstring>(item.Content()).c_str();
+            }
+        }
+
+        if (WeaknessKick().IsChecked() && WeaknessKick().IsChecked().Value())
+            weaknesses += L"Inconsistent Kicking, ";
+        if (WeaknessFitness().IsChecked() && WeaknessFitness().IsChecked().Value())
+            weaknesses += L"Low Endurance, ";
+        if (WeaknessDecision().IsChecked() && WeaknessDecision().IsChecked().Value())
+            weaknesses += L"Poor Decision Making, ";
+        if (WeaknessPressure().IsChecked() && WeaknessPressure().IsChecked().Value())
+            weaknesses += L"Struggles Under Pressure, ";
+
+        if (!weaknesses.empty())
+        {
+            weaknesses.erase(weaknesses.size() - 2);
+        }
+
+        GameState::CurrentPlayer.mentalityXFactor = mentality;
+        GameState::CurrentPlayer.physicalXFactor = physical;
+        GameState::CurrentPlayer.weaknesses = weaknesses;
+
         Frame().Navigate(
             winrt::Windows::UI::Xaml::Interop::TypeName{
                 L"thefootballife.ConfirmPlayerPage",
