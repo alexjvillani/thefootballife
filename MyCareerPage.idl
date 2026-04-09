@@ -1,0 +1,8 @@
+namespace thefootballife
+{
+    runtimeclass MyCareerPage : Microsoft.UI.Xaml.Controls.Page
+    {
+        MyCareerPage();
+        String PageTitle;
+    }
+}

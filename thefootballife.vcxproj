@@ -117,12 +117,18 @@
     <Manifest Include="app.manifest" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CareerHubPage.xaml.h">
+      <DependentUpon>CareerHubPage.xaml</DependentUpon>
+    </ClInclude>
     <ClInclude Include="ConfirmPlayerPage.xaml.h">
       <DependentUpon>ConfirmPlayerPage.xaml</DependentUpon>
     </ClInclude>
     <ClInclude Include="Gamestate.h" />
     <ClInclude Include="MainMenuPage.xaml.h">
       <DependentUpon>MainMenuPage.xaml</DependentUpon>
+    </ClInclude>
+    <ClInclude Include="MyCareerPage.xaml.h">
+      <DependentUpon>MyCareerPage.xaml</DependentUpon>
     </ClInclude>
     <ClInclude Include="pch.h" />
     <ClInclude Include="App.xaml.h">
@@ -141,23 +147,31 @@
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml" />
+    <Page Include="CareerHubPage.xaml" />
     <Page Include="ConfirmPlayerPage.xaml" />
     <Page Include="MainMenuPage.xaml">
       <SubType>Designer</SubType>
     </Page>
     <Page Include="MainWindow.xaml" />
+    <Page Include="MyCareerPage.xaml" />
     <Page Include="PlayerCreationPage.xaml">
       <SubType>Designer</SubType>
     </Page>
     <Page Include="XFactorPage.xaml" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CareerHubPage.xaml.cpp">
+      <DependentUpon>CareerHubPage.xaml</DependentUpon>
+    </ClCompile>
     <ClCompile Include="ConfirmPlayerPage.xaml.cpp">
       <DependentUpon>ConfirmPlayerPage.xaml</DependentUpon>
     </ClCompile>
     <ClCompile Include="Gamestate.cpp" />
     <ClCompile Include="MainMenuPage.xaml.cpp">
       <DependentUpon>MainMenuPage.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="MyCareerPage.xaml.cpp">
+      <DependentUpon>MyCareerPage.xaml</DependentUpon>
     </ClCompile>
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
@@ -177,12 +191,14 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <Midl Include="CareerHubPage.idl" />
     <Midl Include="ConfirmPlayerPage.idl" />
     <Midl Include="MainMenuPage.idl" />
     <Midl Include="MainWindow.idl">
       <SubType>Code</SubType>
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </Midl>
+    <Midl Include="MyCareerPage.idl" />
     <Midl Include="PlayerCreationPage.idl" />
     <Midl Include="XFactorPage.idl" />
   </ItemGroup>

@@ -119,11 +119,11 @@ namespace winrt::thefootballife::implementation
 
     void ConfirmPlayerPage::StartCareerButton_Click(IInspectable const&, RoutedEventArgs const&)
     {
-        ContentDialog dialog;
-        dialog.Title(box_value(L"Career Starting"));
-        dialog.Content(box_value(L"Next step: navigate to CareerHubPage and load the player into the weekly career loop."));
-        dialog.CloseButtonText(L"OK");
-        dialog.XamlRoot(this->XamlRoot());
-        dialog.ShowAsync();
+        Frame().Navigate(
+            winrt::Windows::UI::Xaml::Interop::TypeName{
+                L"thefootballife.CareerHubPage",
+                winrt::Windows::UI::Xaml::Interop::TypeKind::Custom
+            }
+        );
     }
 }
