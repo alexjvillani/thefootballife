@@ -5,6 +5,9 @@
 #endif
 
 #include "PlayerCreationPage.xaml.h"
+#include "CareerHubPage.xaml.h"
+#include "GameState.h"
+#include "SaveGameService.h"
 #include <winrt/Windows.UI.Xaml.Interop.h>
 
 using namespace winrt;
@@ -31,12 +34,108 @@ namespace winrt::thefootballife::implementation
 
     void MainMenuPage::LoadGame_Click(IInspectable const&, RoutedEventArgs const&)
     {
+        bool hasAnySave = false;
+        for (int slot = 1; slot <= SaveGameService::MaxSaveSlots; ++slot)
+        {
+            if (SaveGameService::SlotExists(slot))
+            {
+                hasAnySave = true;
+                break;
+            }
+        }
+
+        if (!hasAnySave)
+        {
+            ContentDialog dialog;
+            dialog.Title(box_value(L"No Saves Found"));
+            dialog.Content(box_value(L"No save files exist yet. Create and save a career first."));
+            dialog.CloseButtonText(L"OK");
+            dialog.XamlRoot(this->XamlRoot());
+            dialog.ShowAsync();
+            return;
+        }
+
+        ComboBox slotComboBox;
+        for (int slot = 1; slot <= SaveGameService::MaxSaveSlots; ++slot)
+        {
+            ComboBoxItem item;
+            std::wstring label = L"Slot " + std::to_wstring(slot);
+            if (SaveGameService::SlotExists(slot))
+            {
+                label += L" (Available)";
+            }
+            else
+            {
+                label += L" (Empty)";
+                item.IsEnabled(false);
+            }
+
+            item.Content(box_value(hstring(label)));
+            slotComboBox.Items().Append(item);
+        }
+
+        for (int slot = 1; slot <= SaveGameService::MaxSaveSlots; ++slot)
+        {
+            if (SaveGameService::SlotExists(slot))
+            {
+                slotComboBox.SelectedIndex(slot - 1);
+                break;
+            }
+        }
+
         ContentDialog dialog;
         dialog.Title(box_value(L"Load Game"));
-        dialog.Content(box_value(L"Save/load system coming soon."));
-        dialog.CloseButtonText(L"OK");
+        dialog.Content(slotComboBox);
+        dialog.PrimaryButtonText(L"Load");
+        dialog.CloseButtonText(L"Cancel");
         dialog.XamlRoot(this->XamlRoot());
-        dialog.ShowAsync();
+
+        auto weakThis = get_weak();
+        dialog.ShowAsync().Completed(
+            [weakThis, slotComboBox](auto const& operation, auto const&)
+            {
+                if (auto self = weakThis.get())
+                {
+                    if (operation.GetResults() != ContentDialogResult::Primary)
+                    {
+                        return;
+                    }
+
+                    int slot = static_cast<int>(slotComboBox.SelectedIndex()) + 1;
+                    PlayerData loadedPlayer;
+                    int loadedWeek = 1;
+                    std::wstring loadedChoice;
+                    bool loaded = SaveGameService::LoadFromSlot(
+                        slot,
+                        loadedPlayer,
+                        loadedWeek,
+                        loadedChoice
+                    );
+
+                    if (!loaded)
+                    {
+                        ContentDialog failDialog;
+                        failDialog.Title(box_value(L"Load Failed"));
+                        failDialog.Content(box_value(L"Could not read the selected save slot."));
+                        failDialog.CloseButtonText(L"OK");
+                        failDialog.XamlRoot(self->XamlRoot());
+                        failDialog.ShowAsync();
+                        return;
+                    }
+
+                    GameState::CurrentPlayer = loadedPlayer;
+                    GameState::CurrentWeek = loadedWeek;
+                    GameState::LastChoice = loadedChoice;
+
+                    self->Frame().Navigate(
+                        winrt::Windows::UI::Xaml::Interop::TypeName{
+                            L"thefootballife.CareerHubPage",
+                            winrt::Windows::UI::Xaml::Interop::TypeKind::Custom
+                        }
+                    );
+                }
+            }
+        );
     }
 
     void MainMenuPage::Settings_Click(IInspectable const&, RoutedEventArgs const&)
