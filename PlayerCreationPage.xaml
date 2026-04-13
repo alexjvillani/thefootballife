@@ -108,6 +108,7 @@
                                     <TextBlock Text="Preferred Number" Foreground="White"/>
                                     <TextBox x:Name="NumberTextBox"
                                              PlaceholderText="e.g. 9"
+                                             MaxLength="2"
                                              TextChanged="PlayerField_Changed"/>
                                 </StackPanel>
 
@@ -370,7 +371,7 @@
                         </Border>
 
                         <!-- Preview Button -->
-                        <Button Content="Generate Profile Preview"
+                        <Button Content="Generate Final Variables"
                                 Click="GeneratePreview_Click"
                                 HorizontalAlignment="Stretch"
                                 Margin="0,4,0,0"/>
