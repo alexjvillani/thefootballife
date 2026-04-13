@@ -9,6 +9,8 @@
 #include <vector>
 #include <string>
 #include <cwchar>
+#include <cwctype>
+#include <algorithm>
 #include <winrt/Windows.UI.Xaml.Interop.h>
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Microsoft.UI.Xaml.Media.Imaging.h>
@@ -21,6 +23,49 @@ using namespace Microsoft::UI::Xaml::Media::Imaging;
 
 namespace winrt::thefootballife::implementation
 {
+    bool PlayerCreationPage::IsValidNamePart(hstring const& text)
+    {
+        std::wstring value = text.c_str();
+        if (value.empty())
+        {
+            return false;
+        }
+
+        return std::all_of(
+            value.begin(),
+            value.end(),
+            [](wchar_t ch)
+            {
+                return ::iswalpha(ch) || ch == L'-';
+            }
+        );
+    }
+
+    bool PlayerCreationPage::TryGetPreferredNumber(int& preferredNumber)
+    {
+        std::wstring value = NumberTextBox().Text().c_str();
+        if (value.empty())
+        {
+            return false;
+        }
+
+        try
+        {
+            int parsed = std::stoi(value);
+            if (parsed < 0 || parsed > 99)
+            {
+                return false;
+            }
+
+            preferredNumber = parsed;
+            return true;
+        }
+        catch (...)
+        {
+            return false;
+        }
+    }
+
     PlayerCreationPage::PlayerCreationPage()
     {
         InitializeComponent();
@@ -167,7 +212,7 @@ namespace winrt::thefootballife::implementation
         ProfileImage().Source(bitmap);
     }
 
-    void PlayerCreationPage::UpdateGeneratedProfile()
+    void PlayerCreationPage::UpdateGeneratedProfile(bool forceRegenerate)
     {
         std::random_device rd;
         std::mt19937 gen(rd());
@@ -195,9 +240,14 @@ namespace winrt::thefootballife::implementation
         std::uniform_int_distribution<> heightGrowthDist(0, 8);
         std::uniform_int_distribution<> distanceDist(1, 60);
 
-        m_familySituation = hstring(familyOptions[familyDist(gen)]);
-        m_finances = hstring(financeOptions[financeDist(gen)]);
-        m_distanceToClubKm = distanceDist(gen);
+        if (forceRegenerate || !m_hasGeneratedVariables)
+        {
+            m_familySituation = hstring(familyOptions[familyDist(gen)]);
+            m_finances = hstring(financeOptions[financeDist(gen)]);
+            m_distanceToClubKm = distanceDist(gen);
+            m_heightGrowthCm = heightGrowthDist(gen);
+            m_hasGeneratedVariables = true;
+        }
 
         auto school = GetComboBoxValue(SchoolComboBox());
         if (school == L"Private School")
@@ -247,13 +297,13 @@ namespace winrt::thefootballife::implementation
                 m_generatedWeightKg = weightDist(gen);
             }
         }
-        else
+        else if (forceRegenerate || m_generatedHeightCm == 0 || m_generatedWeightKg == 0)
         {
             m_generatedHeightCm = heightDist(gen);
             m_generatedWeightKg = weightDist(gen);
         }
 
-        m_potentialHeightCm = m_generatedHeightCm + heightGrowthDist(gen);
+        m_potentialHeightCm = m_generatedHeightCm + m_heightGrowthCm;
         if (m_potentialHeightCm > 213)
         {
             m_potentialHeightCm = 213;
@@ -294,7 +344,7 @@ namespace winrt::thefootballife::implementation
 
     void PlayerCreationPage::GeneratePreview_Click(IInspectable const&, RoutedEventArgs const&)
     {
-        UpdateGeneratedProfile();
+        UpdateGeneratedProfile(true);
     }
 
     void PlayerCreationPage::ManualPhysicalCheckBox_Changed(IInspectable const&, RoutedEventArgs const&)
@@ -314,14 +364,35 @@ namespace winrt::thefootballife::implementation
         HeightTextBox().IsEnabled(manual);
         WeightTextBox().IsEnabled(manual);
 
-        UpdateGeneratedProfile();
+        UpdateGeneratedProfile(false);
     }
 
-    void PlayerCreationPage::NameField_Changed(IInspectable const&, RoutedEventArgs const&)
+    void PlayerCreationPage::NameField_Changed(IInspectable const& sender, RoutedEventArgs const&)
     {
         if (!m_isPageReady)
         {
             return;
+        }
+
+        if (auto textBox = sender.try_as<TextBox>())
+        {
+            std::wstring current = textBox.Text().c_str();
+            std::wstring cleaned;
+            cleaned.reserve(current.size());
+
+            for (wchar_t ch : current)
+            {
+                if (::iswalpha(ch) || ch == L'-')
+                {
+                    cleaned.push_back(ch);
+                }
+            }
+
+            if (cleaned != current)
+            {
+                textBox.Text(hstring(cleaned));
+                textBox.SelectionStart(static_cast<int32_t>(cleaned.size()));
+            }
         }
 
         SummaryNameText().Text(L"Name: " + GetFullName());
@@ -334,7 +405,24 @@ namespace winrt::thefootballife::implementation
             return;
         }
 
-        UpdateGeneratedProfile();
+        std::wstring numberText = NumberTextBox().Text().c_str();
+        std::wstring cleanedNumber;
+        cleanedNumber.reserve(numberText.size());
+        for (wchar_t ch : numberText)
+        {
+            if (::iswdigit(ch))
+            {
+                cleanedNumber.push_back(ch);
+            }
+        }
+
+        if (cleanedNumber != numberText)
+        {
+            NumberTextBox().Text(hstring(cleanedNumber));
+            NumberTextBox().SelectionStart(static_cast<int32_t>(cleanedNumber.size()));
+        }
+
+        UpdateGeneratedProfile(false);
     }
 
     void PlayerCreationPage::PlayerField_Changed(IInspectable const&, SelectionChangedEventArgs const&)
@@ -344,7 +432,7 @@ namespace winrt::thefootballife::implementation
             return;
         }
 
-        UpdateGeneratedProfile();
+        UpdateGeneratedProfile(false);
     }
 
     void PlayerCreationPage::BackButton_Click(IInspectable const&, RoutedEventArgs const&)
@@ -365,6 +453,29 @@ namespace winrt::thefootballife::implementation
             ContentDialog dialog;
             dialog.Title(box_value(L"Missing Information"));
             dialog.Content(box_value(L"Please enter both a first name and last name before continuing."));
+            dialog.CloseButtonText(L"OK");
+            dialog.XamlRoot(this->XamlRoot());
+            dialog.ShowAsync();
+            return;
+        }
+
+        if (!IsValidNamePart(firstName) || !IsValidNamePart(lastName))
+        {
+            ContentDialog dialog;
+            dialog.Title(box_value(L"Invalid Name"));
+            dialog.Content(box_value(L"Names can only contain letters and hyphens."));
+            dialog.CloseButtonText(L"OK");
+            dialog.XamlRoot(this->XamlRoot());
+            dialog.ShowAsync();
+            return;
+        }
+
+        int preferredNumber = 0;
+        if (!TryGetPreferredNumber(preferredNumber))
+        {
+            ContentDialog dialog;
+            dialog.Title(box_value(L"Invalid Preferred Number"));
+            dialog.Content(box_value(L"Preferred number must be a whole number between 0 and 99."));
             dialog.CloseButtonText(L"OK");
             dialog.XamlRoot(this->XamlRoot());
             dialog.ShowAsync();
@@ -403,13 +514,13 @@ namespace winrt::thefootballife::implementation
             }
         }
 
-        UpdateGeneratedProfile();
+        UpdateGeneratedProfile(false);
 
         GameState::CurrentPlayer.firstName = firstName.c_str();
         GameState::CurrentPlayer.lastName = lastName.c_str();
         GameState::CurrentPlayer.position = GetComboBoxValue(PositionComboBox()).c_str();
         GameState::CurrentPlayer.foot = GetComboBoxValue(FootComboBox()).c_str();
-        GameState::CurrentPlayer.number = NumberTextBox().Text().c_str();
+        GameState::CurrentPlayer.number = to_hstring(preferredNumber).c_str();
         GameState::CurrentPlayer.team = GetComboBoxValue(TeamComboBox()).c_str();
         GameState::CurrentPlayer.state = GetComboBoxValue(StateComboBox()).c_str();
         GameState::CurrentPlayer.schoolType = GetComboBoxValue(SchoolComboBox()).c_str();
@@ -429,7 +540,7 @@ namespace winrt::thefootballife::implementation
             L"Player Created!\n\nName: " + std::wstring(GetFullName()) +
             L"\nPosition: " + std::wstring(GetComboBoxValue(PositionComboBox())) +
             L"\nFoot: " + std::wstring(GetComboBoxValue(FootComboBox())) +
-            L"\nNumber: " + std::wstring(NumberTextBox().Text()) +
+            L"\nNumber: " + std::to_wstring(preferredNumber) +
             L"\nTeam: " + std::wstring(GetComboBoxValue(TeamComboBox())) +
             L"\nState: " + std::wstring(GetComboBoxValue(StateComboBox())) +
             L"\nHeight / Weight: " + std::wstring(FormatHeightFeet(m_generatedHeightCm)) + L" / " + std::to_wstring(m_generatedWeightKg) + L" kg" +

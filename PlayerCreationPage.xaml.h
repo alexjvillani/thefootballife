@@ -36,13 +36,15 @@ namespace winrt::thefootballife::implementation
             winrt::Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& e);
 
     private:
+        bool IsValidNamePart(winrt::hstring const& text);
+        bool TryGetPreferredNumber(int& preferredNumber);
         winrt::hstring GetComboBoxValue(winrt::Microsoft::UI::Xaml::Controls::ComboBox const& comboBox);
         winrt::hstring GetFullName();
         winrt::hstring FormatHeightFeet(int totalCm);
         int ParseFeetAndInches(winrt::hstring const& text);
         int ParseWeight(winrt::hstring const& text);
         void SetRandomProfileImage();
-        void UpdateGeneratedProfile();
+        void UpdateGeneratedProfile(bool forceRegenerate);
 
     private:
         bool m_isPageReady{ false };
@@ -50,7 +52,9 @@ namespace winrt::thefootballife::implementation
         int m_generatedHeightCm{ 0 };
         int m_generatedWeightKg{ 0 };
         int m_potentialHeightCm{ 0 };
+        int m_heightGrowthCm{ 0 };
         int m_distanceToClubKm{ 0 };
+        bool m_hasGeneratedVariables{ false };
 
         winrt::hstring m_familySituation{ L"" };
         winrt::hstring m_finances{ L"" };
