@@ -9,6 +9,7 @@
 #include <vector>
 #include <string>
 #include <cwchar>
+#include <cwctype>
 #include <algorithm>
 #include <winrt/Windows.UI.Xaml.Interop.h>
 #include <winrt/Windows.Foundation.h>
@@ -35,7 +36,7 @@ namespace winrt::thefootballife::implementation
             value.end(),
             [](wchar_t ch)
             {
-                return std::iswalpha(ch) || ch == L'-';
+                return ::iswalpha(ch) || ch == L'-';
             }
         );
     }
@@ -381,7 +382,7 @@ namespace winrt::thefootballife::implementation
 
             for (wchar_t ch : current)
             {
-                if (std::iswalpha(ch) || ch == L'-')
+                if (::iswalpha(ch) || ch == L'-')
                 {
                     cleaned.push_back(ch);
                 }
@@ -409,7 +410,7 @@ namespace winrt::thefootballife::implementation
         cleanedNumber.reserve(numberText.size());
         for (wchar_t ch : numberText)
         {
-            if (std::iswdigit(ch))
+            if (::iswdigit(ch))
             {
                 cleanedNumber.push_back(ch);
             }
