@@ -141,6 +141,7 @@
       <DependentUpon>PlayerCreationPage.xaml</DependentUpon>
     </ClInclude>
     <ClInclude Include="PlayerData.h" />
+    <ClInclude Include="SaveGameService.h" />
     <ClInclude Include="XFactorPage.xaml.h">
       <DependentUpon>XFactorPage.xaml</DependentUpon>
     </ClInclude>
@@ -186,6 +187,7 @@
     <ClCompile Include="PlayerCreationPage.xaml.cpp">
       <DependentUpon>PlayerCreationPage.xaml</DependentUpon>
     </ClCompile>
+    <ClCompile Include="SaveGameService.cpp" />
     <ClCompile Include="XFactorPage.xaml.cpp">
       <DependentUpon>XFactorPage.xaml</DependentUpon>
     </ClCompile>

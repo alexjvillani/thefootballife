@@ -67,7 +67,7 @@ namespace winrt::thefootballife::implementation
         else
             WeaknessesText().Text(L"Weaknesses: " + hstring(player.weaknesses));
 
-        WeekText().Text(L"Current Week: Active save loaded");
+        WeekText().Text(L"Current Week: " + to_hstring(GameState::CurrentWeek));
     }
 
     void MyCareerPage::BackToCareerHubButton_Click(IInspectable const&, RoutedEventArgs const&)
