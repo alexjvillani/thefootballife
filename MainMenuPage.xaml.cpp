@@ -56,17 +56,30 @@ namespace winrt::thefootballife::implementation
         }
 
         ComboBox slotComboBox;
+
         for (int slot = 1; slot <= SaveGameService::MaxSaveSlots; ++slot)
         {
             ComboBoxItem item;
             std::wstring label = L"Slot " + std::to_wstring(slot);
+
             if (SaveGameService::SlotExists(slot))
             {
-                label += L" (Available)";
+                std::wstring playerName;
+                int week = 1;
+
+                if (SaveGameService::GetSavePreview(slot, playerName, week))
+                {
+                    label += L" - " + playerName + L" (Week " + std::to_wstring(week) + L")";
+                }
+                else
+                {
+                    label += L" - Not Available";
+                    item.IsEnabled(false);
+                }
             }
             else
             {
-                label += L" (Empty)";
+                label += L" - Not Available";
                 item.IsEnabled(false);
             }
 
@@ -105,6 +118,7 @@ namespace winrt::thefootballife::implementation
                     PlayerData loadedPlayer;
                     int loadedWeek = 1;
                     std::wstring loadedChoice;
+
                     bool loaded = SaveGameService::LoadFromSlot(
                         slot,
                         loadedPlayer,

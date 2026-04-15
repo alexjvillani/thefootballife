@@ -182,4 +182,53 @@ namespace SaveGameService
 
         return true;
     }
+
+    bool GetSavePreview(int slot, std::wstring& playerName, int& week)
+    {
+        if (slot < 1 || slot > MaxSaveSlots)
+        {
+            return false;
+        }
+
+        std::wifstream file(GetSaveSlotPath(slot));
+        if (!file.is_open())
+        {
+            return false;
+        }
+
+        std::unordered_map<std::wstring, std::wstring> values;
+        std::wstring line;
+        while (std::getline(file, line))
+        {
+            size_t separator = line.find(L'=');
+            if (separator == std::wstring::npos)
+            {
+                continue;
+            }
+
+            values[line.substr(0, separator)] = line.substr(separator + 1);
+        }
+
+        std::wstring firstName = values[L"FirstName"];
+        std::wstring lastName = values[L"LastName"];
+
+        playerName = firstName;
+        if (!firstName.empty() && !lastName.empty())
+        {
+            playerName += L" ";
+        }
+        playerName += lastName;
+
+        if (playerName.empty())
+        {
+            playerName = L"Unknown Player";
+        }
+
+        if (!TryParseInt(values[L"CurrentWeek"], week))
+        {
+            week = 1;
+        }
+
+        return true;
+    }
 }
