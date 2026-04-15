@@ -6,6 +6,7 @@
 
 #include "GameState.h"
 #include "SaveGameService.h"
+#include <algorithm>
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Microsoft.UI.Xaml.Media.Imaging.h>
 #include <winrt/Windows.UI.Xaml.Interop.h>
@@ -25,6 +26,8 @@ namespace winrt::thefootballife::implementation
         m_lastChoice = hstring(GameState::LastChoice);
         LoadPlayerData();
         UpdateWeekDisplay();
+        UpdateBlockUI();
+        UpdateStateUI();
     }
 
     hstring CareerHubPage::PageTitle()
@@ -45,6 +48,148 @@ namespace winrt::thefootballife::implementation
         int inches = roundedInches % 12;
 
         return to_hstring(feet) + L"'" + to_hstring(inches) + L"\"";
+    }
+
+    int CareerHubPage::BlocksUsed() const
+    {
+        return m_trainingBlocks + m_schoolBlocks + m_workBlocks + m_socialBlocks + m_recoveryBlocks;
+    }
+
+    void CareerHubPage::UpdateBlockUI()
+    {
+        TrainingBlocksText().Text(to_hstring(m_trainingBlocks));
+        SchoolBlocksText().Text(to_hstring(m_schoolBlocks));
+        WorkBlocksText().Text(to_hstring(m_workBlocks));
+        SocialBlocksText().Text(to_hstring(m_socialBlocks));
+        RecoveryBlocksText().Text(to_hstring(m_recoveryBlocks));
+
+        int used = BlocksUsed();
+        int remaining = kTotalBlocks - used;
+        BlockSummaryText().Text(to_hstring(used) + L"/" + to_hstring(kTotalBlocks) + L" blocks allocated");
+
+        if (remaining == 0)
+        {
+            BlockWarningText().Text(L"Allocation is valid. You can advance the week.");
+        }
+        else if (remaining > 0)
+        {
+            BlockWarningText().Text(L"Unassigned blocks: " + to_hstring(remaining) + L". Assign all blocks before advancing.");
+        }
+        else
+        {
+            BlockWarningText().Text(L"Over allocated by " + to_hstring(-remaining) + L". Remove blocks to continue.");
+        }
+    }
+
+    void CareerHubPage::UpdateStateUI()
+    {
+        PhysicalStateText().Text(
+            L"Fatigue: " + to_hstring(m_fatigue) +
+            L" | Injury Risk: " + to_hstring(m_injuryRisk) +
+            L" | Recovery Quality: " + to_hstring(m_recoveryQuality)
+        );
+
+        MentalStateText().Text(
+            L"Confidence: " + to_hstring(m_confidence) +
+            L" | Stress: " + to_hstring(m_stress) +
+            L" | Motivation: " + to_hstring(m_motivation)
+        );
+
+        LifeStateText().Text(
+            L"Discipline: " + to_hstring(m_discipline) +
+            L" | Finances: " + to_hstring(m_finances) +
+            L" | Relationships: " + to_hstring(m_relationships)
+        );
+    }
+
+    void CareerHubPage::AdjustBlockByTag(hstring const& tag, int delta)
+    {
+        int* target = nullptr;
+
+        if (tag == L"Training")
+            target = &m_trainingBlocks;
+        else if (tag == L"School")
+            target = &m_schoolBlocks;
+        else if (tag == L"Work")
+            target = &m_workBlocks;
+        else if (tag == L"Social")
+            target = &m_socialBlocks;
+        else if (tag == L"Recovery")
+            target = &m_recoveryBlocks;
+
+        if (target == nullptr)
+            return;
+
+        int proposed = *target + delta;
+        if (proposed < 0)
+        {
+            BottomHintText().Text(L"Blocks cannot go below zero.");
+            return;
+        }
+
+        int projectedTotal = BlocksUsed() + delta;
+        if (delta > 0 && projectedTotal > kTotalBlocks)
+        {
+            BottomHintText().Text(L"You only have 14 total blocks each week.");
+            return;
+        }
+
+        *target = proposed;
+        BottomHintText().Text(L"Weekly schedule updated.");
+        UpdateBlockUI();
+    }
+
+    void CareerHubPage::ApplyWeekSimulation()
+    {
+        m_fatigue = std::clamp(m_fatigue + (m_trainingBlocks * 4) + (m_workBlocks * 3) - (m_recoveryBlocks * 8), 0, 100);
+        m_injuryRisk = std::clamp(m_injuryRisk + (m_fatigue / 12) + (m_trainingBlocks * 2) - (m_recoveryBlocks * 5), 0, 100);
+        m_recoveryQuality = std::clamp(m_recoveryQuality + (m_recoveryBlocks * 7) - (m_workBlocks * 2), 0, 100);
+
+        m_confidence = std::clamp(m_confidence + (m_trainingBlocks * 2) + (m_socialBlocks) - (m_stress / 18), 0, 100);
+        m_stress = std::clamp(m_stress + (m_schoolBlocks * 2) + (m_workBlocks * 3) - (m_recoveryBlocks * 4), 0, 100);
+        m_motivation = std::clamp(m_motivation + (m_trainingBlocks) + (m_socialBlocks) - (m_fatigue / 20), 0, 100);
+
+        m_discipline = std::clamp(m_discipline + (m_schoolBlocks * 2) + (m_trainingBlocks) - (m_socialBlocks * 2), 0, 100);
+        m_finances = std::clamp(m_finances + (m_workBlocks * 6) - (m_recoveryBlocks), 0, 100);
+        m_relationships = std::clamp(m_relationships + (m_socialBlocks * 4) - (m_workBlocks), 0, 100);
+
+        std::wstring consequence;
+        if (m_recoveryBlocks == 0)
+        {
+            consequence += L"Lack of sleep lowered performance readiness and increased injury risk. ";
+        }
+
+        if (m_trainingBlocks >= 6)
+        {
+            consequence += L"Extra training boosted stats but pushed up fatigue. ";
+        }
+
+        if (m_workBlocks >= 4)
+        {
+            consequence += L"Heavy work schedule improved finances while reducing recovery quality. ";
+        }
+
+        if (m_socialBlocks >= 4)
+        {
+            consequence += L"Social time improved morale and relationships, but discipline dipped. ";
+            m_discipline = std::clamp(m_discipline - 4, 0, 100);
+        }
+
+        if (consequence.empty())
+        {
+            consequence = L"Balanced week. No major penalties triggered.";
+        }
+
+        ConsequenceText().Text(hstring(consequence));
+
+        m_lastChoice = L"Week simulated with blocks T:" + to_hstring(m_trainingBlocks) +
+            L" S:" + to_hstring(m_schoolBlocks) +
+            L" W:" + to_hstring(m_workBlocks) +
+            L" So:" + to_hstring(m_socialBlocks) +
+            L" R:" + to_hstring(m_recoveryBlocks);
+
+        GameState::LastChoice = m_lastChoice.c_str();
+        UpdateStateUI();
     }
 
     void CareerHubPage::LoadPlayerData()
@@ -97,8 +242,8 @@ namespace winrt::thefootballife::implementation
         {
             StatusText().Text(L"Status: Emerging Prospect");
             SeasonText().Text(L"Season Phase: Mid-Season Push");
-            WeeklyOutlookText().Text(L"Momentum is building. Your weekly choices are starting to shape how coaches and recruiters see you.");
-            DevelopmentText().Text(L"Your development path is becoming clearer as consistency starts to matter more.");
+            WeeklyOutlookText().Text(L"Momentum is building. Your weekly choices are shaping both your football ceiling and off-field life.");
+            DevelopmentText().Text(L"Coaches now track your consistency, discipline, and resilience week-to-week.");
         }
     }
 
@@ -134,11 +279,39 @@ namespace winrt::thefootballife::implementation
         UpdateWeekDisplay();
     }
 
+    void CareerHubPage::IncrementBlockButton_Click(IInspectable const& sender, RoutedEventArgs const&)
+    {
+        auto button = sender.try_as<Button>();
+        if (!button)
+            return;
+
+        auto tag = unbox_value_or<hstring>(button.Tag(), L"");
+        AdjustBlockByTag(tag, 1);
+    }
+
+    void CareerHubPage::DecrementBlockButton_Click(IInspectable const& sender, RoutedEventArgs const&)
+    {
+        auto button = sender.try_as<Button>();
+        if (!button)
+            return;
+
+        auto tag = unbox_value_or<hstring>(button.Tag(), L"");
+        AdjustBlockByTag(tag, -1);
+    }
+
     void CareerHubPage::AdvanceWeekButton_Click(IInspectable const&, RoutedEventArgs const&)
     {
+        if (BlocksUsed() != kTotalBlocks)
+        {
+            BottomHintText().Text(L"You must allocate exactly 14 blocks before advancing.");
+            return;
+        }
+
+        ApplyWeekSimulation();
+
         m_currentWeek++;
         GameState::CurrentWeek = m_currentWeek;
-        BottomHintText().Text(L"The week has advanced. Keep shaping your career with each decision.");
+        BottomHintText().Text(L"Week advanced. Simulation outcomes applied to your player state.");
         UpdateWeekDisplay();
     }
 
