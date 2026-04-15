@@ -206,6 +206,7 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <TextBlock x:Name="BottomHintText"
@@ -222,16 +223,16 @@
                     Margin="0,0,10,0"/>
 
             <Button Grid.Column="2"
-                    Content="Exit to My Career"
-                    Click="ExitToMyCareerButton_Click"
-                    MinWidth="170"
+                    Content="Advance Week"
+                    Click="AdvanceWeekButton_Click"
+                    MinWidth="160"
                     MinHeight="44"
                     Margin="0,0,10,0"/>
 
             <Button Grid.Column="3"
-                    Content="Advance Week"
-                    Click="AdvanceWeekButton_Click"
-                    MinWidth="160"
+                    Content="Exit to Main Menu"
+                    Click="ExitToMainMenuButton_Click"
+                    MinWidth="170"
                     MinHeight="44"/>
         </Grid>
     </Grid>

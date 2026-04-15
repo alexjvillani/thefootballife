@@ -223,4 +223,14 @@ namespace winrt::thefootballife::implementation
             }
         );
     }
+
+    void CareerHubPage::ExitToMainMenuButton_Click(IInspectable const&, RoutedEventArgs const&)
+    {
+        Frame().Navigate(
+            winrt::Windows::UI::Xaml::Interop::TypeName{
+                L"thefootballife.MainMenuPage",
+                winrt::Windows::UI::Xaml::Interop::TypeKind::Custom
+            }
+        );
+    }
 }

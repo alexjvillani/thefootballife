@@ -38,6 +38,10 @@ namespace winrt::thefootballife::implementation
             winrt::Windows::Foundation::IInspectable const& sender,
             winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
 
+        void ExitToMainMenuButton_Click(
+            winrt::Windows::Foundation::IInspectable const& sender,
+            winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
+
     private:
         void LoadPlayerData();
         void UpdateWeekDisplay();
