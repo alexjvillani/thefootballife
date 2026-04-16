@@ -100,6 +100,7 @@ namespace winrt::thefootballife::implementation
         dialog.Title(box_value(L"Load Game"));
         dialog.Content(slotComboBox);
         dialog.PrimaryButtonText(L"Load");
+        dialog.SecondaryButtonText(L"Delete");
         dialog.CloseButtonText(L"Cancel");
         dialog.XamlRoot(this->XamlRoot());
 
@@ -109,44 +110,91 @@ namespace winrt::thefootballife::implementation
             {
                 if (auto self = weakThis.get())
                 {
-                    if (operation.GetResults() != ContentDialogResult::Primary)
-                    {
-                        return;
-                    }
-
+                    ContentDialogResult result = operation.GetResults();
                     int slot = static_cast<int>(slotComboBox.SelectedIndex()) + 1;
-                    PlayerData loadedPlayer;
-                    int loadedWeek = 1;
-                    std::wstring loadedChoice;
 
-                    bool loaded = SaveGameService::LoadFromSlot(
-                        slot,
-                        loadedPlayer,
-                        loadedWeek,
-                        loadedChoice
-                    );
-
-                    if (!loaded)
+                    if (slot < 1 || slot > SaveGameService::MaxSaveSlots)
                     {
-                        ContentDialog failDialog;
-                        failDialog.Title(box_value(L"Load Failed"));
-                        failDialog.Content(box_value(L"Could not read the selected save slot."));
-                        failDialog.CloseButtonText(L"OK");
-                        failDialog.XamlRoot(self->XamlRoot());
-                        failDialog.ShowAsync();
                         return;
                     }
 
-                    GameState::CurrentPlayer = loadedPlayer;
-                    GameState::CurrentWeek = loadedWeek;
-                    GameState::LastChoice = loadedChoice;
+                    if (result == ContentDialogResult::Primary)
+                    {
+                        PlayerData loadedPlayer;
+                        int loadedWeek = 1;
+                        std::wstring loadedChoice;
 
-                    self->Frame().Navigate(
-                        winrt::Windows::UI::Xaml::Interop::TypeName{
-                            L"thefootballife.CareerHubPage",
-                            winrt::Windows::UI::Xaml::Interop::TypeKind::Custom
+                        bool loaded = SaveGameService::LoadFromSlot(
+                            slot,
+                            loadedPlayer,
+                            loadedWeek,
+                            loadedChoice
+                        );
+
+                        if (!loaded)
+                        {
+                            ContentDialog failDialog;
+                            failDialog.Title(box_value(L"Load Failed"));
+                            failDialog.Content(box_value(L"Could not read the selected save slot."));
+                            failDialog.CloseButtonText(L"OK");
+                            failDialog.XamlRoot(self->XamlRoot());
+                            failDialog.ShowAsync();
+                            return;
                         }
-                    );
+
+                        GameState::CurrentPlayer = loadedPlayer;
+                        GameState::CurrentWeek = loadedWeek;
+                        GameState::LastChoice = loadedChoice;
+
+                        self->Frame().Navigate(
+                            winrt::Windows::UI::Xaml::Interop::TypeName{
+                                L"thefootballife.CareerHubPage",
+                                winrt::Windows::UI::Xaml::Interop::TypeKind::Custom
+                            }
+                        );
+                    }
+                    else if (result == ContentDialogResult::Secondary)
+                    {
+                        ContentDialog confirmDialog;
+                        confirmDialog.Title(box_value(L"Delete Save"));
+                        confirmDialog.Content(box_value(L"Are you sure you want to delete this save?"));
+                        confirmDialog.PrimaryButtonText(L"Delete");
+                        confirmDialog.CloseButtonText(L"Cancel");
+                        confirmDialog.XamlRoot(self->XamlRoot());
+
+                        auto weakSelf2 = self->get_weak();
+                        confirmDialog.ShowAsync().Completed(
+                            [weakSelf2, slot](auto const& confirmOperation, auto const&)
+                            {
+                                if (auto self2 = weakSelf2.get())
+                                {
+                                    if (confirmOperation.GetResults() != ContentDialogResult::Primary)
+                                    {
+                                        return;
+                                    }
+
+                                    bool deleted = SaveGameService::DeleteSlot(slot);
+
+                                    ContentDialog resultDialog;
+                                    resultDialog.XamlRoot(self2->XamlRoot());
+
+                                    if (deleted)
+                                    {
+                                        resultDialog.Title(box_value(L"Save Deleted"));
+                                        resultDialog.Content(box_value(L"The selected save slot was deleted."));
+                                    }
+                                    else
+                                    {
+                                        resultDialog.Title(box_value(L"Delete Failed"));
+                                        resultDialog.Content(box_value(L"Could not delete the selected save slot."));
+                                    }
+
+                                    resultDialog.CloseButtonText(L"OK");
+                                    resultDialog.ShowAsync();
+                                }
+                            }
+                        );
+                    }
                 }
             }
         );

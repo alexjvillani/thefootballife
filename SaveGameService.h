@@ -23,6 +23,9 @@ namespace SaveGameService
         int& currentWeek,
         std::wstring& lastChoice
     );
-
+    
+    bool DeleteSlot(int slot);
     bool GetSavePreview(int slot, std::wstring& playerName, int& week);
+
+
 }

@@ -5,8 +5,10 @@
 #include <fstream>
 #include <string>
 #include <unordered_map>
+#include <filesystem>
 
 using namespace winrt::Windows::Storage;
+namespace fs = std::filesystem;
 
 namespace
 {
@@ -230,5 +232,22 @@ namespace SaveGameService
         }
 
         return true;
+    }
+
+    bool DeleteSlot(int slot)
+    {
+        if (slot < 1 || slot > MaxSaveSlots)
+        {
+            return false;
+        }
+
+        std::wstring path = GetSaveSlotPath(slot);
+
+        if (!fs::exists(path))
+        {
+            return false;
+        }
+
+        return fs::remove(path);
     }
 }
