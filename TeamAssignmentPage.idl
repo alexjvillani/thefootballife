@@ -1,0 +1,8 @@
+namespace thefootballife
+{
+    runtimeclass TeamAssignmentPage : Microsoft.UI.Xaml.Controls.Page
+    {
+        TeamAssignmentPage();
+        String PageTitle;
+    }
+}

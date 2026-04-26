@@ -49,7 +49,13 @@ namespace winrt::thefootballife::implementation
             L"A developing prospect building toward a bigger football future."
         );
 
-        TeamText().Text(L"Supported Team: " + hstring(player.team));
+        std::wstring teamText = L"Supported Team: " + player.team;
+        if (!player.originalTeam.empty())
+        {
+            teamText += L"\nOriginal Team: " + player.originalTeam + L" (" + player.originalTeamPrimaryColour + L" / " + player.originalTeamSecondaryColour + L")";
+        }
+
+        TeamText().Text(hstring(teamText));
         PositionText().Text(L"Position: " + hstring(player.position));
 
         if (player.mentalityXFactor.empty())

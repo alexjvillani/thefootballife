@@ -97,6 +97,11 @@
                                    Foreground="White"
                                    FontSize="16"/>
 
+                        <TextBlock x:Name="OriginalTeamText"
+                                   Text="Original Team: To be generated on next screen"
+                                   Foreground="White"
+                                   FontSize="16"/>
+
                         <TextBlock x:Name="StateText"
                                    Text="State of Origin: Victoria"
                                    Foreground="White"
@@ -218,7 +223,7 @@
             <Button Content="Back"
                     Click="BackButton_Click"/>
 
-            <Button Content="Start Career"
+            <Button Content="Generate Team"
                     Click="StartCareerButton_Click"/>
         </StackPanel>
     </Grid>
