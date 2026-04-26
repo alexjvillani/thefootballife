@@ -204,9 +204,13 @@ namespace winrt::thefootballife::implementation
         }
 
         PlayerNameText().Text(hstring(player.firstName + L" " + player.lastName));
-        PlayerInfoText().Text(
-            hstring(player.position + L" | " + player.foot + L" Foot | #" + player.number)
-        );
+        std::wstring teamLine = player.position + L" | " + player.foot + L" Foot | #" + player.number;
+        if (!player.originalTeam.empty())
+        {
+            teamLine += L" | Original Club: " + player.originalTeam;
+        }
+
+        PlayerInfoText().Text(hstring(teamLine));
 
         HeightText().Text(L"Height: " + FormatHeightFeet(player.heightCm));
 

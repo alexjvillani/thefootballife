@@ -62,6 +62,11 @@ namespace winrt::thefootballife::implementation
         FootText().Text(L"Preferred Foot: " + hstring(player.foot));
         NumberText().Text(L"Number: " + hstring(player.number));
         TeamText().Text(L"Supported Team: " + hstring(player.team));
+
+        if (player.originalTeam.empty())
+            OriginalTeamText().Text(L"Original Team: To be generated on next screen");
+        else
+            OriginalTeamText().Text(L"Original Team: " + hstring(player.originalTeam));
         StateText().Text(L"State of Origin: " + hstring(player.state));
         SchoolText().Text(L"School Type: " + hstring(player.schoolType));
         RegionText().Text(L"Region: " + hstring(player.region));
@@ -121,7 +126,7 @@ namespace winrt::thefootballife::implementation
     {
         Frame().Navigate(
             winrt::Windows::UI::Xaml::Interop::TypeName{
-                L"thefootballife.CareerHubPage",
+                L"thefootballife.TeamAssignmentPage",
                 winrt::Windows::UI::Xaml::Interop::TypeKind::Custom
             }
         );

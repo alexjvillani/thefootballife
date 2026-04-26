@@ -535,6 +535,10 @@ namespace winrt::thefootballife::implementation
 
         // Replace this later if you store the actual random prospect image path
         GameState::CurrentPlayer.profileImagePath = L"ms-appx:///Assets/StoreLogo.png";
+        GameState::CurrentPlayer.originalTeam.clear();
+        GameState::CurrentPlayer.originalTeamSuburb.clear();
+        GameState::CurrentPlayer.originalTeamPrimaryColour.clear();
+        GameState::CurrentPlayer.originalTeamSecondaryColour.clear();
 
         std::wstring summary =
             L"Player Created!\n\nName: " + std::wstring(GetFullName()) +

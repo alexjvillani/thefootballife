@@ -9,6 +9,10 @@ struct PlayerData
     std::wstring foot;
     std::wstring number;
     std::wstring team;
+    std::wstring originalTeam;
+    std::wstring originalTeamSuburb;
+    std::wstring originalTeamPrimaryColour;
+    std::wstring originalTeamSecondaryColour;
     std::wstring state;
     std::wstring schoolType;
     std::wstring region;

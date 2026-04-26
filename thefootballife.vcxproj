@@ -142,6 +142,9 @@
     </ClInclude>
     <ClInclude Include="PlayerData.h" />
     <ClInclude Include="SaveGameService.h" />
+    <ClInclude Include="TeamAssignmentPage.xaml.h">
+      <DependentUpon>TeamAssignmentPage.xaml</DependentUpon>
+    </ClInclude>
     <ClInclude Include="XFactorPage.xaml.h">
       <DependentUpon>XFactorPage.xaml</DependentUpon>
     </ClInclude>
@@ -158,6 +161,7 @@
     <Page Include="PlayerCreationPage.xaml">
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="TeamAssignmentPage.xaml" />
     <Page Include="XFactorPage.xaml" />
   </ItemGroup>
   <ItemGroup>
@@ -188,6 +192,9 @@
       <DependentUpon>PlayerCreationPage.xaml</DependentUpon>
     </ClCompile>
     <ClCompile Include="SaveGameService.cpp" />
+    <ClCompile Include="TeamAssignmentPage.xaml.cpp">
+      <DependentUpon>TeamAssignmentPage.xaml</DependentUpon>
+    </ClCompile>
     <ClCompile Include="XFactorPage.xaml.cpp">
       <DependentUpon>XFactorPage.xaml</DependentUpon>
     </ClCompile>
@@ -202,6 +209,7 @@
     </Midl>
     <Midl Include="MyCareerPage.idl" />
     <Midl Include="PlayerCreationPage.idl" />
+    <Midl Include="TeamAssignmentPage.idl" />
     <Midl Include="XFactorPage.idl" />
   </ItemGroup>
   <ItemGroup>

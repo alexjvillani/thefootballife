@@ -7,12 +7,14 @@
     <Page Include="MainWindow.xaml" />
     <Page Include="MainMenuPage.xaml" />
     <Page Include="PlayerCreationPage.xaml" />
+    <Page Include="TeamAssignmentPage.xaml" />
     <Page Include="XFactorPage.xaml" />
   </ItemGroup>
   <ItemGroup>
     <Midl Include="MainWindow.idl" />
     <Midl Include="MainMenuPage.idl" />
     <Midl Include="PlayerCreationPage.idl" />
+    <Midl Include="TeamAssignmentPage.idl" />
     <Midl Include="XFactorPage.idl" />
   </ItemGroup>
   <ItemGroup>

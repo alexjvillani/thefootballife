@@ -85,6 +85,10 @@ namespace SaveGameService
         file << L"Foot=" << player.foot << L"\n";
         file << L"Number=" << player.number << L"\n";
         file << L"Team=" << player.team << L"\n";
+        file << L"OriginalTeam=" << player.originalTeam << L"\n";
+        file << L"OriginalTeamSuburb=" << player.originalTeamSuburb << L"\n";
+        file << L"OriginalTeamPrimaryColour=" << player.originalTeamPrimaryColour << L"\n";
+        file << L"OriginalTeamSecondaryColour=" << player.originalTeamSecondaryColour << L"\n";
         file << L"State=" << player.state << L"\n";
         file << L"SchoolType=" << player.schoolType << L"\n";
         file << L"Region=" << player.region << L"\n";
@@ -142,6 +146,10 @@ namespace SaveGameService
         player.number = values[L"Number"];
         player.team = values[L"Team"];
         player.state = values[L"State"];
+        player.originalTeam = values[L"OriginalTeam"];
+        player.originalTeamSuburb = values[L"OriginalTeamSuburb"];
+        player.originalTeamPrimaryColour = values[L"OriginalTeamPrimaryColour"];
+        player.originalTeamSecondaryColour = values[L"OriginalTeamSecondaryColour"];
         player.schoolType = values[L"SchoolType"];
         player.region = values[L"Region"];
         player.familySituation = values[L"FamilySituation"];
