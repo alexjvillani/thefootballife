@@ -9,6 +9,10 @@
     <Page Include="PlayerCreationPage.xaml" />
     <Page Include="TeamAssignmentPage.xaml" />
     <Page Include="XFactorPage.xaml" />
+    <Page Include="CareerHubPage.xaml" />
+    <Page Include="ConfirmPlayerPage.xaml" />
+    <Page Include="MyCareerPage.xaml" />
+    <Page Include="CreditPage.xaml" />
   </ItemGroup>
   <ItemGroup>
     <Midl Include="MainWindow.idl" />
@@ -16,13 +20,22 @@
     <Midl Include="PlayerCreationPage.idl" />
     <Midl Include="TeamAssignmentPage.idl" />
     <Midl Include="XFactorPage.idl" />
+    <Midl Include="CareerHubPage.idl" />
+    <Midl Include="ConfirmPlayerPage.idl" />
+    <Midl Include="MyCareerPage.idl" />
+    <Midl Include="CreditPage.idl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
+    <ClCompile Include="Gamestate.cpp" />
+    <ClCompile Include="SaveGameService.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
+    <ClInclude Include="Gamestate.h" />
+    <ClInclude Include="PlayerData.h" />
+    <ClInclude Include="SaveGameService.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Wide310x150Logo.scale-200.png">

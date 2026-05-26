@@ -6,6 +6,7 @@
 
 #include "PlayerCreationPage.xaml.h"
 #include "CareerHubPage.xaml.h"
+#include "CreditPage.xaml.h"
 #include "GameState.h"
 #include "SaveGameService.h"
 #include <winrt/Windows.UI.Xaml.Interop.h>
@@ -212,12 +213,12 @@ namespace winrt::thefootballife::implementation
 
     void MainMenuPage::Credits_Click(IInspectable const&, RoutedEventArgs const&)
     {
-        ContentDialog dialog;
-        dialog.Title(box_value(L"Credits"));
-        dialog.Content(box_value(L"The Football Life\nCreated by Alex Villani"));
-        dialog.CloseButtonText(L"OK");
-        dialog.XamlRoot(this->XamlRoot());
-        dialog.ShowAsync();
+        Frame().Navigate(
+            winrt::Windows::UI::Xaml::Interop::TypeName{
+                L"thefootballife.CreditPage",
+                winrt::Windows::UI::Xaml::Interop::TypeKind::Custom
+            }
+        );
     }
 
     void MainMenuPage::Exit_Click(IInspectable const&, RoutedEventArgs const&)

@@ -123,6 +123,9 @@
     <ClInclude Include="ConfirmPlayerPage.xaml.h">
       <DependentUpon>ConfirmPlayerPage.xaml</DependentUpon>
     </ClInclude>
+    <ClInclude Include="CreditPage.xaml.h">
+      <DependentUpon>CreditPage.xaml</DependentUpon>
+    </ClInclude>
     <ClInclude Include="Gamestate.h" />
     <ClInclude Include="MainMenuPage.xaml.h">
       <DependentUpon>MainMenuPage.xaml</DependentUpon>
@@ -153,6 +156,7 @@
     <ApplicationDefinition Include="App.xaml" />
     <Page Include="CareerHubPage.xaml" />
     <Page Include="ConfirmPlayerPage.xaml" />
+    <Page Include="CreditPage.xaml" />
     <Page Include="MainMenuPage.xaml">
       <SubType>Designer</SubType>
     </Page>
@@ -170,6 +174,9 @@
     </ClCompile>
     <ClCompile Include="ConfirmPlayerPage.xaml.cpp">
       <DependentUpon>ConfirmPlayerPage.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="CreditPage.xaml.cpp">
+      <DependentUpon>CreditPage.xaml</DependentUpon>
     </ClCompile>
     <ClCompile Include="Gamestate.cpp" />
     <ClCompile Include="MainMenuPage.xaml.cpp">
@@ -202,6 +209,7 @@
   <ItemGroup>
     <Midl Include="CareerHubPage.idl" />
     <Midl Include="ConfirmPlayerPage.idl" />
+    <Midl Include="CreditPage.idl" />
     <Midl Include="MainMenuPage.idl" />
     <Midl Include="MainWindow.idl">
       <SubType>Code</SubType>

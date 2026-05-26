@@ -1,0 +1,8 @@
+namespace thefootballife
+{
+    [default_interface]
+    runtimeclass CreditPage : Microsoft.UI.Xaml.Controls.Page
+    {
+        CreditPage();
+    }
+}
