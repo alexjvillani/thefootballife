@@ -6,6 +6,10 @@
 #include <string>
 #include <unordered_map>
 #include <filesystem>
+#include <ShlObj.h>
+
+#pragma comment(lib, "Shell32.lib")
+#pragma comment(lib, "Ole32.lib")
 
 using namespace winrt::Windows::Storage;
 namespace fs = std::filesystem;
@@ -28,12 +32,35 @@ namespace
 
 namespace SaveGameService
 {
+    std::wstring GetSaveFolder()
+    {
+        PWSTR path = nullptr;
+
+        HRESULT hr = SHGetKnownFolderPath(FOLDERID_Documents, 0, NULL, &path);
+        if (FAILED(hr))
+        {
+            return L"";
+        }
+
+        std::filesystem::path docPath(path);
+        CoTaskMemFree(path);
+
+        docPath /= L"The Football Life"; 
+
+        // ensure folder exists
+        std::filesystem::create_directories(docPath);
+
+        return docPath.wstring();
+    }
+
     std::wstring GetSaveSlotPath(int slot)
     {
-        std::wstring path = ApplicationData::Current().LocalFolder().Path().c_str();
+        std::wstring path = GetSaveFolder();
+
         path += L"\\career_save_slot";
         path += std::to_wstring(slot);
         path += L".txt";
+
         return path;
     }
 
