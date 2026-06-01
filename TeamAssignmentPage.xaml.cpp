@@ -18,7 +18,7 @@
 #include <cctype>
 #include <unordered_map>
 
-#include <Windows.h> // for MultiByteToWideChar
+#include <Windows.h>
 
 #include <winrt/Windows.UI.h>
 #include <winrt/Windows.UI.Text.h>
@@ -44,23 +44,17 @@ namespace
         return s.substr(l, r - l + 1);
     }
 
-    // Convert UTF-8 std::string to std::wstring using Win32 API (not deprecated)
     static std::wstring ToW(std::string const& s)
     {
         if (s.empty()) return {};
         int required = ::MultiByteToWideChar(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), nullptr, 0);
-        if (required == 0)
-        {
-            // fallback: widen ASCII
-            return std::wstring(s.begin(), s.end());
-        }
+        if (required == 0) return std::wstring(s.begin(), s.end());
         std::wstring out;
         out.resize(required);
         ::MultiByteToWideChar(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), &out[0], required);
         return out;
     }
 
-    // RFC-style simple CSV parser supporting quoted fields and commas inside quotes.
     static std::vector<std::string> ParseCsvLine(std::string const& line)
     {
         std::vector<std::string> out;
@@ -74,70 +68,34 @@ namespace
             {
                 if (c == '"')
                 {
-                    // If next char is also a quote, that's an escaped quote.
-                    if (i + 1 < line.size() && line[i + 1] == '"')
-                    {
-                        cur.push_back('"');
-                        ++i;
-                    }
-                    else
-                    {
-                        inQuotes = false;
-                    }
+                    if (i + 1 < line.size() && line[i + 1] == '"') { cur.push_back('"'); ++i; }
+                    else inQuotes = false;
                 }
-                else
-                {
-                    cur.push_back(c);
-                }
+                else cur.push_back(c);
             }
             else
             {
-                if (c == '"')
-                {
-                    inQuotes = true;
-                }
-                else if (c == ',')
-                {
-                    out.push_back(TrimAscii(cur));
-                    cur.clear();
-                }
-                else
-                {
-                    cur.push_back(c);
-                }
+                if (c == '"') inQuotes = true;
+                else if (c == ',') { out.push_back(TrimAscii(cur)); cur.clear(); }
+                else cur.push_back(c);
             }
         }
-
         out.push_back(TrimAscii(cur));
-        return out;
-    }
-
-    static std::vector<std::wstring> ParseCsvLineToW(std::string const& line)
-    {
-        auto parts = ParseCsvLine(line);
-        std::vector<std::wstring> out;
-        out.reserve(parts.size());
-        for (auto const& p : parts) out.push_back(ToW(p));
         return out;
     }
 
     static std::string NormalizeHeader(std::string s)
     {
-        // lower-case, remove spaces and punctuation for loose matching
         std::string out;
         out.reserve(s.size());
         for (char c : s)
-        {
             if (std::isalnum(static_cast<unsigned char>(c)))
-            {
                 out.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
-            }
-        }
         return out;
     }
 
-    // Find index in header map by multiple accepted names.
-    static int FindHeaderIndex(std::unordered_map<std::string, int> const& map, std::initializer_list<std::string> names)
+    static int FindHeaderIndex(std::unordered_map<std::string, int> const& map,
+        std::initializer_list<std::string> names)
     {
         for (auto const& n : names)
         {
@@ -147,22 +105,112 @@ namespace
         return -1;
     }
 
-    // Helpers to read small UTF-8 files
     static std::vector<std::string> ReadLinesUtf8AsciiTrim(std::string const& path)
     {
         std::vector<std::string> lines;
         std::ifstream file(path);
         if (!file.is_open()) return lines;
         std::string line;
-        while (std::getline(file, line))
-        {
-            auto t = TrimAscii(line);
-            lines.push_back(t);
-        }
+        while (std::getline(file, line)) lines.push_back(TrimAscii(line));
         return lines;
     }
 
-    // Load fallback component files if present
+    static void TrimUtf8Bom(std::string& s)
+    {
+        const unsigned char bom[] = { 0xEFu, 0xBBu, 0xBFu };
+        if (s.size() >= 3 &&
+            static_cast<unsigned char>(s[0]) == bom[0] &&
+            static_cast<unsigned char>(s[1]) == bom[1] &&
+            static_cast<unsigned char>(s[2]) == bom[2])
+            s.erase(0, 3);
+    }
+
+    static bool FileExists(std::string const& path)
+    {
+        if (path.empty()) return false;
+        std::ifstream f(path, std::ios::binary);
+        return f.is_open();
+    }
+
+    static std::string FindLocalTeamsCsv()
+    {
+        const std::string csvRelative = "Assets\\Data\\localteams.csv";
+
+        std::vector<std::string> candidates;
+
+        // Current working directory (VS sets this to the .vcxproj folder by default)
+        {
+            char cwdBuf[MAX_PATH] = {};
+            if (GetCurrentDirectoryA(MAX_PATH, cwdBuf) > 0)
+            {
+                std::string cwd(cwdBuf);
+                
+                while (!cwd.empty() && (cwd.back() == '\\' || cwd.back() == '/'))
+                    cwd.pop_back();
+
+                candidates.push_back(cwd + "\\" + csvRelative);
+                
+                candidates.push_back(cwd + "\\..\\" + csvRelative);
+                candidates.push_back(cwd + "\\..\\..\\" + csvRelative);
+            }
+        }
+
+        // --- 2. Directory containing the exe ---
+        {
+            char exeBuf[MAX_PATH] = {};
+            if (GetModuleFileNameA(nullptr, exeBuf, MAX_PATH) > 0)
+            {
+                std::string exePath(exeBuf);
+                auto pos = exePath.find_last_of("\\/");
+                if (pos != std::string::npos)
+                {
+                    std::string exeDir = exePath.substr(0, pos);
+                    candidates.push_back(exeDir + "\\" + csvRelative);
+                    // x64\Debug -> project root is two levels up
+                    candidates.push_back(exeDir + "\\..\\" + csvRelative);
+                    candidates.push_back(exeDir + "\\..\\..\\" + csvRelative);
+                }
+            }
+        }
+
+        // --- 3. All drive letters, common project folder names ---
+        {
+            const std::vector<std::string> projectRoots =
+            {
+                "thefootballife",
+                "thefootball_life",
+                "FootballLife",
+                "football_life",
+            };
+
+            DWORD driveMask = GetLogicalDrives();
+            for (int i = 2; i < 26; ++i) // skip A/B
+            {
+                if (!(driveMask & (1u << i))) continue;
+                char dl = 'A' + static_cast<char>(i);
+                std::string driveRoot;
+                driveRoot += dl;
+                driveRoot += ":\\";
+                for (auto const& root : projectRoots)
+                    candidates.push_back(driveRoot + root + "\\" + csvRelative);
+            }
+        }
+
+        // --- Diagnostic: print every candidate to VS Output window ---
+        OutputDebugStringA("[TeamAssignment] Searching for localteams.csv:\n");
+        for (auto const& p : candidates)
+        {
+            std::string msg = "  trying: " + p;
+            bool found = FileExists(p);
+            msg += found ? " -> FOUND\n" : " -> not found\n";
+            OutputDebugStringA(msg.c_str());
+            if (found) return p;
+        }
+
+        OutputDebugStringA("[TeamAssignment] localteams.csv NOT FOUND in any location.\n");
+        return {};
+    }
+
     static std::vector<std::wstring> LoadMascots()
     {
         std::vector<std::wstring> out;
@@ -180,8 +228,7 @@ namespace
             auto parts = ParseCsvLine(l);
             if (parts.empty()) continue;
             std::string primary = TrimAscii(parts[0]);
-            std::string secondary;
-            if (parts.size() > 1) secondary = TrimAscii(parts[1]);
+            std::string secondary = parts.size() > 1 ? TrimAscii(parts[1]) : "";
             out.emplace_back(ToW(primary), ToW(secondary));
         }
         return out;
@@ -190,77 +237,12 @@ namespace
     static std::vector<std::wstring> LoadSuburbsForStateFromFile(std::wstring const& state)
     {
         std::string asciiState(state.begin(), state.end());
-        // replace spaces with underscore
         for (auto& c : asciiState) if (c == ' ') c = '_';
         std::string path = "Assets\\Data\\suburbs_" + asciiState + ".txt";
         std::vector<std::wstring> out;
         auto lines = ReadLinesUtf8AsciiTrim(path);
         for (auto const& l : lines) if (!l.empty()) out.push_back(ToW(l));
         return out;
-    }
-
-    // Find the CSV by checking several likely locations without using std::filesystem
-    static std::string FindLocalTeamsCsv()
-    {
-        std::vector<std::string> candidates;
-
-        // Basic relative candidate (project layout)
-        candidates.push_back("Assets\\Data\\localteams.csv");
-        candidates.push_back("Assets/Data/localteams.csv");
-
-        // Working directory
-        {
-            char cwdBuf[MAX_PATH] = { 0 };
-            if (GetCurrentDirectoryA(MAX_PATH, cwdBuf) > 0)
-            {
-                std::string cwd(cwdBuf);
-                candidates.push_back(cwd + "\\Assets\\Data\\localteams.csv");
-                candidates.push_back(cwd + "\\Assets\\Data\\localteams.csv");
-                candidates.push_back(cwd + "\\..\\Assets\\Data\\localteams.csv");
-            }
-        }
-
-        // Executable directory
-        {
-            char exeBuf[MAX_PATH] = { 0 };
-            if (GetModuleFileNameA(nullptr, exeBuf, MAX_PATH) > 0)
-            {
-                std::string exePath(exeBuf);
-                auto pos = exePath.find_last_of("\\/");
-                if (pos != std::string::npos)
-                {
-                    std::string exeDir = exePath.substr(0, pos);
-                    candidates.push_back(exeDir + "\\Assets\\Data\\localteams.csv");
-                    candidates.push_back(exeDir + "\\..\\Assets\\Data\\localteams.csv");
-                }
-            }
-        }
-
-        // Try each candidate by opening it (avoids filesystem API)
-        for (auto const& p : candidates)
-        {
-            if (p.empty()) continue;
-            std::ifstream f(p, std::ios::binary);
-            if (f.is_open())
-            {
-                return p;
-            }
-        }
-
-        return std::string();
-    }
-
-    // Trim UTF-8 BOM (if present) from the start of a std::string
-    static void TrimUtf8Bom(std::string& s)
-    {
-        const unsigned char bom[] = { 0xEFu, 0xBBu, 0xBFu };
-        if (s.size() >= 3 &&
-            static_cast<unsigned char>(s[0]) == bom[0] &&
-            static_cast<unsigned char>(s[1]) == bom[1] &&
-            static_cast<unsigned char>(s[2]) == bom[2])
-        {
-            s.erase(0, 3);
-        }
     }
 }
 
@@ -272,131 +254,142 @@ namespace winrt::thefootballife::implementation
         GenerateTeamAssignment(true);
     }
 
-    hstring TeamAssignmentPage::PageTitle()
-    {
-        return m_pageTitle;
-    }
-
-    void TeamAssignmentPage::PageTitle(hstring const& value)
-    {
-        m_pageTitle = value;
-    }
+    hstring TeamAssignmentPage::PageTitle() { return m_pageTitle; }
+    void    TeamAssignmentPage::PageTitle(hstring const& value) { m_pageTitle = value; }
 
     std::wstring TeamAssignmentPage::ResolvePlayerState() const
     {
         std::wstring state = GameState::CurrentPlayer.state;
-
-        if (state.empty())
-        {
-            return L"Victoria";
-        }
-
-        return state;
+        return state.empty() ? L"Victoria" : state;
     }
 
-    std::vector<TeamAssignmentPage::TeamProfile> TeamAssignmentPage::BuildTeamsForState(std::wstring const& state)
+    std::vector<TeamAssignmentPage::TeamProfile>
+        TeamAssignmentPage::BuildTeamsForState(std::wstring const& state)
     {
         const int desiredCount = 10;
         std::vector<TeamProfile> teams;
 
-        // Try to load CSV with header mapping (preferred).
+        
+        std::string csvPath = FindLocalTeamsCsv();
+
+        if (!csvPath.empty())
         {
-            std::string csvPath = FindLocalTeamsCsv();
-            if (!csvPath.empty())
+            std::ifstream file(csvPath, std::ios::binary);
+            if (file.is_open())
             {
-                std::ifstream file(csvPath, std::ios::binary);
-                if (file.is_open())
+                OutputDebugStringA("[TeamAssignment] CSV opened OK.\n");
+
+                std::string headerLine;
+                if (std::getline(file, headerLine))
                 {
-                    std::string headerLine;
-                    if (!std::getline(file, headerLine))
+                    TrimUtf8Bom(headerLine);
+                    if (!headerLine.empty() && headerLine.back() == '\r')
+                        headerLine.pop_back();
+
+                    // Log header so we can see it in Output window
+                    OutputDebugStringA(("[TeamAssignment] Header: " + headerLine + "\n").c_str());
+
+                    auto headerParts = ParseCsvLine(headerLine);
+                    std::unordered_map<std::string, int> headerMap;
+                    for (size_t i = 0; i < headerParts.size(); ++i)
+                        headerMap[NormalizeHeader(headerParts[i])] = static_cast<int>(i);
+
+                    int idxState = FindHeaderIndex(headerMap, { "state" });
+                    int idxClub = FindHeaderIndex(headerMap, { "clubname", "club", "name" });
+                    int idxSuburb = FindHeaderIndex(headerMap, { "suburb", "location", "town" });
+                    int idxPrimary = FindHeaderIndex(headerMap, { "primary", "primarycolour", "primarycolor" });
+                    int idxSecondary = FindHeaderIndex(headerMap, { "secondary", "secondarycolour", "secondarycolor" });
+                    int idxDistance = FindHeaderIndex(headerMap, { "distance", "distancekm", "distancekms", "km" });
+
+                    // Log column mapping
                     {
-                        // empty file -> fall through to fallback generator
+                        char buf[256];
+                        snprintf(buf, sizeof(buf),
+                            "[TeamAssignment] Columns -> state:%d club:%d suburb:%d primary:%d secondary:%d distance:%d\n",
+                            idxState, idxClub, idxSuburb, idxPrimary, idxSecondary, idxDistance);
+                        OutputDebugStringA(buf);
                     }
-                    else
+
+                    bool hasHeaderMapping = (idxState != -1) && (idxClub != -1 || idxSuburb != -1);
+
+                    std::string row;
+                    int rowCount = 0, matchCount = 0;
+                    while (std::getline(file, row))
                     {
-                        // remove possible UTF-8 BOM from first line
-                        TrimUtf8Bom(headerLine);
+                        if (!row.empty() && row.back() == '\r') row.pop_back();
+                        if (row.empty()) continue;
+                        TrimUtf8Bom(row);
+                        ++rowCount;
 
-                        auto headerParts = ParseCsvLine(headerLine);
-                        std::unordered_map<std::string, int> headerMap;
-                        for (size_t i = 0; i < headerParts.size(); ++i)
+                        auto parts = ParseCsvLine(row);
+
+                        if (hasHeaderMapping)
                         {
-                            headerMap[NormalizeHeader(headerParts[i])] = static_cast<int>(i);
-                        }
+                            std::wstring rowState;
+                            if (idxState >= 0 && idxState < static_cast<int>(parts.size()))
+                                rowState = ToW(parts[idxState]);
 
-                        // Acceptable header aliases
-                        int idxState = FindHeaderIndex(headerMap, { "state" });
-                        int idxClub = FindHeaderIndex(headerMap, { "clubname", "club", "clubname" });
-                        int idxSuburb = FindHeaderIndex(headerMap, { "suburb" });
-                        int idxPrimary = FindHeaderIndex(headerMap, { "primary", "primarycolour", "primarycolor" });
-                        int idxSecondary = FindHeaderIndex(headerMap, { "secondary", "secondarycolour", "secondarycolor" });
-                        int idxDistance = FindHeaderIndex(headerMap, { "distance", "distancekm", "distance_km" });
+                            if (rowState != state) continue;
+                            ++matchCount;
 
-                        bool hasHeaderMapping = idxState != -1 && (idxClub != -1 || idxSuburb != -1);
-
-                        std::string row;
-                        while (std::getline(file, row))
-                        {
-                            if (row.empty()) continue;
-                            TrimUtf8Bom(row); // defensive: trim BOM on any accidental re-save
-                            auto parts = ParseCsvLine(row);
-                            if (hasHeaderMapping)
+                            TeamProfile team;
+                            if (idxClub >= 0 && idxClub < static_cast<int>(parts.size()))
+                                team.name = ToW(parts[idxClub]);
+                            if (idxSuburb >= 0 && idxSuburb < static_cast<int>(parts.size()))
+                                team.suburb = ToW(parts[idxSuburb]);
+                            if (idxPrimary >= 0 && idxPrimary < static_cast<int>(parts.size()))
+                                team.primaryColour = ToW(parts[idxPrimary]);
+                            if (idxSecondary >= 0 && idxSecondary < static_cast<int>(parts.size()))
+                                team.secondaryColour = ToW(parts[idxSecondary]);
+                            if (idxDistance >= 0 && idxDistance < static_cast<int>(parts.size()))
                             {
-                                std::wstring rowState;
-                                if (idxState >= 0 && idxState < static_cast<int>(parts.size()))
-                                    rowState = ToW(parts[idxState]);
-                                else
-                                    rowState.clear();
-
-                                if (rowState != state) continue;
-
-                                TeamProfile team;
-                                if (idxClub >= 0 && idxClub < static_cast<int>(parts.size())) team.name = ToW(parts[idxClub]);
-                                if (idxSuburb >= 0 && idxSuburb < static_cast<int>(parts.size())) team.suburb = ToW(parts[idxSuburb]);
-                                if (idxPrimary >= 0 && idxPrimary < static_cast<int>(parts.size())) team.primaryColour = ToW(parts[idxPrimary]);
-                                if (idxSecondary >= 0 && idxSecondary < static_cast<int>(parts.size())) team.secondaryColour = ToW(parts[idxSecondary]);
-
-                                if (idxDistance >= 0 && idxDistance < static_cast<int>(parts.size()))
-                                {
-                                    try { team.baseDistanceKm = std::stoi(parts[idxDistance]); }
-                                    catch (...) { team.baseDistanceKm = 0; }
-                                }
-                                else
-                                {
-                                    team.baseDistanceKm = 0;
-                                }
-
-                                if (team.name.empty() && !team.suburb.empty())
-                                {
-                                    team.name = BuildClubName(team.suburb, L"FC");
-                                }
-
-                                teams.push_back(team);
-                            }
-                            else
-                            {
-                                // fallback ordered columns: State, League, ClubName, Suburb, Primary, Secondary, Distance
-                                if (parts.size() < 7) continue;                 
-                                std::wstring rowState = ToW(parts[0]);
-                                if (rowState != state) continue;
-
-                                TeamProfile team;
-                                team.name = ToW(parts[2]);
-                                team.suburb = ToW(parts[3]);
-                                team.primaryColour = ToW(parts[4]);
-                                team.secondaryColour = ToW(parts[5]);
-                                try { team.baseDistanceKm = std::stoi(parts[6]); }
+                                try { team.baseDistanceKm = std::stoi(parts[idxDistance]); }
                                 catch (...) { team.baseDistanceKm = 0; }
-
-                                teams.push_back(team);
                             }
+
+                            if (team.name.empty() && !team.suburb.empty())
+                                team.name = BuildClubName(team.suburb, L"FC");
+
+                            if (!team.name.empty())
+                                teams.push_back(team);
                         }
+                        else
+                        {
+                            // Ordered fallback: State, League, ClubName, Suburb, Primary, Secondary, Distance
+                            if (parts.size() < 7) continue;
+                            if (ToW(parts[0]) != state) continue;
+                            ++matchCount;
+
+                            TeamProfile team;
+                            team.name = ToW(parts[2]);
+                            team.suburb = ToW(parts[3]);
+                            team.primaryColour = ToW(parts[4]);
+                            team.secondaryColour = ToW(parts[5]);
+                            try { team.baseDistanceKm = std::stoi(parts[6]); }
+                            catch (...) { team.baseDistanceKm = 0; }
+                            if (!team.name.empty()) teams.push_back(team);
+                        }
+                    }
+
+                    // Log summary
+                    {
+                        std::wstring stateLabel = state;
+                        std::string stateA(stateLabel.begin(), stateLabel.end());
+                        char buf[256];
+                        snprintf(buf, sizeof(buf),
+                            "[TeamAssignment] Rows read: %d  Matching state '%s': %d  Teams loaded: %d\n",
+                            rowCount, stateA.c_str(), matchCount, static_cast<int>(teams.size()));
+                        OutputDebugStringA(buf);
                     }
                 }
             }
+            else
+            {
+                OutputDebugStringA("[TeamAssignment] CSV path found but could not open file.\n");
+            }
         }
 
-        // If we have CSV matches, randomize/truncate to desiredCount and return
+        // shuffle the CSV
         if (!teams.empty())
         {
             if (teams.size() > static_cast<size_t>(desiredCount))
@@ -409,47 +402,44 @@ namespace winrt::thefootballife::implementation
             return teams;
         }
 
-        // If CSV didn't provide data, try component files (suburbs/mascots/colours) and fall back to small defaults.
+        //fallback team code
+        OutputDebugStringA("[TeamAssignment] Falling back to generated teams.\n");
+
         auto suburbs = LoadSuburbsForStateFromFile(state);
         auto mascots = LoadMascots();
         auto colours = LoadColours();
 
         if (suburbs.empty())
-        {
-            suburbs = { L"Central", L"Northside", L"Southside", L"West End", L"East End", L"Riverside", L"Harbour", L"Hillside", L"Valley", L"Parkside" };
-        }
+            suburbs = { L"Central", L"Northside", L"Southside", L"West End", L"East End",
+                        L"Riverside", L"Harbour", L"Hillside", L"Valley", L"Parkside" };
 
         if (mascots.empty())
-        {
-            mascots = { L"Falcons", L"Storm", L"Rangers", L"Lions", L"Titans", L"Wolves", L"Roos", L"Jets", L"Sharks", L"Panthers" };
-        }
+            mascots = { L"Falcons", L"Storm", L"Rangers", L"Lions", L"Titans",
+                        L"Wolves", L"Roos", L"Jets", L"Sharks", L"Panthers" };
 
         if (colours.empty())
-        {
             colours =
-            {
-                { L"Navy", L"Gold" },
-                { L"Maroon", L"White" },
-                { L"Black", L"Red" },
-                { L"Royal Blue", L"Silver" },
-                { L"Forest Green", L"White" },
-                { L"Purple", L"Gold" },
-                { L"Teal", L"Black" },
-                { L"Crimson", L"White" },
-                { L"Sky Blue", L"Navy" },
-                { L"Orange", L"Charcoal" }
-            };
-        }
+        {
+            { L"Navy",         L"Gold"     },
+            { L"Maroon",       L"White"    },
+            { L"Black",        L"Red"      },
+            { L"Royal Blue",   L"Silver"   },
+            { L"Forest Green", L"White"    },
+            { L"Purple",       L"Gold"     },
+            { L"Teal",         L"Black"    },
+            { L"Crimson",      L"White"    },
+            { L"Sky Blue",     L"Navy"     },
+            { L"Orange",       L"Charcoal" }
+        };
 
         std::random_device rd;
         std::mt19937 gen(rd());
-
         std::shuffle(mascots.begin(), mascots.end(), gen);
         std::shuffle(colours.begin(), colours.end(), gen);
 
-        // Avoid potential macro conflicts with min by using explicit ternary expression.
-        size_t reserveCount = (suburbs.size() < static_cast<size_t>(desiredCount)) ? suburbs.size() : static_cast<size_t>(desiredCount);
-        teams.reserve(reserveCount);
+        size_t cap = (suburbs.size() < static_cast<size_t>(desiredCount))
+            ? suburbs.size() : static_cast<size_t>(desiredCount);
+        teams.reserve(cap);
 
         for (size_t i = 0; i < suburbs.size() && teams.size() < static_cast<size_t>(desiredCount); ++i)
         {
@@ -475,12 +465,8 @@ namespace winrt::thefootballife::implementation
             item.Background(SolidColorBrush(winrt::Windows::UI::ColorHelper::FromArgb(255, 38, 38, 38)));
 
             Microsoft::UI::Xaml::CornerRadius itemRadius{};
-            itemRadius.TopLeft = 8;
-            itemRadius.TopRight = 8;
-            itemRadius.BottomRight = 8;
-            itemRadius.BottomLeft = 8;
+            itemRadius.TopLeft = itemRadius.TopRight = itemRadius.BottomRight = itemRadius.BottomLeft = 8;
             item.CornerRadius(itemRadius);
-
             item.Padding(Thickness{ 10, 10, 10, 10 });
 
             StackPanel row;
@@ -492,19 +478,16 @@ namespace winrt::thefootballife::implementation
             title.FontWeight(winrt::Windows::UI::Text::FontWeights::SemiBold());
 
             TextBlock meta;
-
             std::wstring metaText =
                 L"Location: " + team.suburb +
-                L"  •  Club profile distance: " + std::to_wstring(team.baseDistanceKm) + L" km" +
-                L"  •  Colours: " + team.primaryColour + L" / " + team.secondaryColour;
-
+                L"  \u2022  Distance: " + std::to_wstring(team.baseDistanceKm) + L" km" +
+                L"  \u2022  Colours: " + team.primaryColour + L" / " + team.secondaryColour;
             meta.Text(hstring(metaText));
             meta.Foreground(SolidColorBrush(winrt::Windows::UI::ColorHelper::FromArgb(255, 210, 210, 210)));
             meta.TextWrapping(TextWrapping::Wrap);
 
             row.Children().Append(title);
             row.Children().Append(meta);
-
             item.Child(row);
             TeamsListPanel().Children().Append(item);
         }
@@ -515,39 +498,25 @@ namespace winrt::thefootballife::implementation
         std::wstring state = ResolvePlayerState();
 
         if (regenerateNames || m_stateTeams.empty())
-        {
             m_stateTeams = BuildTeamsForState(state);
-        }
 
         int targetDistance = GameState::CurrentPlayer.distanceToClubKm;
         int bestDiff = (std::numeric_limits<int>::max)();
-
         std::vector<size_t> candidates;
 
         for (size_t i = 0; i < m_stateTeams.size(); ++i)
         {
             int diff = std::abs(targetDistance - m_stateTeams[i].baseDistanceKm);
-
-            if (diff < bestDiff)
-            {
-                bestDiff = diff;
-                candidates.clear();
-                candidates.push_back(i);
-            }
-            else if (diff == bestDiff)
-            {
-                candidates.push_back(i);
-            }
+            if (diff < bestDiff) { bestDiff = diff; candidates.clear(); candidates.push_back(i); }
+            else if (diff == bestDiff) candidates.push_back(i);
         }
 
         size_t assignedIndex = 0;
-
         if (!candidates.empty())
         {
             std::random_device rd;
             std::mt19937 gen(rd());
             std::uniform_int_distribution<size_t> dist(0, candidates.size() - 1);
-
             assignedIndex = candidates[dist(gen)];
         }
 
@@ -555,27 +524,22 @@ namespace winrt::thefootballife::implementation
         m_hasAssignedTeam = true;
 
         HeaderText().Text(
-            L"Generated " + to_hstring(static_cast<int>(m_stateTeams.size())) + L" clubs in " + hstring(state) +
-            L" and matched the closest profile to your distance from club: " +
-            to_hstring(targetDistance) + L" km."
-        );
+            L"Generated " + to_hstring(static_cast<int>(m_stateTeams.size())) +
+            L" clubs in " + hstring(state) +
+            L" and matched the closest profile to your distance: " +
+            to_hstring(targetDistance) + L" km.");
 
-        StateTeamsTitleText().Text(to_hstring(static_cast<int>(m_stateTeams.size())) + L" generated clubs for " + hstring(state));
+        StateTeamsTitleText().Text(
+            to_hstring(static_cast<int>(m_stateTeams.size())) + L" generated clubs for " + hstring(state));
 
         AssignedTeamText().Text(hstring(m_assignedTeam.name));
         AssignedSuburbText().Text(L"Home suburb: " + hstring(m_assignedTeam.suburb));
-
         AssignedDistanceText().Text(
             L"Distance match: profile " + to_hstring(m_assignedTeam.baseDistanceKm) +
-            L" km (player: " + to_hstring(targetDistance) + L" km)"
-        );
-
+            L" km (player: " + to_hstring(targetDistance) + L" km)");
         AssignedColourText().Text(
-            L"Two-tone colours: " +
-            hstring(m_assignedTeam.primaryColour) +
-            L" / " +
-            hstring(m_assignedTeam.secondaryColour)
-        );
+            L"Two-tone colours: " + hstring(m_assignedTeam.primaryColour) +
+            L" / " + hstring(m_assignedTeam.secondaryColour));
 
         RenderTeamsList();
     }
@@ -587,10 +551,7 @@ namespace winrt::thefootballife::implementation
 
     void TeamAssignmentPage::ConfirmTeamButton_Click(IInspectable const&, RoutedEventArgs const&)
     {
-        if (!m_hasAssignedTeam)
-        {
-            return;
-        }
+        if (!m_hasAssignedTeam) return;
 
         GameState::CurrentPlayer.originalTeam = m_assignedTeam.name;
         GameState::CurrentPlayer.originalTeamSuburb = m_assignedTeam.suburb;
@@ -601,7 +562,6 @@ namespace winrt::thefootballife::implementation
             winrt::Windows::UI::Xaml::Interop::TypeName{
                 L"thefootballife.CareerHubPage",
                 winrt::Windows::UI::Xaml::Interop::TypeKind::Custom
-            }
-        );
+            });
     }
 }
