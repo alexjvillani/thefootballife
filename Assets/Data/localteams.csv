@@ -1,5 +1,78 @@
 State,Club Name,Suburb,Primary,Secondary,Distance
-Victoria,Richmond Falcons,Richmond,Navy,Gold,4
-Victoria,Geelong Rangers,Geelong,Blue,White,60
-Victoria,South Melbourne,South Melbourne,Blue,White,15
-Victoria,Heidelberg United,Heidelberg,Yellow,Black,18
+Victoria,Taylors Lakes Lions,Taylors Lakes,Blue,Yellow,4
+Victoria,Keilor Blues,Keilor,Blue,White,60
+Victoria,Spotswood Woodsmen,Spotswood,Green,Gold,15
+Victoria,Aberfeldie Sports Club,Aberfeldie,Yellow,Black,18
+Victoria,Ballarat Swans,Ballarat,Red,White,70
+Victoria,Fitzroy Lions,Fitzroy,Blue,Red,20
+Victoria,Blackburn Panthers,Blackburn,Black,Red,44
+Victoria,Inverloch Eagles,Inverloch,White,Blue,16
+Victoria,Portarlington Demons,Portarlington,Navy,Red,30
+Victoria,Bell Park Dragons,Bell Park,Green,White,25
+Victoria,Seaford Tigers,Seaford,Black,Yellow,30
+Victoria,Corowa-Rutherglen,Corowa,Blue,White,80
+Victoria,Traralgon Maroons,Traralgon,Maroon,White,20
+South Australia,Adelaide University,North Adelaide,Black,White,25
+South Australia,Imperial Blues,Murray Bridge,Light Blue,Navy,30
+South Australia,Ramblers Roosters,Murray Bridge,Red,White,50
+South Australia,Mallala Magpies,Mallala,Black,White,30
+South Australia,Victor Harbor Kangaroos,Victor Harbor,Blue,White,25
+South Australia,Meadows Bulldogs,Meadows,Green,Gold,30
+South Australia,Mount Burr Mozzies,Mount Burr,Yellow,Brown,10
+South Australia,Noarlunga Shoes,Old Noarlunga,Navy,White,15
+South Australia,Central Yorke Cougars,Maitland,Black,White,20
+South Australia,Marion Rams,Marion,Yellow,Brown,15
+South Australia,Plympton Bulldogs,Plympton Park,Red,Black,20
+South Australia,Modbury Hawks,Ridgehaven,Brown,Yellow,15
+Western Australia,North Fremantle Magpies,North Fremantle,Black,White,15
+Western Australia,Beverley Redbacks,Beverley,Red,Black,20
+Western Australia,Railway Tigers,Albany,Yellow,Black,30
+Western Australia,Kalgoorlie Kangaroos,Kalgoorie,Black,White,10
+Western Australia,Mount Barker Bulls,Mount Barker,Green,White,20
+Western Australia,Bunbury Bulldogs,Bunbury,Yellow,Black,40
+Western Australia,Donnybrook Dons,Donnybrook,Blue,White,70
+Western Australia,Deanmill Hawks,Deanmill,Brown,Yellow,50
+Western Australia,Jandakot Jets,Atwell,White,Red,30
+Western Australia,Koongamia Crows,Koongamia,Red,Navy,25
+Western Australia,Hammond Park Hurricanes,Hammond Park,Green,Navy,10
+Western Australia,Melville Rams,Melville,Gold,Green,12
+New South Wales,Penrith Rams,Penrith,Teal,Black,20
+New South Wales,Campbelltown Blues,Campbelltown,Navy,White,20
+New South Wales,Killarney Vale Bombers,Killarney Valley,Black,Red,15
+New South Wales,Southern Broken Hill Kangaroos,Broken Hill,Red,White,15
+New South Wales,Lockhart Demons,Riverina,Navy,Red,20
+New South Wales,Ungarie Magpies,Ungarie,Black,White,20
+New South Wales,Wagga Tigers,Wagga Wagga,Black,Yellow,30
+New South Wales,Wollongong Lions,Wollongong,Red,White,25
+New South Wales,Cardiff City Hawks,Cameron Park,Brown,Gold,35
+New South Wales,Manly Warringah Wolves,Manly,Maroon,White,20
+Queensland,Hermit Park Tigers,Annandale,Black ,Yellow,30
+Queensland,Northern Beaches Suns,Burdell,Light Blue,Red,25
+Queensland,Port Douglas Crocs,Port Douglas,Navy,White,30
+Queensland,Cairns City Lions,Holloways Beach,Navy,Green,40
+Queensland,Sandgate Hawks,Taigum,Green,Red,32
+Queensland,Springwood Pumas,Underwood,Navy,Yellow,15
+Queensland,Wynnum Vikings,Wynnum West,Light Blue,Navy,13
+Queensland,Coomera Magpies,Coomera,Black,White,20
+Queensland,North Mackay Saints,Beaconsfield,Black ,White,30
+Queensland,Bay Power,Urangan,Black,Teal,20
+Northern Territory,Canteen Creek Blues,Canteen Creek,Navy,White,10
+Northern Territory,Elliott Hawks,Elliott,Brown,Gold,15
+Northern Territory,Sporties Spitfires,Tennant Creek,Black,Red,10
+Northern Territory,Ti Tree Roosters,Ti-Tree,Dark Blue,Red,35
+Northern Territory,Baywara Power,Gunyangara,Teal,White,20
+Northern Territory,Nguykal King Fish,Yirrkala,Teal,Navy,40
+Northern Territory,Arnhem Crows,Barunga,Red,Navy,30
+Northern Territory,Katherine Camels,Katherine,Black,Orange,15
+Northern Territory,Tapalinga Superstars,Wurrumiyanga,Brown,Gold,30
+Northern Territory,Walama Bulldogs,Wurrumiyanga,White,Navy,23
+Tasmania,Brighton Robins,Pontville,Navy,Red,20
+Tasmania,Kingborough Tigers,Kingston,Black,Yellow,15
+Tasmania,Sorell Eagles,Sorell,Black,Blue,20
+Tasmania,Circular Head Saints,Smithton,Red,Black,15
+Tasmania,Burnie Dockers,Burnie,Green,Navy,10
+Tasmania,Somerset Kangaroos,Somerset,White,Blue,15
+Tasmania,Cuprona Bulldogs,Heybridge,Blue,Red,25
+Tasmania,Spreyton Eagles,Spreyton,Maroon,Gold,16
+Tasmania,Turners Beach Seagulls,Turners Beach,Blue,White,30
+Tasmania,Campania Wallabies,Campania,Green,Gold,20
