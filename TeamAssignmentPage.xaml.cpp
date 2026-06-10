@@ -5,7 +5,7 @@
 #endif
 
 #include "GameState.h"
-#include "SaveGameService.h"    
+#include "SaveGameService.h"
 
 #include <algorithm>
 #include <random>
@@ -138,24 +138,21 @@ namespace
 
         std::vector<std::string> candidates;
 
-        // Current working directory (VS sets this to the .vcxproj folder by default)
+        // 1. Current working directory
         {
             char cwdBuf[MAX_PATH] = {};
             if (GetCurrentDirectoryA(MAX_PATH, cwdBuf) > 0)
             {
                 std::string cwd(cwdBuf);
-                
                 while (!cwd.empty() && (cwd.back() == '\\' || cwd.back() == '/'))
                     cwd.pop_back();
-
                 candidates.push_back(cwd + "\\" + csvRelative);
-                
                 candidates.push_back(cwd + "\\..\\" + csvRelative);
                 candidates.push_back(cwd + "\\..\\..\\" + csvRelative);
             }
         }
 
-        // --- 2. Directory containing the exe ---
+        // 2. Directory containing the exe
         {
             char exeBuf[MAX_PATH] = {};
             if (GetModuleFileNameA(nullptr, exeBuf, MAX_PATH) > 0)
@@ -166,14 +163,13 @@ namespace
                 {
                     std::string exeDir = exePath.substr(0, pos);
                     candidates.push_back(exeDir + "\\" + csvRelative);
-                    // x64\Debug -> project root is two levels up
                     candidates.push_back(exeDir + "\\..\\" + csvRelative);
                     candidates.push_back(exeDir + "\\..\\..\\" + csvRelative);
                 }
             }
         }
 
-        // --- 3. All drive letters, common project folder names ---
+        // 3. All drive letters, common project folder names
         {
             const std::vector<std::string> projectRoots =
             {
@@ -184,7 +180,7 @@ namespace
             };
 
             DWORD driveMask = GetLogicalDrives();
-            for (int i = 2; i < 26; ++i) // skip A/B
+            for (int i = 2; i < 26; ++i)
             {
                 if (!(driveMask & (1u << i))) continue;
                 char dl = 'A' + static_cast<char>(i);
@@ -196,7 +192,6 @@ namespace
             }
         }
 
-        // --- Diagnostic: print every candidate to VS Output window ---
         OutputDebugStringA("[TeamAssignment] Searching for localteams.csv:\n");
         for (auto const& p : candidates)
         {
@@ -269,7 +264,6 @@ namespace winrt::thefootballife::implementation
         const int desiredCount = 10;
         std::vector<TeamProfile> teams;
 
-        
         std::string csvPath = FindLocalTeamsCsv();
 
         if (!csvPath.empty())
@@ -286,7 +280,6 @@ namespace winrt::thefootballife::implementation
                     if (!headerLine.empty() && headerLine.back() == '\r')
                         headerLine.pop_back();
 
-                    // Log header so we can see it in Output window
                     OutputDebugStringA(("[TeamAssignment] Header: " + headerLine + "\n").c_str());
 
                     auto headerParts = ParseCsvLine(headerLine);
@@ -295,18 +288,22 @@ namespace winrt::thefootballife::implementation
                         headerMap[NormalizeHeader(headerParts[i])] = static_cast<int>(i);
 
                     int idxState = FindHeaderIndex(headerMap, { "state" });
+                    int idxLeague = FindHeaderIndex(headerMap, { "league" });
                     int idxClub = FindHeaderIndex(headerMap, { "clubname", "club", "name" });
                     int idxSuburb = FindHeaderIndex(headerMap, { "suburb", "location", "town" });
                     int idxPrimary = FindHeaderIndex(headerMap, { "primary", "primarycolour", "primarycolor" });
                     int idxSecondary = FindHeaderIndex(headerMap, { "secondary", "secondarycolour", "secondarycolor" });
                     int idxDistance = FindHeaderIndex(headerMap, { "distance", "distancekm", "distancekms", "km" });
+                    int idxHomeGround = FindHeaderIndex(headerMap, { "homeground", "ground", "venue" });
+                    int idxReputation = FindHeaderIndex(headerMap, { "reputation", "rep" });
 
-                    // Log column mapping
                     {
-                        char buf[256];
+                        char buf[512];
                         snprintf(buf, sizeof(buf),
-                            "[TeamAssignment] Columns -> state:%d club:%d suburb:%d primary:%d secondary:%d distance:%d\n",
-                            idxState, idxClub, idxSuburb, idxPrimary, idxSecondary, idxDistance);
+                            "[TeamAssignment] Columns -> state:%d league:%d club:%d suburb:%d "
+                            "primary:%d secondary:%d distance:%d homeground:%d reputation:%d\n",
+                            idxState, idxLeague, idxClub, idxSuburb,
+                            idxPrimary, idxSecondary, idxDistance, idxHomeGround, idxReputation);
                         OutputDebugStringA(buf);
                     }
 
@@ -333,6 +330,9 @@ namespace winrt::thefootballife::implementation
                             ++matchCount;
 
                             TeamProfile team;
+
+                            if (idxLeague >= 0 && idxLeague < static_cast<int>(parts.size()))
+                                team.league = ToW(parts[idxLeague]);
                             if (idxClub >= 0 && idxClub < static_cast<int>(parts.size()))
                                 team.name = ToW(parts[idxClub]);
                             if (idxSuburb >= 0 && idxSuburb < static_cast<int>(parts.size()))
@@ -346,6 +346,13 @@ namespace winrt::thefootballife::implementation
                                 try { team.baseDistanceKm = std::stoi(parts[idxDistance]); }
                                 catch (...) { team.baseDistanceKm = 0; }
                             }
+                            if (idxHomeGround >= 0 && idxHomeGround < static_cast<int>(parts.size()))
+                                team.homeGround = ToW(parts[idxHomeGround]);
+                            if (idxReputation >= 0 && idxReputation < static_cast<int>(parts.size()))
+                            {
+                                try { team.reputation = std::stoi(parts[idxReputation]); }
+                                catch (...) { team.reputation = 50; }
+                            }
 
                             if (team.name.empty() && !team.suburb.empty())
                                 team.name = BuildClubName(team.suburb, L"FC");
@@ -355,26 +362,35 @@ namespace winrt::thefootballife::implementation
                         }
                         else
                         {
-                            // Ordered fallback: State, League, ClubName, Suburb, Primary, Secondary, Distance
+                            // Ordered fallback:
+                            // State(0), League(1), ClubName(2), Suburb(3), Primary(4),
+                            // Secondary(5), Distance(6), HomeGround(7), Reputation(8)
                             if (parts.size() < 7) continue;
                             if (ToW(parts[0]) != state) continue;
                             ++matchCount;
 
                             TeamProfile team;
+                            team.league = parts.size() > 1 ? ToW(parts[1]) : L"";
                             team.name = ToW(parts[2]);
                             team.suburb = ToW(parts[3]);
                             team.primaryColour = ToW(parts[4]);
                             team.secondaryColour = ToW(parts[5]);
                             try { team.baseDistanceKm = std::stoi(parts[6]); }
                             catch (...) { team.baseDistanceKm = 0; }
+                            if (parts.size() > 7)
+                                team.homeGround = ToW(parts[7]);
+                            if (parts.size() > 8)
+                            {
+                                try { team.reputation = std::stoi(parts[8]); }
+                                catch (...) { team.reputation = 50; }
+                            }
+
                             if (!team.name.empty()) teams.push_back(team);
                         }
                     }
 
-                    // Log summary
                     {
-                        std::wstring stateLabel = state;
-                        std::string stateA(stateLabel.begin(), stateLabel.end());
+                        std::string stateA(state.begin(), state.end());
                         char buf[256];
                         snprintf(buf, sizeof(buf),
                             "[TeamAssignment] Rows read: %d  Matching state '%s': %d  Teams loaded: %d\n",
@@ -389,7 +405,7 @@ namespace winrt::thefootballife::implementation
             }
         }
 
-        // shuffle the CSV
+        // Shuffle and trim to desired count if we got CSV data
         if (!teams.empty())
         {
             if (teams.size() > static_cast<size_t>(desiredCount))
@@ -402,7 +418,7 @@ namespace winrt::thefootballife::implementation
             return teams;
         }
 
-        //fallback team code
+        // Fallback: generate teams from suburb/mascot/colour files
         OutputDebugStringA("[TeamAssignment] Falling back to generated teams.\n");
 
         auto suburbs = LoadSuburbsForStateFromFile(state);
@@ -449,6 +465,7 @@ namespace winrt::thefootballife::implementation
             team.primaryColour = colours[i % colours.size()].first;
             team.secondaryColour = colours[i % colours.size()].second;
             team.baseDistanceKm = 4 + static_cast<int>(i) * 6;
+            team.reputation = 50;
             teams.push_back(team);
         }
 
@@ -477,16 +494,27 @@ namespace winrt::thefootballife::implementation
             title.Foreground(SolidColorBrush(winrt::Windows::UI::Colors::White()));
             title.FontWeight(winrt::Windows::UI::Text::FontWeights::SemiBold());
 
+            // League badge line
+            TextBlock leagueLine;
+            std::wstring leagueText = team.league.empty() ? L"Local League" : team.league;
+            leagueLine.Text(hstring(leagueText));
+            leagueLine.Foreground(SolidColorBrush(winrt::Windows::UI::ColorHelper::FromArgb(255, 160, 160, 160)));
+            leagueLine.FontStyle(winrt::Windows::UI::Text::FontStyle::Italic);
+
             TextBlock meta;
             std::wstring metaText =
                 L"Location: " + team.suburb +
                 L"  \u2022  Distance: " + std::to_wstring(team.baseDistanceKm) + L" km" +
                 L"  \u2022  Colours: " + team.primaryColour + L" / " + team.secondaryColour;
+            if (!team.homeGround.empty())
+                metaText += L"  \u2022  Ground: " + team.homeGround;
+            metaText += L"  \u2022  Reputation: " + std::to_wstring(team.reputation) + L"/100";
             meta.Text(hstring(metaText));
             meta.Foreground(SolidColorBrush(winrt::Windows::UI::ColorHelper::FromArgb(255, 210, 210, 210)));
             meta.TextWrapping(TextWrapping::Wrap);
 
             row.Children().Append(title);
+            row.Children().Append(leagueLine);
             row.Children().Append(meta);
             item.Child(row);
             TeamsListPanel().Children().Append(item);
@@ -530,16 +558,25 @@ namespace winrt::thefootballife::implementation
             to_hstring(targetDistance) + L" km.");
 
         StateTeamsTitleText().Text(
-            to_hstring(static_cast<int>(m_stateTeams.size())) + L" generated clubs for " + hstring(state));
+            to_hstring(static_cast<int>(m_stateTeams.size())) +
+            L" generated clubs for " + hstring(state));
 
         AssignedTeamText().Text(hstring(m_assignedTeam.name));
+        AssignedLeagueText().Text(
+            m_assignedTeam.league.empty() ? L"Local League" : hstring(m_assignedTeam.league));
         AssignedSuburbText().Text(L"Home suburb: " + hstring(m_assignedTeam.suburb));
         AssignedDistanceText().Text(
             L"Distance match: profile " + to_hstring(m_assignedTeam.baseDistanceKm) +
             L" km (player: " + to_hstring(targetDistance) + L" km)");
         AssignedColourText().Text(
-            L"Two-tone colours: " + hstring(m_assignedTeam.primaryColour) +
+            L"Colours: " + hstring(m_assignedTeam.primaryColour) +
             L" / " + hstring(m_assignedTeam.secondaryColour));
+        AssignedGroundText().Text(
+            m_assignedTeam.homeGround.empty()
+            ? L"Home ground: Not listed"
+            : L"Home ground: " + hstring(m_assignedTeam.homeGround));
+        AssignedReputationText().Text(
+            L"Club reputation: " + to_hstring(m_assignedTeam.reputation) + L" / 100");
 
         RenderTeamsList();
     }
@@ -557,6 +594,9 @@ namespace winrt::thefootballife::implementation
         GameState::CurrentPlayer.originalTeamSuburb = m_assignedTeam.suburb;
         GameState::CurrentPlayer.originalTeamPrimaryColour = m_assignedTeam.primaryColour;
         GameState::CurrentPlayer.originalTeamSecondaryColour = m_assignedTeam.secondaryColour;
+        GameState::CurrentPlayer.originalTeamHomeGround = m_assignedTeam.homeGround;
+        GameState::CurrentPlayer.originalTeamLeague = m_assignedTeam.league;
+        GameState::CurrentPlayer.originalTeamReputation = m_assignedTeam.reputation;
 
         Frame().Navigate(
             winrt::Windows::UI::Xaml::Interop::TypeName{
