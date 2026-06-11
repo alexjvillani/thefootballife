@@ -1,5 +1,7 @@
 #pragma once
 #include "CareerHubPage.g.h"
+#include <vector>
+#include <string>
 
 namespace winrt::thefootballife::implementation
 {
@@ -51,19 +53,45 @@ namespace winrt::thefootballife::implementation
             winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
 
     private:
+        // Ladder entry for one club
+        struct LadderEntry
+        {
+            std::wstring clubName;
+            std::wstring homeGround;
+            int wins{ 0 };
+            int losses{ 0 };
+            int draws{ 0 };
+            int pointsFor{ 0 };
+            int pointsAgainst{ 0 };
+            // Computed
+            int played() const { return wins + losses + draws; }
+            int ladderPoints() const { return wins * 4 + draws * 2; }
+            double percentage() const
+            {
+                return (pointsAgainst == 0)
+                    ? (pointsFor > 0 ? 999.9 : 100.0)
+                    : (static_cast<double>(pointsFor) / pointsAgainst) * 100.0;
+            }
+        };
+
         void LoadPlayerData();
         void UpdateWeekDisplay();
         void UpdateBlockUI();
         void UpdateStateUI();
         void ApplyWeekSimulation();
         void AdjustBlockByTag(winrt::hstring const& tag, int delta);
-        int BlocksUsed() const;
+        int  BlocksUsed() const;
         winrt::hstring FormatHeightFeet(int totalCm);
 
+        // Ladder
+        void LoadLadderFromCsv();
+        void RenderLadder();
+
     private:
+        winrt::hstring m_pageTitle{ L"Career Hub" };
+
         int m_currentWeek{ 1 };
         winrt::hstring m_lastChoice{ L"No action chosen yet." };
-        winrt::hstring m_pageTitle{ L"Career Hub" };
 
         static constexpr int kTotalBlocks{ 14 };
         int m_trainingBlocks{ 4 };
@@ -83,6 +111,9 @@ namespace winrt::thefootballife::implementation
         int m_discipline{ 60 };
         int m_finances{ 35 };
         int m_relationships{ 50 };
+
+        // Ladder data
+        std::vector<LadderEntry> m_ladder;
     };
 }
 

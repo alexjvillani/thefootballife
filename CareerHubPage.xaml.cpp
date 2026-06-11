@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "CareerHubPage.xaml.h"
 #if __has_include("CareerHubPage.g.cpp")
 #include "CareerHubPage.g.cpp"
@@ -6,16 +6,158 @@
 
 #include "GameState.h"
 #include "SaveGameService.h"
+
 #include <algorithm>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <vector>
+#include <unordered_map>
+#include <locale>
+#include <cctype>
+#include <iomanip>
+
+#include <Windows.h>
+
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Microsoft.UI.Xaml.Media.Imaging.h>
 #include <winrt/Windows.UI.Xaml.Interop.h>
+#include <winrt/Windows.UI.h>
+#include <winrt/Windows.UI.Text.h>
 
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
+using namespace Microsoft::UI::Xaml::Media;
 using namespace Microsoft::UI::Xaml::Media::Imaging;
 using namespace Windows::Foundation;
+
+
+namespace
+{
+    static inline std::string TrimA(std::string s)
+    {
+        auto l = s.find_first_not_of(" \t\r\n");
+        if (l == std::string::npos) return {};
+        auto r = s.find_last_not_of(" \t\r\n");
+        return s.substr(l, r - l + 1);
+    }
+
+    static std::wstring ToW(std::string const& s)
+    {
+        if (s.empty()) return {};
+        int n = ::MultiByteToWideChar(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), nullptr, 0);
+        if (n == 0) return std::wstring(s.begin(), s.end());
+        std::wstring out(n, L'\0');
+        ::MultiByteToWideChar(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), &out[0], n);
+        return out;
+    }
+
+    static std::vector<std::string> ParseCsvLine(std::string const& line)
+    {
+        std::vector<std::string> out;
+        std::string cur;
+        bool inQ = false;
+        for (size_t i = 0; i < line.size(); ++i)
+        {
+            char c = line[i];
+            if (inQ)
+            {
+                if (c == '"')
+                {
+                    if (i + 1 < line.size() && line[i + 1] == '"') { cur += '"'; ++i; }
+                    else inQ = false;
+                }
+                else cur += c;
+            }
+            else
+            {
+                if (c == '"') inQ = true;
+                else if (c == ',') { out.push_back(TrimA(cur)); cur.clear(); }
+                else cur += c;
+            }
+        }
+        out.push_back(TrimA(cur));
+        return out;
+    }
+
+    static std::string NormHdr(std::string s)
+    {
+        std::string o;
+        for (char c : s)
+            if (std::isalnum(static_cast<unsigned char>(c)))
+                o += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        return o;
+    }
+
+    static int HdrIdx(std::unordered_map<std::string, int> const& m,
+        std::initializer_list<std::string> names)
+    {
+        for (auto const& n : names) { auto it = m.find(n); if (it != m.end()) return it->second; }
+        return -1;
+    }
+
+    static void StripBom(std::string& s)
+    {
+        if (s.size() >= 3 &&
+            static_cast<unsigned char>(s[0]) == 0xEF &&
+            static_cast<unsigned char>(s[1]) == 0xBB &&
+            static_cast<unsigned char>(s[2]) == 0xBF)
+            s.erase(0, 3);
+    }
+
+    // Locate localteams.csv (same search logic as TeamAssignmentPage)
+    static std::string FindCsv(std::string const& relativePath)
+    {
+        std::vector<std::string> candidates;
+
+        auto tryAdd = [&](std::string base)
+            {
+                while (!base.empty() && (base.back() == '\\' || base.back() == '/')) base.pop_back();
+                candidates.push_back(base + "\\" + relativePath);
+                candidates.push_back(base + "\\..\\" + relativePath);
+                candidates.push_back(base + "\\..\\..\\" + relativePath);
+            };
+
+        char buf[MAX_PATH] = {};
+        if (GetCurrentDirectoryA(MAX_PATH, buf) > 0) tryAdd(buf);
+
+        char exe[MAX_PATH] = {};
+        if (GetModuleFileNameA(nullptr, exe, MAX_PATH) > 0)
+        {
+            std::string ep(exe);
+            auto p = ep.find_last_of("\\/");
+            if (p != std::string::npos) tryAdd(ep.substr(0, p));
+        }
+
+        const std::vector<std::string> roots = {
+            "thefootballife", "thefootball_life", "FootballLife", "football_life"
+        };
+        DWORD dm = GetLogicalDrives();
+        for (int i = 2; i < 26; ++i)
+        {
+            if (!(dm & (1u << i))) continue;
+            char dl = 'A' + static_cast<char>(i);
+            std::string dr; dr += dl; dr += ":\\";
+            for (auto const& r : roots)
+                candidates.push_back(dr + r + "\\" + relativePath);
+        }
+
+        for (auto const& p : candidates)
+        {
+            std::ifstream f(p, std::ios::binary);
+            if (f.is_open()) return p;
+        }
+        return {};
+    }
+
+    static std::wstring FormatPct(double pct)
+    {
+        std::wostringstream ss;
+        ss << std::fixed << std::setprecision(1) << pct;
+        return ss.str();
+    }
+}
 
 namespace winrt::thefootballife::implementation
 {
@@ -28,32 +170,195 @@ namespace winrt::thefootballife::implementation
         UpdateWeekDisplay();
         UpdateBlockUI();
         UpdateStateUI();
+        LoadLadderFromCsv();
+        RenderLadder();
     }
 
-    hstring CareerHubPage::PageTitle()
-    {
-        return m_pageTitle;
-    }
-
-    void CareerHubPage::PageTitle(hstring const& value)
-    {
-        m_pageTitle = value;
-    }
+    hstring CareerHubPage::PageTitle() { return m_pageTitle; }
+    void    CareerHubPage::PageTitle(hstring const& value) { m_pageTitle = value; }
 
     hstring CareerHubPage::FormatHeightFeet(int totalCm)
     {
-        double totalInches = static_cast<double>(totalCm) / 2.54;
-        int roundedInches = static_cast<int>(totalInches + 0.5);
-        int feet = roundedInches / 12;
-        int inches = roundedInches % 12;
-
-        return to_hstring(feet) + L"'" + to_hstring(inches) + L"\"";
+        int rounded = static_cast<int>(totalCm / 2.54 + 0.5);
+        return to_hstring(rounded / 12) + L"'" + to_hstring(rounded % 12) + L"\"";
     }
 
     int CareerHubPage::BlocksUsed() const
     {
         return m_trainingBlocks + m_schoolBlocks + m_workBlocks + m_socialBlocks + m_recoveryBlocks;
     }
+
+    // ── Ladder ───────────────────────────────────────────────────────────────
+
+    void CareerHubPage::LoadLadderFromCsv()
+    {
+        m_ladder.clear();
+
+        auto const& player = GameState::CurrentPlayer;
+        std::wstring playerState = player.state;
+        std::wstring playerLeague = player.originalTeamLeague;
+
+        if (playerState.empty()) playerState = L"Victoria";
+
+        // Choose CSV based on tier (extend later for state/AFL tiers)
+        std::string csvPath = FindCsv("Assets\\Data\\localteams.csv");
+        if (csvPath.empty()) return;
+
+        std::ifstream file(csvPath, std::ios::binary);
+        if (!file.is_open()) return;
+
+        std::string headerLine;
+        if (!std::getline(file, headerLine)) return;
+        StripBom(headerLine);
+        if (!headerLine.empty() && headerLine.back() == '\r') headerLine.pop_back();
+
+        auto hparts = ParseCsvLine(headerLine);
+        std::unordered_map<std::string, int> hmap;
+        for (size_t i = 0; i < hparts.size(); ++i)
+            hmap[NormHdr(hparts[i])] = static_cast<int>(i);
+
+        int iState = HdrIdx(hmap, { "state" });
+        int iLeague = HdrIdx(hmap, { "league" });
+        int iClub = HdrIdx(hmap, { "clubname", "club", "name" });
+        int iGround = HdrIdx(hmap, { "homeground", "ground", "venue" });
+        int iWins = HdrIdx(hmap, { "wins", "w" });
+        int iLosses = HdrIdx(hmap, { "losses", "l" });
+        int iDraws = HdrIdx(hmap, { "draws", "d" });
+        int iPF = HdrIdx(hmap, { "pointsfor", "pf" });
+        int iPA = HdrIdx(hmap, { "pointsagainst", "pa" });
+
+        std::string row;
+        while (std::getline(file, row))
+        {
+            if (!row.empty() && row.back() == '\r') row.pop_back();
+            if (row.empty()) continue;
+
+            auto p = ParseCsvLine(row);
+
+            // Filter: must match player's state
+            std::wstring rowState = (iState >= 0 && iState < (int)p.size()) ? ToW(p[iState]) : L"";
+            std::wstring rowLeague = (iLeague >= 0 && iLeague < (int)p.size()) ? ToW(p[iLeague]) : L"";
+
+            if (rowState != playerState) continue;
+
+            // If we know the player's league code, filter to that too
+            if (!playerLeague.empty() && !rowLeague.empty() && rowLeague != playerLeague)
+                continue;
+
+            LadderEntry e;
+            if (iClub >= 0 && iClub < (int)p.size()) e.clubName = ToW(p[iClub]);
+            if (iGround >= 0 && iGround < (int)p.size()) e.homeGround = ToW(p[iGround]);
+            auto safeInt = [&](int idx) -> int {
+                if (idx < 0 || idx >= (int)p.size()) return 0;
+                try { return std::stoi(p[idx]); }
+                catch (...) { return 0; }
+                };
+            e.wins = safeInt(iWins);
+            e.losses = safeInt(iLosses);
+            e.draws = safeInt(iDraws);
+            e.pointsFor = safeInt(iPF);
+            e.pointsAgainst = safeInt(iPA);
+
+            if (!e.clubName.empty())
+                m_ladder.push_back(e);
+        }
+
+        // Sort: ladder points desc, then percentage desc
+        std::sort(m_ladder.begin(), m_ladder.end(), [](LadderEntry const& a, LadderEntry const& b)
+            {
+                if (a.ladderPoints() != b.ladderPoints())
+                    return a.ladderPoints() > b.ladderPoints();
+                return a.percentage() > b.percentage();
+            });
+
+        // Update title to show league name
+        std::wstring title = playerLeague.empty()
+            ? playerState + L" Ladder"
+            : playerLeague + L" Ladder";
+        LadderTitleText().Text(hstring(title));
+    }
+
+    void CareerHubPage::RenderLadder()
+    {
+        LadderRowsPanel().Children().Clear();
+
+        if (m_ladder.empty())
+        {
+            TextBlock empty;
+            empty.Text(L"No ladder data available.");
+            empty.Foreground(SolidColorBrush(winrt::Windows::UI::ColorHelper::FromArgb(255, 150, 150, 150)));
+            empty.FontSize(13);
+            LadderRowsPanel().Children().Append(empty);
+            return;
+        }
+
+        const std::wstring playerClub = GameState::CurrentPlayer.originalTeam;
+
+        for (int pos = 0; pos < static_cast<int>(m_ladder.size()); ++pos)
+        {
+            auto const& e = m_ladder[pos];
+            bool isPlayer = (e.clubName == playerClub);
+
+            Border row;
+            // Highlight the player's club
+            auto bgColour = isPlayer
+                ? winrt::Windows::UI::ColorHelper::FromArgb(255, 30, 58, 95)   // blue tint
+                : winrt::Windows::UI::ColorHelper::FromArgb(255, 30, 30, 30);
+            row.Background(SolidColorBrush(bgColour));
+
+            Microsoft::UI::Xaml::CornerRadius cr{};
+            cr.TopLeft = cr.TopRight = cr.BottomRight = cr.BottomLeft = 6;
+            row.CornerRadius(cr);
+            row.Padding(Thickness{ 6, 5, 6, 5 });
+
+            Grid g;
+            GridLength star{ 1.0, Microsoft::UI::Xaml::GridUnitType::Star };
+            GridLength px22{ 22,  Microsoft::UI::Xaml::GridUnitType::Pixel };
+            GridLength px26{ 26,  Microsoft::UI::Xaml::GridUnitType::Pixel };
+            GridLength px48{ 48,  Microsoft::UI::Xaml::GridUnitType::Pixel };
+            GridLength px32{ 32,  Microsoft::UI::Xaml::GridUnitType::Pixel };
+
+            ColumnDefinition c0; c0.Width(px22); g.ColumnDefinitions().Append(c0);
+            ColumnDefinition c1; c1.Width(star);  g.ColumnDefinitions().Append(c1);
+            ColumnDefinition c2; c2.Width(px26); g.ColumnDefinitions().Append(c2);
+            ColumnDefinition c3; c3.Width(px26); g.ColumnDefinitions().Append(c3);
+            ColumnDefinition c4; c4.Width(px26); g.ColumnDefinitions().Append(c4);
+            ColumnDefinition c5; c5.Width(px26); g.ColumnDefinitions().Append(c5);
+            ColumnDefinition c6; c6.Width(px48); g.ColumnDefinitions().Append(c6);
+            ColumnDefinition c7; c7.Width(px32); g.ColumnDefinitions().Append(c7);
+
+            auto rowColour = isPlayer
+                ? winrt::Windows::UI::Colors::White()
+                : winrt::Windows::UI::ColorHelper::FromArgb(255, 220, 220, 220);
+
+            auto makeCell = [&](int col, std::wstring const& text, bool bold = false)
+                {
+                    TextBlock tb;
+                    tb.Text(hstring(text));
+                    tb.FontSize(12);
+                    tb.Foreground(SolidColorBrush(rowColour));
+                    tb.VerticalAlignment(VerticalAlignment::Center);
+                    tb.TextTrimming(TextTrimming::CharacterEllipsis);
+                    if (bold) tb.FontWeight(winrt::Windows::UI::Text::FontWeights::SemiBold());
+                    Grid::SetColumn(tb, col);
+                    g.Children().Append(tb);
+                };
+
+            makeCell(0, std::to_wstring(pos + 1));
+            makeCell(1, e.clubName, isPlayer);
+            makeCell(2, std::to_wstring(e.played()));
+            makeCell(3, std::to_wstring(e.wins));
+            makeCell(4, std::to_wstring(e.losses));
+            makeCell(5, std::to_wstring(e.draws));
+            makeCell(6, FormatPct(e.percentage()));
+            makeCell(7, std::to_wstring(e.ladderPoints()), true);
+
+            row.Child(g);
+            LadderRowsPanel().Children().Append(row);
+        }
+    }
+
+    // ── Block UI ─────────────────────────────────────────────────────────────
 
     void CareerHubPage::UpdateBlockUI()
     {
@@ -68,17 +373,11 @@ namespace winrt::thefootballife::implementation
         BlockSummaryText().Text(to_hstring(used) + L"/" + to_hstring(kTotalBlocks) + L" blocks allocated");
 
         if (remaining == 0)
-        {
             BlockWarningText().Text(L"Allocation is valid. You can advance the week.");
-        }
         else if (remaining > 0)
-        {
             BlockWarningText().Text(L"Unassigned blocks: " + to_hstring(remaining) + L". Assign all blocks before advancing.");
-        }
         else
-        {
             BlockWarningText().Text(L"Over allocated by " + to_hstring(-remaining) + L". Remove blocks to continue.");
-        }
     }
 
     void CareerHubPage::UpdateStateUI()
@@ -86,52 +385,34 @@ namespace winrt::thefootballife::implementation
         PhysicalStateText().Text(
             L"Fatigue: " + to_hstring(m_fatigue) +
             L" | Injury Risk: " + to_hstring(m_injuryRisk) +
-            L" | Recovery Quality: " + to_hstring(m_recoveryQuality)
-        );
+            L" | Recovery Quality: " + to_hstring(m_recoveryQuality));
 
         MentalStateText().Text(
             L"Confidence: " + to_hstring(m_confidence) +
             L" | Stress: " + to_hstring(m_stress) +
-            L" | Motivation: " + to_hstring(m_motivation)
-        );
+            L" | Motivation: " + to_hstring(m_motivation));
 
         LifeStateText().Text(
             L"Discipline: " + to_hstring(m_discipline) +
             L" | Finances: " + to_hstring(m_finances) +
-            L" | Relationships: " + to_hstring(m_relationships)
-        );
+            L" | Relationships: " + to_hstring(m_relationships));
     }
 
     void CareerHubPage::AdjustBlockByTag(hstring const& tag, int delta)
     {
         int* target = nullptr;
-
-        if (tag == L"Training")
-            target = &m_trainingBlocks;
-        else if (tag == L"School")
-            target = &m_schoolBlocks;
-        else if (tag == L"Work")
-            target = &m_workBlocks;
-        else if (tag == L"Social")
-            target = &m_socialBlocks;
-        else if (tag == L"Recovery")
-            target = &m_recoveryBlocks;
-
-        if (target == nullptr)
-            return;
+        if (tag == L"Training") target = &m_trainingBlocks;
+        else if (tag == L"School")   target = &m_schoolBlocks;
+        else if (tag == L"Work")     target = &m_workBlocks;
+        else if (tag == L"Social")   target = &m_socialBlocks;
+        else if (tag == L"Recovery") target = &m_recoveryBlocks;
+        if (!target) return;
 
         int proposed = *target + delta;
-        if (proposed < 0)
+        if (proposed < 0) { BottomHintText().Text(L"Blocks cannot go below zero."); return; }
+        if (delta > 0 && BlocksUsed() + delta > kTotalBlocks)
         {
-            BottomHintText().Text(L"Blocks cannot go below zero.");
-            return;
-        }
-
-        int projectedTotal = BlocksUsed() + delta;
-        if (delta > 0 && projectedTotal > kTotalBlocks)
-        {
-            BottomHintText().Text(L"You only have 14 total blocks each week.");
-            return;
+            BottomHintText().Text(L"You only have 14 total blocks each week."); return;
         }
 
         *target = proposed;
@@ -144,41 +425,27 @@ namespace winrt::thefootballife::implementation
         m_fatigue = std::clamp(m_fatigue + (m_trainingBlocks * 4) + (m_workBlocks * 3) - (m_recoveryBlocks * 8), 0, 100);
         m_injuryRisk = std::clamp(m_injuryRisk + (m_fatigue / 12) + (m_trainingBlocks * 2) - (m_recoveryBlocks * 5), 0, 100);
         m_recoveryQuality = std::clamp(m_recoveryQuality + (m_recoveryBlocks * 7) - (m_workBlocks * 2), 0, 100);
-
-        m_confidence = std::clamp(m_confidence + (m_trainingBlocks * 2) + (m_socialBlocks) - (m_stress / 18), 0, 100);
+        m_confidence = std::clamp(m_confidence + (m_trainingBlocks * 2) + m_socialBlocks - (m_stress / 18), 0, 100);
         m_stress = std::clamp(m_stress + (m_schoolBlocks * 2) + (m_workBlocks * 3) - (m_recoveryBlocks * 4), 0, 100);
-        m_motivation = std::clamp(m_motivation + (m_trainingBlocks) + (m_socialBlocks) - (m_fatigue / 20), 0, 100);
-
-        m_discipline = std::clamp(m_discipline + (m_schoolBlocks * 2) + (m_trainingBlocks) - (m_socialBlocks * 2), 0, 100);
-        m_finances = std::clamp(m_finances + (m_workBlocks * 6) - (m_recoveryBlocks), 0, 100);
-        m_relationships = std::clamp(m_relationships + (m_socialBlocks * 4) - (m_workBlocks), 0, 100);
+        m_motivation = std::clamp(m_motivation + m_trainingBlocks + m_socialBlocks - (m_fatigue / 20), 0, 100);
+        m_discipline = std::clamp(m_discipline + (m_schoolBlocks * 2) + m_trainingBlocks - (m_socialBlocks * 2), 0, 100);
+        m_finances = std::clamp(m_finances + (m_workBlocks * 6) - m_recoveryBlocks, 0, 100);
+        m_relationships = std::clamp(m_relationships + (m_socialBlocks * 4) - m_workBlocks, 0, 100);
 
         std::wstring consequence;
         if (m_recoveryBlocks == 0)
-        {
             consequence += L"Lack of sleep lowered performance readiness and increased injury risk. ";
-        }
-
         if (m_trainingBlocks >= 6)
-        {
             consequence += L"Extra training boosted stats but pushed up fatigue. ";
-        }
-
         if (m_workBlocks >= 4)
-        {
             consequence += L"Heavy work schedule improved finances while reducing recovery quality. ";
-        }
-
         if (m_socialBlocks >= 4)
         {
             consequence += L"Social time improved morale and relationships, but discipline dipped. ";
             m_discipline = std::clamp(m_discipline - 4, 0, 100);
         }
-
         if (consequence.empty())
-        {
             consequence = L"Balanced week. No major penalties triggered.";
-        }
 
         ConsequenceText().Text(hstring(consequence));
 
@@ -204,30 +471,27 @@ namespace winrt::thefootballife::implementation
         }
 
         PlayerNameText().Text(hstring(player.firstName + L" " + player.lastName));
+
         std::wstring teamLine = player.position + L" | " + player.foot + L" Foot | #" + player.number;
         if (!player.originalTeam.empty())
-        {
-            teamLine += L" | Original Club: " + player.originalTeam;
-        }
-
+            teamLine += L" | " + player.originalTeam;
+        if (!player.originalTeamLeague.empty())
+            teamLine += L" (" + player.originalTeamLeague + L")";
         PlayerInfoText().Text(hstring(teamLine));
 
         HeightText().Text(L"Height: " + FormatHeightFeet(player.heightCm));
 
-        if (player.mentalityXFactor.empty())
-            MentalityText().Text(L"Mentality: None selected");
-        else
-            MentalityText().Text(L"Mentality: " + hstring(player.mentalityXFactor));
+        MentalityText().Text(player.mentalityXFactor.empty()
+            ? L"Mentality: None selected"
+            : L"Mentality: " + hstring(player.mentalityXFactor));
 
-        if (player.physicalXFactor.empty())
-            PhysicalText().Text(L"Physical: None selected");
-        else
-            PhysicalText().Text(L"Physical: " + hstring(player.physicalXFactor));
+        PhysicalText().Text(player.physicalXFactor.empty()
+            ? L"Physical: None selected"
+            : L"Physical: " + hstring(player.physicalXFactor));
 
-        if (player.weaknesses.empty())
-            WeaknessesText().Text(L"Weaknesses: None selected");
-        else
-            WeaknessesText().Text(L"Weaknesses: " + hstring(player.weaknesses));
+        WeaknessesText().Text(player.weaknesses.empty()
+            ? L"Weaknesses: None selected"
+            : L"Weaknesses: " + hstring(player.weaknesses));
     }
 
     void CareerHubPage::UpdateWeekDisplay()
@@ -286,21 +550,15 @@ namespace winrt::thefootballife::implementation
     void CareerHubPage::IncrementBlockButton_Click(IInspectable const& sender, RoutedEventArgs const&)
     {
         auto button = sender.try_as<Button>();
-        if (!button)
-            return;
-
-        auto tag = unbox_value_or<hstring>(button.Tag(), L"");
-        AdjustBlockByTag(tag, 1);
+        if (!button) return;
+        AdjustBlockByTag(unbox_value_or<hstring>(button.Tag(), L""), 1);
     }
 
     void CareerHubPage::DecrementBlockButton_Click(IInspectable const& sender, RoutedEventArgs const&)
     {
         auto button = sender.try_as<Button>();
-        if (!button)
-            return;
-
-        auto tag = unbox_value_or<hstring>(button.Tag(), L"");
-        AdjustBlockByTag(tag, -1);
+        if (!button) return;
+        AdjustBlockByTag(unbox_value_or<hstring>(button.Tag(), L""), -1);
     }
 
     void CareerHubPage::AdvanceWeekButton_Click(IInspectable const&, RoutedEventArgs const&)
@@ -312,11 +570,12 @@ namespace winrt::thefootballife::implementation
         }
 
         ApplyWeekSimulation();
-
         m_currentWeek++;
         GameState::CurrentWeek = m_currentWeek;
         BottomHintText().Text(L"Week advanced. Simulation outcomes applied to your player state.");
         UpdateWeekDisplay();
+
+        RenderLadder();
     }
 
     void CareerHubPage::SaveGameButton_Click(IInspectable const&, RoutedEventArgs const&)
@@ -326,88 +585,62 @@ namespace winrt::thefootballife::implementation
         {
             ComboBoxItem item;
             std::wstring label = L"Slot " + std::to_wstring(slot);
-            if (SaveGameService::SlotExists(slot))
-            {
-                label += L" (Overwrite)";
-            }
-            else
-            {
-                label += L" (Empty)";
-            }
-
+            label += SaveGameService::SlotExists(slot) ? L" (Overwrite)" : L" (Empty)";
             item.Content(box_value(hstring(label)));
             slotComboBox.Items().Append(item);
         }
 
-        int recommendedSlot = SaveGameService::FindFirstAvailableSlot();
-        slotComboBox.SelectedIndex(recommendedSlot - 1);
+        slotComboBox.SelectedIndex(SaveGameService::FindFirstAvailableSlot() - 1);
 
-        ContentDialog slotDialog;
-        slotDialog.Title(box_value(L"Choose Save Slot"));
-        slotDialog.Content(slotComboBox);
-        slotDialog.PrimaryButtonText(L"Save");
-        slotDialog.CloseButtonText(L"Cancel");
-        slotDialog.XamlRoot(this->XamlRoot());
+        ContentDialog dlg;
+        dlg.Title(box_value(L"Choose Save Slot"));
+        dlg.Content(slotComboBox);
+        dlg.PrimaryButtonText(L"Save");
+        dlg.CloseButtonText(L"Cancel");
+        dlg.XamlRoot(this->XamlRoot());
 
         auto weakThis = get_weak();
-        slotDialog.ShowAsync().Completed(
-            [weakThis, slotComboBox](auto const& operation, auto const&)
+        dlg.ShowAsync().Completed(
+            [weakThis, slotComboBox](auto const& op, auto const&)
             {
                 if (auto self = weakThis.get())
                 {
-                    if (operation.GetResults() != ContentDialogResult::Primary)
-                    {
-                        return;
-                    }
+                    if (op.GetResults() != ContentDialogResult::Primary) return;
 
                     int slot = static_cast<int>(slotComboBox.SelectedIndex()) + 1;
                     bool saved = SaveGameService::SaveToSlot(
-                        slot,
-                        GameState::CurrentPlayer,
-                        self->m_currentWeek,
-                        self->m_lastChoice.c_str()
-                    );
+                        slot, GameState::CurrentPlayer,
+                        self->m_currentWeek, self->m_lastChoice.c_str());
 
-                    ContentDialog resultDialog;
-                    resultDialog.XamlRoot(self->XamlRoot());
-                    resultDialog.CloseButtonText(L"OK");
-
+                    ContentDialog result;
+                    result.XamlRoot(self->XamlRoot());
+                    result.CloseButtonText(L"OK");
                     if (saved)
                     {
-                        resultDialog.Title(box_value(L"Game Saved"));
-                        resultDialog.Content(
-                            box_value(L"Career saved to slot " + to_hstring(slot) + L".")
-                        );
+                        result.Title(box_value(L"Game Saved"));
+                        result.Content(box_value(L"Career saved to slot " + to_hstring(slot) + L"."));
                     }
                     else
                     {
-                        resultDialog.Title(box_value(L"Save Failed"));
-                        resultDialog.Content(box_value(L"Could not write the selected save slot."));
+                        result.Title(box_value(L"Save Failed"));
+                        result.Content(box_value(L"Could not write the selected save slot."));
                     }
-
-                    resultDialog.ShowAsync();
+                    result.ShowAsync();
                 }
-            }
-        );
+            });
     }
 
     void CareerHubPage::ExitToMyCareerButton_Click(IInspectable const&, RoutedEventArgs const&)
     {
-        Frame().Navigate(
-            winrt::Windows::UI::Xaml::Interop::TypeName{
-                L"thefootballife.MyCareerPage",
-                winrt::Windows::UI::Xaml::Interop::TypeKind::Custom
-            }
-        );
+        Frame().Navigate(winrt::Windows::UI::Xaml::Interop::TypeName{
+            L"thefootballife.MyCareerPage",
+            winrt::Windows::UI::Xaml::Interop::TypeKind::Custom });
     }
 
     void CareerHubPage::ExitToMainMenuButton_Click(IInspectable const&, RoutedEventArgs const&)
     {
-        Frame().Navigate(
-            winrt::Windows::UI::Xaml::Interop::TypeName{
-                L"thefootballife.MainMenuPage",
-                winrt::Windows::UI::Xaml::Interop::TypeKind::Custom
-            }
-        );
+        Frame().Navigate(winrt::Windows::UI::Xaml::Interop::TypeName{
+            L"thefootballife.MainMenuPage",
+            winrt::Windows::UI::Xaml::Interop::TypeKind::Custom });
     }
 }
