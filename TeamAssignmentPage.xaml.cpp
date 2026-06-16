@@ -589,7 +589,6 @@ namespace winrt::thefootballife::implementation
     void TeamAssignmentPage::ConfirmTeamButton_Click(IInspectable const&, RoutedEventArgs const&)
     {
         if (!m_hasAssignedTeam) return;
-
         GameState::CurrentPlayer.originalTeam = m_assignedTeam.name;
         GameState::CurrentPlayer.originalTeamSuburb = m_assignedTeam.suburb;
         GameState::CurrentPlayer.originalTeamPrimaryColour = m_assignedTeam.primaryColour;
@@ -597,6 +596,10 @@ namespace winrt::thefootballife::implementation
         GameState::CurrentPlayer.originalTeamHomeGround = m_assignedTeam.homeGround;
         GameState::CurrentPlayer.originalTeamLeague = m_assignedTeam.league;
         GameState::CurrentPlayer.originalTeamReputation = m_assignedTeam.reputation;
+
+        // Reset career progression state for a fresh save
+        GameState::CurrentWeek = 1;
+        GameState::LastChoice = L"";
 
         Frame().Navigate(
             winrt::Windows::UI::Xaml::Interop::TypeName{
