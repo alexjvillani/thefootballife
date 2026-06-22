@@ -266,10 +266,16 @@
     <Import Project="packages\Microsoft.Windows.ImplementationLibrary.1.0.260126.7\build\native\Microsoft.Windows.ImplementationLibrary.targets" Condition="Exists('packages\Microsoft.Windows.ImplementationLibrary.1.0.260126.7\build\native\Microsoft.Windows.ImplementationLibrary.targets')" />
   </ImportGroup>
   <!--
-    This target runs before the build and restores NuGet packages automatically,
-    so a fresh clone just needs to hit Build — no manual restore step required.
+    This target runs before the build and restores NuGet packages automatically
+    using the NuGet executable bundled with Visual Studio — no PATH setup needed.
+    On a fresh clone, hitting Build is enough.
   -->
   <Target Name="RestorePackagesBeforeBuild" BeforeTargets="PrepareForBuild" Condition="!Exists('packages\Microsoft.WindowsAppSDK.1.8.260317003\build\native\Microsoft.WindowsAppSDK.props')">
-    <Exec Command="nuget restore &quot;$(MSBuildProjectDirectory)\packages.config&quot; -PackagesDirectory &quot;$(MSBuildProjectDirectory)\packages&quot;" />
+    <PropertyGroup>
+      <NuGetExePath Condition="Exists('$(VSInstallDir)Common7\IDE\CommonExtensions\Microsoft\NuGet\NuGet.exe')">$(VSInstallDir)Common7\IDE\CommonExtensions\Microsoft\NuGet\NuGet.exe</NuGetExePath>
+      <NuGetExePath Condition="$(NuGetExePath)=='' and Exists('$(VSAPPIDDIR)..\CommonExtensions\Microsoft\NuGet\NuGet.exe')">$(VSAPPIDDIR)..\CommonExtensions\Microsoft\NuGet\NuGet.exe</NuGetExePath>
+    </PropertyGroup>
+    <Error Condition="$(NuGetExePath)=='' " Text="Could not locate NuGet.exe inside Visual Studio. Please run 'Restore NuGet Packages' from the Solution Explorer context menu." />
+    <Exec Command="&quot;$(NuGetExePath)&quot; restore &quot;$(MSBuildProjectDirectory)\packages.config&quot; -PackagesDirectory &quot;$(MSBuildProjectDirectory)\packages&quot;" Condition="$(NuGetExePath)!=''" />
   </Target>
 </Project>
