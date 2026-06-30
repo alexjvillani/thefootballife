@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <filesystem>
 #include <ShlObj.h>
+#include <sstream>
 
 #pragma comment(lib, "Shell32.lib")
 #pragma comment(lib, "Ole32.lib")
@@ -92,19 +93,14 @@ namespace SaveGameService
         int slot,
         PlayerData const& player,
         int currentWeek,
-        std::wstring const& lastChoice
+        std::wstring const& lastChoice,
+        std::unordered_map<std::wstring, TeamSeasonStats> const& teamStats
     )
     {
-        if (slot < 1 || slot > MaxSaveSlots)
-        {
-            return false;
-        }
+        if (slot < 1 || slot > MaxSaveSlots) return false;
 
         std::wofstream file(GetSaveSlotPath(slot));
-        if (!file.is_open())
-        {
-            return false;
-        }
+        if (!file.is_open()) return false;
 
         file << L"FirstName=" << player.firstName << L"\n";
         file << L"LastName=" << player.lastName << L"\n";
@@ -116,6 +112,9 @@ namespace SaveGameService
         file << L"OriginalTeamSuburb=" << player.originalTeamSuburb << L"\n";
         file << L"OriginalTeamPrimaryColour=" << player.originalTeamPrimaryColour << L"\n";
         file << L"OriginalTeamSecondaryColour=" << player.originalTeamSecondaryColour << L"\n";
+        file << L"OriginalTeamHomeGround=" << player.originalTeamHomeGround << L"\n";
+        file << L"OriginalTeamLeague=" << player.originalTeamLeague << L"\n";
+        file << L"OriginalTeamReputation=" << player.originalTeamReputation << L"\n";
         file << L"State=" << player.state << L"\n";
         file << L"SchoolType=" << player.schoolType << L"\n";
         file << L"Region=" << player.region << L"\n";
@@ -132,6 +131,21 @@ namespace SaveGameService
         file << L"CurrentWeek=" << currentWeek << L"\n";
         file << L"LastChoice=" << lastChoice << L"\n";
 
+        // Team stats section
+        if (!teamStats.empty())
+        {
+            file << L"[TeamStats]\n";
+            for (auto const& [clubName, s] : teamStats)
+            {
+                file << clubName << L"="
+                    << s.wins << L","
+                    << s.losses << L","
+                    << s.draws << L","
+                    << s.pointsFor << L","
+                    << s.pointsAgainst << L"\n";
+            }
+        }
+
         return true;
     }
 
@@ -139,31 +153,56 @@ namespace SaveGameService
         int slot,
         PlayerData& player,
         int& currentWeek,
-        std::wstring& lastChoice
+        std::wstring& lastChoice,
+        std::unordered_map<std::wstring, TeamSeasonStats>& teamStats
     )
     {
-        if (slot < 1 || slot > MaxSaveSlots)
-        {
-            return false;
-        }
+        if (slot < 1 || slot > MaxSaveSlots) return false;
 
         std::wifstream file(GetSaveSlotPath(slot));
-        if (!file.is_open())
-        {
-            return false;
-        }
+        if (!file.is_open()) return false;
 
         std::unordered_map<std::wstring, std::wstring> values;
+        teamStats.clear();
+
+        bool inTeamStats = false;
         std::wstring line;
         while (std::getline(file, line))
         {
-            size_t separator = line.find(L'=');
-            if (separator == std::wstring::npos)
+            if (line == L"[TeamStats]") { inTeamStats = true; continue; }
+
+            if (inTeamStats)
             {
+                // Format: ClubName=W,L,D,PF,PA
+                size_t eq = line.find(L'=');
+                if (eq == std::wstring::npos) continue;
+                std::wstring club = line.substr(0, eq);
+                std::wstring data = line.substr(eq + 1);
+
+                TeamSeasonStats s;
+                std::wistringstream ss(data);
+                std::wstring tok;
+                int idx = 0;
+                while (std::getline(ss, tok, L','))
+                {
+                    try {
+                        int v = std::stoi(tok);
+                        if (idx == 0) s.wins = v;
+                        else if (idx == 1) s.losses = v;
+                        else if (idx == 2) s.draws = v;
+                        else if (idx == 3) s.pointsFor = v;
+                        else if (idx == 4) s.pointsAgainst = v;
+                    }
+                    catch (...) {}
+                    ++idx;
+                }
+                teamStats[club] = s;
                 continue;
             }
 
-            values[line.substr(0, separator)] = line.substr(separator + 1);
+            size_t sep = line.find(L'=');
+            if (sep == std::wstring::npos) continue;
+            values[line.substr(0, sep)] = line.substr(sep + 1);
         }
 
         player.firstName = values[L"FirstName"];
@@ -177,6 +216,8 @@ namespace SaveGameService
         player.originalTeamSuburb = values[L"OriginalTeamSuburb"];
         player.originalTeamPrimaryColour = values[L"OriginalTeamPrimaryColour"];
         player.originalTeamSecondaryColour = values[L"OriginalTeamSecondaryColour"];
+        player.originalTeamHomeGround = values[L"OriginalTeamHomeGround"];
+        player.originalTeamLeague = values[L"OriginalTeamLeague"];
         player.schoolType = values[L"SchoolType"];
         player.region = values[L"Region"];
         player.familySituation = values[L"FamilySituation"];
@@ -186,36 +227,15 @@ namespace SaveGameService
         player.weaknesses = values[L"Weaknesses"];
         player.profileImagePath = values[L"ProfileImagePath"];
 
-        if (!TryParseInt(values[L"HeightCm"], player.heightCm))
-        {
-            player.heightCm = 0;
-        }
-
-        if (!TryParseInt(values[L"WeightKg"], player.weightKg))
-        {
-            player.weightKg = 0;
-        }
-
-        if (!TryParseInt(values[L"PotentialHeightCm"], player.potentialHeightCm))
-        {
-            player.potentialHeightCm = 0;
-        }
-
-        if (!TryParseInt(values[L"DistanceToClubKm"], player.distanceToClubKm))
-        {
-            player.distanceToClubKm = 0;
-        }
-
-        if (!TryParseInt(values[L"CurrentWeek"], currentWeek))
-        {
-            currentWeek = 1;
-        }
+        if (!TryParseInt(values[L"HeightCm"], player.heightCm))         player.heightCm = 0;
+        if (!TryParseInt(values[L"WeightKg"], player.weightKg))          player.weightKg = 0;
+        if (!TryParseInt(values[L"PotentialHeightCm"], player.potentialHeightCm)) player.potentialHeightCm = 0;
+        if (!TryParseInt(values[L"DistanceToClubKm"], player.distanceToClubKm))  player.distanceToClubKm = 0;
+        if (!TryParseInt(values[L"OriginalTeamReputation"], player.originalTeamReputation)) player.originalTeamReputation = 50;
+        if (!TryParseInt(values[L"CurrentWeek"], currentWeek))              currentWeek = 1;
 
         lastChoice = values[L"LastChoice"];
-        if (lastChoice.empty())
-        {
-            lastChoice = L"No action chosen yet.";
-        }
+        if (lastChoice.empty()) lastChoice = L"No action chosen yet.";
 
         return true;
     }

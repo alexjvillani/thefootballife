@@ -115,21 +115,21 @@ namespace winrt::thefootballife::implementation
                     int slot = static_cast<int>(slotComboBox.SelectedIndex()) + 1;
 
                     if (slot < 1 || slot > SaveGameService::MaxSaveSlots)
-                    {
                         return;
-                    }
 
                     if (result == ContentDialogResult::Primary)
                     {
                         PlayerData loadedPlayer;
                         int loadedWeek = 1;
                         std::wstring loadedChoice;
+                        std::unordered_map<std::wstring, SaveGameService::TeamSeasonStats> loadedTeamStats;
 
                         bool loaded = SaveGameService::LoadFromSlot(
                             slot,
                             loadedPlayer,
                             loadedWeek,
-                            loadedChoice
+                            loadedChoice,
+                            loadedTeamStats
                         );
 
                         if (!loaded)
@@ -146,6 +146,7 @@ namespace winrt::thefootballife::implementation
                         GameState::CurrentPlayer = loadedPlayer;
                         GameState::CurrentWeek = loadedWeek;
                         GameState::LastChoice = loadedChoice;
+                        GameState::TeamStats = loadedTeamStats;
 
                         self->Frame().Navigate(
                             winrt::Windows::UI::Xaml::Interop::TypeName{
@@ -170,9 +171,7 @@ namespace winrt::thefootballife::implementation
                                 if (auto self2 = weakSelf2.get())
                                 {
                                     if (confirmOperation.GetResults() != ContentDialogResult::Primary)
-                                    {
                                         return;
-                                    }
 
                                     bool deleted = SaveGameService::DeleteSlot(slot);
 

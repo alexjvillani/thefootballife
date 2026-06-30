@@ -195,12 +195,9 @@ namespace winrt::thefootballife::implementation
         m_ladder.clear();
 
         auto const& player = GameState::CurrentPlayer;
-        std::wstring playerState = player.state;
+        std::wstring playerState = player.state.empty() ? L"Victoria" : player.state;
         std::wstring playerLeague = player.originalTeamLeague;
 
-        if (playerState.empty()) playerState = L"Victoria";
-
-        // Choose CSV based on tier (extend later for state/AFL tiers)
         std::string csvPath = FindCsv("Assets\\Data\\localteams.csv");
         if (csvPath.empty()) return;
 
@@ -221,11 +218,6 @@ namespace winrt::thefootballife::implementation
         int iLeague = HdrIdx(hmap, { "league" });
         int iClub = HdrIdx(hmap, { "clubname", "club", "name" });
         int iGround = HdrIdx(hmap, { "homeground", "ground", "venue" });
-        int iWins = HdrIdx(hmap, { "wins", "w" });
-        int iLosses = HdrIdx(hmap, { "losses", "l" });
-        int iDraws = HdrIdx(hmap, { "draws", "d" });
-        int iPF = HdrIdx(hmap, { "pointsfor", "pf" });
-        int iPA = HdrIdx(hmap, { "pointsagainst", "pa" });
 
         std::string row;
         while (std::getline(file, row))
@@ -235,46 +227,38 @@ namespace winrt::thefootballife::implementation
 
             auto p = ParseCsvLine(row);
 
-            // Filter: must match player's state
             std::wstring rowState = (iState >= 0 && iState < (int)p.size()) ? ToW(p[iState]) : L"";
             std::wstring rowLeague = (iLeague >= 0 && iLeague < (int)p.size()) ? ToW(p[iLeague]) : L"";
 
             if (rowState != playerState) continue;
-
-            // If we know the player's league code, filter to that too
-            if (!playerLeague.empty() && !rowLeague.empty() && rowLeague != playerLeague)
-                continue;
+            if (!playerLeague.empty() && !rowLeague.empty() && rowLeague != playerLeague) continue;
 
             LadderEntry e;
             if (iClub >= 0 && iClub < (int)p.size()) e.clubName = ToW(p[iClub]);
             if (iGround >= 0 && iGround < (int)p.size()) e.homeGround = ToW(p[iGround]);
-            auto safeInt = [&](int idx) -> int {
-                if (idx < 0 || idx >= (int)p.size()) return 0;
-                try { return std::stoi(p[idx]); }
-                catch (...) { return 0; }
-                };
-            e.wins = safeInt(iWins);
-            e.losses = safeInt(iLosses);
-            e.draws = safeInt(iDraws);
-            e.pointsFor = safeInt(iPF);
-            e.pointsAgainst = safeInt(iPA);
+
+            // Pull stats from save data; default to 0,0,0,0,0 for clubs not yet played
+            auto it = m_teamStats.find(e.clubName);
+            if (it != m_teamStats.end())
+            {
+                e.wins = it->second.wins;
+                e.losses = it->second.losses;
+                e.draws = it->second.draws;
+                e.pointsFor = it->second.pointsFor;
+                e.pointsAgainst = it->second.pointsAgainst;
+            }
 
             if (!e.clubName.empty())
                 m_ladder.push_back(e);
         }
 
-        // Sort: ladder points desc, then percentage desc
         std::sort(m_ladder.begin(), m_ladder.end(), [](LadderEntry const& a, LadderEntry const& b)
             {
-                if (a.ladderPoints() != b.ladderPoints())
-                    return a.ladderPoints() > b.ladderPoints();
+                if (a.ladderPoints() != b.ladderPoints()) return a.ladderPoints() > b.ladderPoints();
                 return a.percentage() > b.percentage();
             });
 
-        // Update title to show league name
-        std::wstring title = playerLeague.empty()
-            ? playerState + L" Ladder"
-            : playerLeague + L" Ladder";
+        std::wstring title = playerLeague.empty() ? playerState + L" Ladder" : playerLeague + L" Ladder";
         LadderTitleText().Text(hstring(title));
     }
 
@@ -610,7 +594,9 @@ namespace winrt::thefootballife::implementation
                     int slot = static_cast<int>(slotComboBox.SelectedIndex()) + 1;
                     bool saved = SaveGameService::SaveToSlot(
                         slot, GameState::CurrentPlayer,
-                        self->m_currentWeek, self->m_lastChoice.c_str());
+                        self->m_currentWeek, self->m_lastChoice.c_str(),
+                        self->m_teamStats
+                    );
 
                     ContentDialog result;
                     result.XamlRoot(self->XamlRoot());

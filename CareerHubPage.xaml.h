@@ -1,7 +1,9 @@
 #pragma once
 #include "CareerHubPage.g.h"
+#include "SaveGameService.h"
 #include <vector>
 #include <string>
+#include <unordered_map>
 
 namespace winrt::thefootballife::implementation
 {
@@ -53,7 +55,6 @@ namespace winrt::thefootballife::implementation
             winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
 
     private:
-        // Ladder entry for one club
         struct LadderEntry
         {
             std::wstring clubName;
@@ -63,8 +64,7 @@ namespace winrt::thefootballife::implementation
             int draws{ 0 };
             int pointsFor{ 0 };
             int pointsAgainst{ 0 };
-            // Computed
-            int played() const { return wins + losses + draws; }
+            int played()       const { return wins + losses + draws; }
             int ladderPoints() const { return wins * 4 + draws * 2; }
             double percentage() const
             {
@@ -82,8 +82,6 @@ namespace winrt::thefootballife::implementation
         void AdjustBlockByTag(winrt::hstring const& tag, int delta);
         int  BlocksUsed() const;
         winrt::hstring FormatHeightFeet(int totalCm);
-
-        // Ladder
         void LoadLadderFromCsv();
         void RenderLadder();
 
@@ -103,16 +101,14 @@ namespace winrt::thefootballife::implementation
         int m_fatigue{ 30 };
         int m_injuryRisk{ 20 };
         int m_recoveryQuality{ 55 };
-
         int m_confidence{ 55 };
         int m_stress{ 35 };
         int m_motivation{ 60 };
-
         int m_discipline{ 60 };
         int m_finances{ 35 };
         int m_relationships{ 50 };
 
-        // Ladder data
+        std::unordered_map<std::wstring, SaveGameService::TeamSeasonStats> m_teamStats;
         std::vector<LadderEntry> m_ladder;
     };
 }

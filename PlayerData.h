@@ -30,3 +30,12 @@ struct PlayerData
     std::wstring weaknesses;
     std::wstring profileImagePath;
 };
+
+struct TeamSeasonStats
+{
+    int wins{ 0 };
+    int losses{ 0 };
+    int draws{ 0 };
+    int pointsFor{ 0 };
+    int pointsAgainst{ 0 };
+};
