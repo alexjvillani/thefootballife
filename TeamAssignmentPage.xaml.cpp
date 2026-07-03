@@ -6,6 +6,7 @@
 
 #include "GameState.h"
 #include "SaveGameService.h"
+#include "FixtureService.h"
 
 #include <algorithm>
 #include <random>
@@ -600,6 +601,13 @@ namespace winrt::thefootballife::implementation
         // Reset career progression state for a fresh save
         GameState::CurrentWeek = 1;
         GameState::LastChoice = L"";
+
+        std::vector<std::wstring> clubNames;
+        clubNames.reserve(m_stateTeams.size());
+        for (auto const& t : m_stateTeams)
+            clubNames.push_back(t.name);
+
+        GameState::Fixtures = FixtureService::GenerateDoubleRoundRobin(clubNames, /*startWeek*/ 1);
 
         Frame().Navigate(
             winrt::Windows::UI::Xaml::Interop::TypeName{

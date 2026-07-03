@@ -123,13 +123,15 @@ namespace winrt::thefootballife::implementation
                         int loadedWeek = 1;
                         std::wstring loadedChoice;
                         std::unordered_map<std::wstring, SaveGameService::TeamSeasonStats> loadedTeamStats;
+                        std::vector<FixtureService::Fixture> fixtures;
 
                         bool loaded = SaveGameService::LoadFromSlot(
                             slot,
                             loadedPlayer,
                             loadedWeek,
                             loadedChoice,
-                            loadedTeamStats
+                            loadedTeamStats,
+                            fixtures
                         );
 
                         if (!loaded)
@@ -147,6 +149,7 @@ namespace winrt::thefootballife::implementation
                         GameState::CurrentWeek = loadedWeek;
                         GameState::LastChoice = loadedChoice;
                         GameState::TeamStats = loadedTeamStats;
+                        GameState::Fixtures = fixtures;
 
                         self->Frame().Navigate(
                             winrt::Windows::UI::Xaml::Interop::TypeName{

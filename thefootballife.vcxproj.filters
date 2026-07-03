@@ -30,12 +30,14 @@
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
     <ClCompile Include="Gamestate.cpp" />
     <ClCompile Include="SaveGameService.cpp" />
+    <ClCompile Include="FixtureService.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="Gamestate.h" />
     <ClInclude Include="PlayerData.h" />
     <ClInclude Include="SaveGameService.h" />
+    <ClInclude Include="FixtureService.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Wide310x150Logo.scale-200.png">

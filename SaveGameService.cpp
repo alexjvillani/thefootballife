@@ -1,9 +1,11 @@
 #include "pch.h"
 #include "SaveGameService.h"
+#include "FixtureService.h"
 
 #include <winrt/Windows.Storage.h>
 #include <fstream>
 #include <string>
+#include <vector>
 #include <unordered_map>
 #include <filesystem>
 #include <ShlObj.h>
@@ -94,7 +96,8 @@ namespace SaveGameService
         PlayerData const& player,
         int currentWeek,
         std::wstring const& lastChoice,
-        std::unordered_map<std::wstring, TeamSeasonStats> const& teamStats
+        std::unordered_map<std::wstring, TeamSeasonStats> const& teamStats,
+        std::vector<FixtureService::Fixture> const& fixtures
     )
     {
         if (slot < 1 || slot > MaxSaveSlots) return false;
@@ -146,6 +149,28 @@ namespace SaveGameService
             }
         }
 
+        // Fixtures section
+        if (!fixtures.empty())
+        {
+            file << L"[Fixtures]\n";
+            int currentRound = -1;
+            for (auto const& f : fixtures)
+            {
+                if (f.Round != currentRound)
+                {
+                    if (currentRound != -1) file << L"\n";
+                    file << L"Round" << f.Round << L"=";
+                    currentRound = f.Round;
+                }
+                else
+                {
+                    file << L";";
+                }
+                file << f.HomeClub << L"," << f.AwayClub << L","
+                    << f.Played << L"," << f.HomeScore << L"," << f.AwayScore;
+            }
+            file << L"\n";
+        }
         return true;
     }
 
@@ -154,7 +179,8 @@ namespace SaveGameService
         PlayerData& player,
         int& currentWeek,
         std::wstring& lastChoice,
-        std::unordered_map<std::wstring, TeamSeasonStats>& teamStats
+        std::unordered_map<std::wstring, TeamSeasonStats>& teamStats,
+        std::vector<FixtureService::Fixture>& fixtures
     )
     {
         if (slot < 1 || slot > MaxSaveSlots) return false;
@@ -164,12 +190,53 @@ namespace SaveGameService
 
         std::unordered_map<std::wstring, std::wstring> values;
         teamStats.clear();
+        fixtures.clear();
 
         bool inTeamStats = false;
+        bool inFixtures = false;
         std::wstring line;
         while (std::getline(file, line))
         {
-            if (line == L"[TeamStats]") { inTeamStats = true; continue; }
+            if (line == L"[TeamStats]") { inTeamStats = true; inFixtures = false; continue; }
+            if (line == L"[Fixtures]") { inFixtures = true; inTeamStats = false; continue; }
+
+            if (inFixtures)
+            {
+                if (line.empty()) continue;
+                size_t eq = line.find(L'=');
+                if (eq == std::wstring::npos) continue;
+
+                // "RoundN" -> N
+                int round = 0;
+                try { round = std::stoi(line.substr(5, eq - 5)); }
+                catch (...) { continue; }
+
+                std::wstring rest = line.substr(eq + 1);
+                std::wistringstream gameStream(rest);
+                std::wstring game;
+                while (std::getline(gameStream, game, L';'))
+                {
+                    std::wistringstream fieldStream(game);
+                    std::wstring home, away, played, hs, as;
+                    std::getline(fieldStream, home, L',');
+                    std::getline(fieldStream, away, L',');
+                    std::getline(fieldStream, played, L',');
+                    std::getline(fieldStream, hs, L',');
+                    std::getline(fieldStream, as, L',');
+
+                    FixtureService::Fixture f;
+                    f.Round = round;
+                    f.HomeClub = home;
+                    f.AwayClub = away;
+                    f.Played = (played == L"1");
+                    try { f.HomeScore = std::stoi(hs); }
+                    catch (...) { f.HomeScore = 0; }
+                    try { f.AwayScore = std::stoi(as); }
+                    catch (...) { f.AwayScore = 0; }
+                    fixtures.push_back(f);
+                }
+                continue;
+            }
 
             if (inTeamStats)
             {

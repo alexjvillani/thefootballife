@@ -1,7 +1,9 @@
 #pragma once
 #include "PlayerData.h"
+#include "FixtureService.h"
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace SaveGameService
 {
@@ -26,7 +28,8 @@ namespace SaveGameService
         PlayerData const& player,
         int currentWeek,
         std::wstring const& lastChoice,
-        std::unordered_map<std::wstring, TeamSeasonStats> const& teamStats = {}
+        std::unordered_map<std::wstring, TeamSeasonStats> const& teamStats = {},
+        std::vector<FixtureService::Fixture> const& fixtures = {}
     );
 
     bool LoadFromSlot(
@@ -34,7 +37,8 @@ namespace SaveGameService
         PlayerData& player,
         int& currentWeek,
         std::wstring& lastChoice,
-        std::unordered_map<std::wstring, TeamSeasonStats>& teamStats
+        std::unordered_map<std::wstring, TeamSeasonStats>& teamStats,
+        std::vector<FixtureService::Fixture>& fixtures
     );
 
     bool GetSavePreview(int slot, std::wstring& playerName, int& week);
