@@ -1,6 +1,7 @@
 #pragma once
 #include "CareerHubPage.g.h"
 #include "SaveGameService.h"
+#include "FixtureService.h"
 #include <vector>
 #include <string>
 #include <unordered_map>
@@ -54,6 +55,14 @@ namespace winrt::thefootballife::implementation
             winrt::Windows::Foundation::IInspectable const& sender,
             winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
 
+        void LadderViewButton_Click(
+            winrt::Windows::Foundation::IInspectable const& sender,
+            winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
+
+        void FixturesViewButton_Click(
+            winrt::Windows::Foundation::IInspectable const& sender,
+            winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
+
     private:
         struct LadderEntry
         {
@@ -79,11 +88,13 @@ namespace winrt::thefootballife::implementation
         void UpdateBlockUI();
         void UpdateStateUI();
         void ApplyWeekSimulation();
+        void SimulateWeekMatches();
         void AdjustBlockByTag(winrt::hstring const& tag, int delta);
         int  BlocksUsed() const;
         winrt::hstring FormatHeightFeet(int totalCm);
         void LoadLadderFromCsv();
         void RenderLadder();
+        void RenderFixtures();
 
     private:
         winrt::hstring m_pageTitle{ L"Career Hub" };
@@ -110,6 +121,7 @@ namespace winrt::thefootballife::implementation
 
         std::unordered_map<std::wstring, SaveGameService::TeamSeasonStats> m_teamStats;
         std::vector<LadderEntry> m_ladder;
+        std::vector<FixtureService::Fixture> m_fixtures;
     };
 }
 

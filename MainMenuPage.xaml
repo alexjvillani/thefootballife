@@ -57,7 +57,7 @@
             </Border>
 
             <TextBlock
-                Text="Version 0.2"
+                Text="Version 03/07/2026"
                 Foreground="#CCCCCC"
                 Margin="20"
                 VerticalAlignment="Bottom"

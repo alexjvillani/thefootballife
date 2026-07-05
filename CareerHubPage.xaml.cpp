@@ -6,6 +6,7 @@
 
 #include "GameState.h"
 #include "SaveGameService.h"
+#include "FixtureService.h"
 
 #include <algorithm>
 #include <fstream>
@@ -16,6 +17,7 @@
 #include <locale>
 #include <cctype>
 #include <iomanip>
+#include <random>
 
 #include <Windows.h>
 
@@ -166,12 +168,15 @@ namespace winrt::thefootballife::implementation
         InitializeComponent();
         m_currentWeek = GameState::CurrentWeek;
         m_lastChoice = hstring(GameState::LastChoice);
+        m_teamStats = GameState::TeamStats;
+        m_fixtures = GameState::Fixtures;
         LoadPlayerData();
         UpdateWeekDisplay();
         UpdateBlockUI();
         UpdateStateUI();
         LoadLadderFromCsv();
         RenderLadder();
+        RenderFixtures();
     }
 
     hstring CareerHubPage::PageTitle() { return m_pageTitle; }
@@ -198,58 +203,136 @@ namespace winrt::thefootballife::implementation
         std::wstring playerState = player.state.empty() ? L"Victoria" : player.state;
         std::wstring playerLeague = player.originalTeamLeague;
 
-        std::string csvPath = FindCsv("Assets\\Data\\localteams.csv");
-        if (csvPath.empty()) return;
-
-        std::ifstream file(csvPath, std::ios::binary);
-        if (!file.is_open()) return;
-
-        std::string headerLine;
-        if (!std::getline(file, headerLine)) return;
-        StripBom(headerLine);
-        if (!headerLine.empty() && headerLine.back() == '\r') headerLine.pop_back();
-
-        auto hparts = ParseCsvLine(headerLine);
-        std::unordered_map<std::string, int> hmap;
-        for (size_t i = 0; i < hparts.size(); ++i)
-            hmap[NormHdr(hparts[i])] = static_cast<int>(i);
-
-        int iState = HdrIdx(hmap, { "state" });
-        int iLeague = HdrIdx(hmap, { "league" });
-        int iClub = HdrIdx(hmap, { "clubname", "club", "name" });
-        int iGround = HdrIdx(hmap, { "homeground", "ground", "venue" });
-
-        std::string row;
-        while (std::getline(file, row))
+        
+        std::unordered_map<std::wstring, bool> leagueClubs;
+        for (auto const& f : m_fixtures)
         {
-            if (!row.empty() && row.back() == '\r') row.pop_back();
-            if (row.empty()) continue;
+            leagueClubs[f.HomeClub] = true;
+            leagueClubs[f.AwayClub] = true;
+        }
 
-            auto p = ParseCsvLine(row);
-
-            std::wstring rowState = (iState >= 0 && iState < (int)p.size()) ? ToW(p[iState]) : L"";
-            std::wstring rowLeague = (iLeague >= 0 && iLeague < (int)p.size()) ? ToW(p[iLeague]) : L"";
-
-            if (rowState != playerState) continue;
-            if (!playerLeague.empty() && !rowLeague.empty() && rowLeague != playerLeague) continue;
-
-            LadderEntry e;
-            if (iClub >= 0 && iClub < (int)p.size()) e.clubName = ToW(p[iClub]);
-            if (iGround >= 0 && iGround < (int)p.size()) e.homeGround = ToW(p[iGround]);
-
-            // Pull stats from save data; default to 0,0,0,0,0 for clubs not yet played
-            auto it = m_teamStats.find(e.clubName);
-            if (it != m_teamStats.end())
+        // Home ground lookup from CSV
+        std::unordered_map<std::wstring, std::wstring> homeGrounds;
+        std::string csvPath = FindCsv("Assets\\Data\\localteams.csv");
+        if (!csvPath.empty())
+        {
+            std::ifstream file(csvPath, std::ios::binary);
+            if (file.is_open())
             {
-                e.wins = it->second.wins;
-                e.losses = it->second.losses;
-                e.draws = it->second.draws;
-                e.pointsFor = it->second.pointsFor;
-                e.pointsAgainst = it->second.pointsAgainst;
-            }
+                std::string headerLine;
+                if (std::getline(file, headerLine))
+                {
+                    StripBom(headerLine);
+                    if (!headerLine.empty() && headerLine.back() == '\r') headerLine.pop_back();
 
-            if (!e.clubName.empty())
+                    auto hparts = ParseCsvLine(headerLine);
+                    std::unordered_map<std::string, int> hmap;
+                    for (size_t i = 0; i < hparts.size(); ++i)
+                        hmap[NormHdr(hparts[i])] = static_cast<int>(i);
+
+                    int iClub = HdrIdx(hmap, { "clubname", "club", "name" });
+                    int iGround = HdrIdx(hmap, { "homeground", "ground", "venue" });
+
+                    std::string row;
+                    while (std::getline(file, row))
+                    {
+                        if (!row.empty() && row.back() == '\r') row.pop_back();
+                        if (row.empty()) continue;
+
+                        auto p = ParseCsvLine(row);
+                        std::wstring clubName = (iClub >= 0 && iClub < (int)p.size()) ? ToW(p[iClub]) : L"";
+                        if (clubName.empty()) continue;
+
+                        std::wstring ground = (iGround >= 0 && iGround < (int)p.size()) ? ToW(p[iGround]) : L"";
+                        homeGrounds[clubName] = ground;
+                    }
+                }
+            }
+        }
+
+        if (!leagueClubs.empty())
+        {
+            // Normal path: build the ladder strictly from fixture participants
+            for (auto const& kv : leagueClubs)
+            {
+                LadderEntry e;
+                e.clubName = kv.first;
+
+                auto groundIt = homeGrounds.find(e.clubName);
+                if (groundIt != homeGrounds.end()) e.homeGround = groundIt->second;
+
+                auto statsIt = m_teamStats.find(e.clubName);
+                if (statsIt != m_teamStats.end())
+                {
+                    e.wins = statsIt->second.wins;
+                    e.losses = statsIt->second.losses;
+                    e.draws = statsIt->second.draws;
+                    e.pointsFor = statsIt->second.pointsFor;
+                    e.pointsAgainst = statsIt->second.pointsAgainst;
+                }
+
                 m_ladder.push_back(e);
+            }
+        }
+        else
+        {
+            // Fallback for saves with no fixtures yet
+            // fall back to the old state/league CSV filter so the ladder isn't empty.
+            if (!csvPath.empty())
+            {
+                std::ifstream file(csvPath, std::ios::binary);
+                if (file.is_open())
+                {
+                    std::string headerLine;
+                    if (std::getline(file, headerLine))
+                    {
+                        StripBom(headerLine);
+                        if (!headerLine.empty() && headerLine.back() == '\r') headerLine.pop_back();
+
+                        auto hparts = ParseCsvLine(headerLine);
+                        std::unordered_map<std::string, int> hmap;
+                        for (size_t i = 0; i < hparts.size(); ++i)
+                            hmap[NormHdr(hparts[i])] = static_cast<int>(i);
+
+                        int iState = HdrIdx(hmap, { "state" });
+                        int iLeague = HdrIdx(hmap, { "league" });
+                        int iClub = HdrIdx(hmap, { "clubname", "club", "name" });
+                        int iGround = HdrIdx(hmap, { "homeground", "ground", "venue" });
+
+                        std::string row;
+                        while (std::getline(file, row))
+                        {
+                            if (!row.empty() && row.back() == '\r') row.pop_back();
+                            if (row.empty()) continue;
+
+                            auto p = ParseCsvLine(row);
+
+                            std::wstring rowState = (iState >= 0 && iState < (int)p.size()) ? ToW(p[iState]) : L"";
+                            std::wstring rowLeague = (iLeague >= 0 && iLeague < (int)p.size()) ? ToW(p[iLeague]) : L"";
+
+                            if (rowState != playerState) continue;
+                            if (!playerLeague.empty() && !rowLeague.empty() && rowLeague != playerLeague) continue;
+
+                            LadderEntry e;
+                            if (iClub >= 0 && iClub < (int)p.size()) e.clubName = ToW(p[iClub]);
+                            if (iGround >= 0 && iGround < (int)p.size()) e.homeGround = ToW(p[iGround]);
+
+                            auto it = m_teamStats.find(e.clubName);
+                            if (it != m_teamStats.end())
+                            {
+                                e.wins = it->second.wins;
+                                e.losses = it->second.losses;
+                                e.draws = it->second.draws;
+                                e.pointsFor = it->second.pointsFor;
+                                e.pointsAgainst = it->second.pointsAgainst;
+                            }
+
+                            if (!e.clubName.empty())
+                                m_ladder.push_back(e);
+                        }
+                    }
+                }
+            }
         }
 
         std::sort(m_ladder.begin(), m_ladder.end(), [](LadderEntry const& a, LadderEntry const& b)
@@ -340,6 +423,91 @@ namespace winrt::thefootballife::implementation
             row.Child(g);
             LadderRowsPanel().Children().Append(row);
         }
+    }
+
+    // ── Fixtures ─────────────────────────────────────────────────────────────
+
+    void CareerHubPage::RenderFixtures()
+    {
+        FixtureRowsPanel().Children().Clear();
+
+        const std::wstring playerClub = GameState::CurrentPlayer.originalTeam;
+
+        std::vector<FixtureService::Fixture> myFixtures;
+        for (auto const& f : m_fixtures)
+            if (f.HomeClub == playerClub || f.AwayClub == playerClub)
+                myFixtures.push_back(f);
+
+        std::sort(myFixtures.begin(), myFixtures.end(),
+            [](FixtureService::Fixture const& a, FixtureService::Fixture const& b)
+            {
+                return a.Round < b.Round;
+            });
+
+        if (myFixtures.empty())
+        {
+            TextBlock empty;
+            empty.Text(L"No fixtures available.");
+            empty.Foreground(SolidColorBrush(winrt::Windows::UI::ColorHelper::FromArgb(255, 150, 150, 150)));
+            empty.FontSize(13);
+            FixtureRowsPanel().Children().Append(empty);
+            return;
+        }
+
+        for (auto const& f : myFixtures)
+        {
+            bool isHome = (f.HomeClub == playerClub);
+            std::wstring opponent = isHome ? f.AwayClub : f.HomeClub;
+
+            Border row;
+            auto bgColour = (f.Round == m_currentWeek)
+                ? winrt::Windows::UI::ColorHelper::FromArgb(255, 30, 58, 95)   // highlight this week
+                : winrt::Windows::UI::ColorHelper::FromArgb(255, 30, 30, 30);
+            row.Background(SolidColorBrush(bgColour));
+
+            Microsoft::UI::Xaml::CornerRadius cr{};
+            cr.TopLeft = cr.TopRight = cr.BottomRight = cr.BottomLeft = 6;
+            row.CornerRadius(cr);
+            row.Padding(Thickness{ 8, 6, 8, 6 });
+
+            StackPanel content;
+            content.Spacing(2);
+
+            TextBlock roundLine;
+            std::wstring label = L"Round " + std::to_wstring(f.Round) + L"  \u2022  " +
+                (isHome ? L"vs " : L"@ ") + opponent;
+            roundLine.Text(hstring(label));
+            roundLine.Foreground(SolidColorBrush(winrt::Windows::UI::Colors::White()));
+            roundLine.FontSize(13);
+            roundLine.FontWeight(winrt::Windows::UI::Text::FontWeights::SemiBold());
+
+            TextBlock resultLine;
+            std::wstring resultText = f.Played
+                ? (L"Result: " +
+                    std::to_wstring(isHome ? f.HomeScore : f.AwayScore) + L" - " +
+                    std::to_wstring(isHome ? f.AwayScore : f.HomeScore))
+                : L"Not yet played";
+            resultLine.Text(hstring(resultText));
+            resultLine.Foreground(SolidColorBrush(winrt::Windows::UI::ColorHelper::FromArgb(255, 190, 190, 190)));
+            resultLine.FontSize(12);
+
+            content.Children().Append(roundLine);
+            content.Children().Append(resultLine);
+            row.Child(content);
+            FixtureRowsPanel().Children().Append(row);
+        }
+    }
+
+    void CareerHubPage::LadderViewButton_Click(IInspectable const&, RoutedEventArgs const&)
+    {
+        LadderContentPanel().Visibility(Visibility::Visible);
+        FixturesContentPanel().Visibility(Visibility::Collapsed);
+    }
+
+    void CareerHubPage::FixturesViewButton_Click(IInspectable const&, RoutedEventArgs const&)
+    {
+        LadderContentPanel().Visibility(Visibility::Collapsed);
+        FixturesContentPanel().Visibility(Visibility::Visible);
     }
 
     // ── Block UI ─────────────────────────────────────────────────────────────
@@ -441,6 +609,40 @@ namespace winrt::thefootballife::implementation
 
         GameState::LastChoice = m_lastChoice.c_str();
         UpdateStateUI();
+    }
+
+    void CareerHubPage::SimulateWeekMatches()
+    {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<int> scoreDist(40, 130);
+
+        for (auto& f : m_fixtures)
+        {
+            if (f.Round != m_currentWeek || f.Played) continue;
+
+            int homeScore = scoreDist(gen);
+            int awayScore = scoreDist(gen);
+
+            f.HomeScore = homeScore;
+            f.AwayScore = awayScore;
+            f.Played = true;
+
+            auto& homeStats = m_teamStats[f.HomeClub];
+            auto& awayStats = m_teamStats[f.AwayClub];
+
+            homeStats.pointsFor += homeScore;
+            homeStats.pointsAgainst += awayScore;
+            awayStats.pointsFor += awayScore;
+            awayStats.pointsAgainst += homeScore;
+
+            if (homeScore > awayScore) { homeStats.wins++; awayStats.losses++; }
+            else if (awayScore > homeScore) { awayStats.wins++; homeStats.losses++; }
+            else { homeStats.draws++; awayStats.draws++; }
+        }
+
+        GameState::Fixtures = m_fixtures;
+        GameState::TeamStats = m_teamStats;
     }
 
     void CareerHubPage::LoadPlayerData()
@@ -554,12 +756,16 @@ namespace winrt::thefootballife::implementation
         }
 
         ApplyWeekSimulation();
+        SimulateWeekMatches();
+
         m_currentWeek++;
         GameState::CurrentWeek = m_currentWeek;
         BottomHintText().Text(L"Week advanced. Simulation outcomes applied to your player state.");
         UpdateWeekDisplay();
 
+        LoadLadderFromCsv();
         RenderLadder();
+        RenderFixtures();
     }
 
     void CareerHubPage::SaveGameButton_Click(IInspectable const&, RoutedEventArgs const&)
@@ -595,7 +801,8 @@ namespace winrt::thefootballife::implementation
                     bool saved = SaveGameService::SaveToSlot(
                         slot, GameState::CurrentPlayer,
                         self->m_currentWeek, self->m_lastChoice.c_str(),
-                        self->m_teamStats
+                        self->m_teamStats,
+                        self->m_fixtures
                     );
 
                     ContentDialog result;

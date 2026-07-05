@@ -264,47 +264,82 @@
                 </ScrollViewer>
             </Border>
 
-            <!-- ── Column 3: League Ladder ── -->
+            <!-- ── Column 3: League Ladder / Fixtures ── -->
             <Border Grid.Column="3"
                     Background="#1C1C1C"
                     CornerRadius="12"
                     Padding="20">
                 <StackPanel Spacing="10">
-                    <TextBlock x:Name="LadderTitleText"
-                               Text="League Ladder"
-                               FontSize="22"
-                               FontWeight="SemiBold"
-                               Foreground="White"/>
 
-                    <!-- Column headers -->
-                    <Grid Margin="0,4,0,2">
+                    <!-- View toggle -->
+                    <Grid ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="22"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="26"/>
-                            <ColumnDefinition Width="26"/>
-                            <ColumnDefinition Width="26"/>
-                            <ColumnDefinition Width="26"/>
-                            <ColumnDefinition Width="48"/>
-                            <ColumnDefinition Width="32"/>
+                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="#"   FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
-                        <TextBlock Grid.Column="1" Text="Club" FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
-                        <TextBlock Grid.Column="2" Text="P"   FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
-                        <TextBlock Grid.Column="3" Text="W"   FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
-                        <TextBlock Grid.Column="4" Text="L"   FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
-                        <TextBlock Grid.Column="5" Text="D"   FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
-                        <TextBlock Grid.Column="6" Text="%"   FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
-                        <TextBlock Grid.Column="7" Text="Pts" FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
+                        <Button Grid.Column="0"
+                                Content="Ladder"
+                                Click="LadderViewButton_Click"
+                                HorizontalAlignment="Stretch"/>
+                        <Button Grid.Column="1"
+                                Content="Fixtures"
+                                Click="FixturesViewButton_Click"
+                                HorizontalAlignment="Stretch"/>
                     </Grid>
 
-                    <Rectangle Height="1" Fill="#333333"/>
+                    <!-- Ladder view -->
+                    <StackPanel x:Name="LadderContentPanel" Spacing="10" Visibility="Visible">
+                        <TextBlock x:Name="LadderTitleText"
+                                   Text="League Ladder"
+                                   FontSize="22"
+                                   FontWeight="SemiBold"
+                                   Foreground="White"/>
 
-                    <!-- Ladder rows — populated from code-behind -->
-                    <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled">
-                        <StackPanel x:Name="LadderRowsPanel" Spacing="2"/>
-                    </ScrollViewer>
+                        <!-- Column headers -->
+                        <Grid Margin="0,4,0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="22"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="26"/>
+                                <ColumnDefinition Width="26"/>
+                                <ColumnDefinition Width="26"/>
+                                <ColumnDefinition Width="26"/>
+                                <ColumnDefinition Width="48"/>
+                                <ColumnDefinition Width="32"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="#"   FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
+                            <TextBlock Grid.Column="1" Text="Club" FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
+                            <TextBlock Grid.Column="2" Text="P"   FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
+                            <TextBlock Grid.Column="3" Text="W"   FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
+                            <TextBlock Grid.Column="4" Text="L"   FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
+                            <TextBlock Grid.Column="5" Text="D"   FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
+                            <TextBlock Grid.Column="6" Text="%"   FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
+                            <TextBlock Grid.Column="7" Text="Pts" FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
+                        </Grid>
+
+                        <Rectangle Height="1" Fill="#333333"/>
+
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      MaxHeight="480">
+                            <StackPanel x:Name="LadderRowsPanel" Spacing="2"/>
+                        </ScrollViewer>
+                    </StackPanel>
+
+                    <!-- Fixtures view -->
+                    <StackPanel x:Name="FixturesContentPanel" Spacing="10" Visibility="Collapsed">
+                        <TextBlock Text="Fixtures"
+                                   FontSize="22"
+                                   FontWeight="SemiBold"
+                                   Foreground="White"/>
+
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      MaxHeight="520">
+                            <StackPanel x:Name="FixtureRowsPanel" Spacing="6"/>
+                        </ScrollViewer>
+                    </StackPanel>
+
                 </StackPanel>
             </Border>
         </Grid>
