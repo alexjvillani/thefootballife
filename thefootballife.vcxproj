@@ -119,6 +119,7 @@
     <Manifest Include="app.manifest" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CareerDayService.h" />
     <ClInclude Include="CareerHubPage.xaml.h">
       <DependentUpon>CareerHubPage.xaml</DependentUpon>
     </ClInclude>
@@ -172,6 +173,7 @@
     <Page Include="XFactorPage.xaml" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CareerDayService.cpp" />
     <ClCompile Include="CareerHubPage.xaml.cpp">
       <DependentUpon>CareerHubPage.xaml</DependentUpon>
     </ClCompile>

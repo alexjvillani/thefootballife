@@ -7,6 +7,7 @@
 #include "GameState.h"
 #include "SaveGameService.h"
 #include "FixtureService.h"
+#include "CareerDayService.h"
 
 #include <algorithm>
 #include <fstream>
@@ -203,7 +204,7 @@ namespace winrt::thefootballife::implementation
         std::wstring playerState = player.state.empty() ? L"Victoria" : player.state;
         std::wstring playerLeague = player.originalTeamLeague;
 
-        
+
         std::unordered_map<std::wstring, bool> leagueClubs;
         for (auto const& f : m_fixtures)
         {
@@ -567,7 +568,16 @@ namespace winrt::thefootballife::implementation
             BottomHintText().Text(L"You only have 14 total blocks each week."); return;
         }
 
+        // Friday has no daily cap - it's the catch-up day for whatever's left of the 14.
+        bool isFriday = (GameState::CurrentDay == DayPhase::Friday);
+        if (!isFriday && delta > 0 && m_blocksSpentToday + delta > kBlocksPerDay)
+        {
+            BottomHintText().Text(L"You can only spend " + to_hstring(kBlocksPerDay) + L" blocks today. Advance to the next day for more.");
+            return;
+        }
+
         *target = proposed;
+        m_blocksSpentToday = std::clamp(m_blocksSpentToday + delta, 0, kBlocksPerDay);
         BottomHintText().Text(L"Weekly schedule updated.");
         UpdateBlockUI();
     }
@@ -682,7 +692,7 @@ namespace winrt::thefootballife::implementation
 
     void CareerHubPage::UpdateWeekDisplay()
     {
-        WeekText().Text(L"Week " + to_hstring(m_currentWeek));
+        WeekText().Text(L"Week " + to_hstring(m_currentWeek) + L" - " + hstring(CareerDayService::GetTodayLabel()));
         LastChoiceText().Text(m_lastChoice);
 
         if (m_currentWeek <= 4)
@@ -749,23 +759,51 @@ namespace winrt::thefootballife::implementation
 
     void CareerHubPage::AdvanceWeekButton_Click(IInspectable const&, RoutedEventArgs const&)
     {
-        if (BlocksUsed() != kTotalBlocks)
+        // Friday is the hard gate: whatever's left of the 14 blocks must be
+        // spent today, since there's no catch-up day after Saturday's match.
+        if (GameState::CurrentDay == DayPhase::Friday && BlocksUsed() != kTotalBlocks)
         {
-            BottomHintText().Text(L"You must allocate exactly 14 blocks before advancing.");
+            BottomHintText().Text(L"You must allocate all 14 blocks for the week before Saturday.");
             return;
         }
 
-        ApplyWeekSimulation();
-        SimulateWeekMatches();
+        bool isMatchday = CareerDayService::AdvanceDay();
+        m_currentWeek = GameState::CurrentWeek;
+        m_blocksSpentToday = 0; // fresh daily cap for the new day
 
-        m_currentWeek++;
-        GameState::CurrentWeek = m_currentWeek;
-        BottomHintText().Text(L"Week advanced. Simulation outcomes applied to your player state.");
+        if (isMatchday)
+        {
+            ApplyWeekSimulation();
+            SimulateWeekMatches();
+            BottomHintText().Text(L"Matchday! Simulation outcomes applied to your player state.");
+            LoadLadderFromCsv();
+            RenderLadder();
+            RenderFixtures();
+        }
+        else if (GameState::CurrentDay == DayPhase::Sunday)
+        {
+            // Free recovery day - no player choice, just a passive nudge.
+            m_recoveryQuality = std::clamp(m_recoveryQuality + 5, 0, 100);
+            m_fatigue = std::clamp(m_fatigue - 5, 0, 100);
+            UpdateStateUI();
+
+            // Reset next week's block allocation - the player builds it up
+            // fresh across the coming Mon-Fri rather than starting pre-filled.
+            m_trainingBlocks = 0;
+            m_schoolBlocks = 0;
+            m_workBlocks = 0;
+            m_socialBlocks = 0;
+            m_recoveryBlocks = 0;
+            UpdateBlockUI();
+
+            BottomHintText().Text(L"Sunday - a free recovery day. Fatigue eased, ready for the week ahead.");
+        }
+        else
+        {
+            BottomHintText().Text(L"Day advanced.");
+        }
+
         UpdateWeekDisplay();
-
-        LoadLadderFromCsv();
-        RenderLadder();
-        RenderFixtures();
     }
 
     void CareerHubPage::SaveGameButton_Click(IInspectable const&, RoutedEventArgs const&)

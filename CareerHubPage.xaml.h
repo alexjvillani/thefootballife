@@ -103,11 +103,13 @@ namespace winrt::thefootballife::implementation
         winrt::hstring m_lastChoice{ L"No action chosen yet." };
 
         static constexpr int kTotalBlocks{ 14 };
+        static constexpr int kBlocksPerDay{ 3 }; // Mon-Thu cap; Friday has no cap but must reach kTotalBlocks
         int m_trainingBlocks{ 4 };
         int m_schoolBlocks{ 5 };
         int m_workBlocks{ 2 };
         int m_socialBlocks{ 2 };
         int m_recoveryBlocks{ 1 };
+        int m_blocksSpentToday{ 0 }; // resets each day; NOT decremented correctly if you undo a block spent on a PREVIOUS day (known limitation, flagged not fixed)
 
         int m_fatigue{ 30 };
         int m_injuryRisk{ 20 };
