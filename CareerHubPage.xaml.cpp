@@ -513,6 +513,28 @@ namespace winrt::thefootballife::implementation
 
     // ── Block UI ─────────────────────────────────────────────────────────────
 
+    CareerHubPage::ProjectedStats CareerHubPage::ComputeProjectedStats() const
+    {
+        //allow for user to see what COULD happen if they went with their choices
+        ProjectedStats p;
+        p.fatigue = std::clamp(m_fatigue + (m_trainingBlocks * 4) + (m_workBlocks * 3) - (m_recoveryBlocks * 8), 0, 100);
+        p.injuryRisk = std::clamp(m_injuryRisk + (p.fatigue / 12) + (m_trainingBlocks * 2) - (m_recoveryBlocks * 5), 0, 100);
+        p.recoveryQuality = std::clamp(m_recoveryQuality + (m_recoveryBlocks * 7) - (m_workBlocks * 2), 0, 100);
+        p.confidence = std::clamp(m_confidence + (m_trainingBlocks * 2) + m_socialBlocks - (m_stress / 18), 0, 100);
+        p.stress = std::clamp(m_stress + (m_schoolBlocks * 2) + (m_workBlocks * 3) - (m_recoveryBlocks * 4), 0, 100);
+        p.motivation = std::clamp(m_motivation + m_trainingBlocks + m_socialBlocks - (p.fatigue / 20), 0, 100);
+        p.discipline = std::clamp(m_discipline + (m_schoolBlocks * 2) + m_trainingBlocks - (m_socialBlocks * 2), 0, 100);
+        p.finances = std::clamp(m_finances + (m_workBlocks * 6) - m_recoveryBlocks, 0, 100);
+        p.relationships = std::clamp(m_relationships + (m_socialBlocks * 4) - m_workBlocks, 0, 100);
+
+        if (m_socialBlocks >= 4)
+        {
+            p.discipline = std::clamp(p.discipline - 4, 0, 100);
+        }
+
+        return p;
+    }
+
     void CareerHubPage::UpdateBlockUI()
     {
         TrainingBlocksText().Text(to_hstring(m_trainingBlocks));
@@ -531,6 +553,30 @@ namespace winrt::thefootballife::implementation
             BlockWarningText().Text(L"Unassigned blocks: " + to_hstring(remaining) + L". Assign all blocks before advancing.");
         else
             BlockWarningText().Text(L"Over allocated by " + to_hstring(-remaining) + L". Remove blocks to continue.");
+
+        // Live preview of what THIS week's allocation would produce if
+        // committed right now. Overwritten with the actual narrative
+        // consequence text once ApplyWeekSimulation() commits on Saturday.
+        ProjectedStats p = ComputeProjectedStats();
+        auto delta = [](wchar_t const* label, int oldValue, int newValue) -> std::wstring
+            {
+                int d = newValue - oldValue;
+                std::wstring sign = d > 0 ? L"+" : L"";
+                return std::wstring(label) + L" " + sign + std::to_wstring(d) + L"   ";
+            };
+
+        std::wstring preview = L"If the week ended now: ";
+        preview += delta(L"Fatigue", m_fatigue, p.fatigue);
+        preview += delta(L"Injury Risk", m_injuryRisk, p.injuryRisk);
+        preview += delta(L"Recovery", m_recoveryQuality, p.recoveryQuality);
+        preview += delta(L"Confidence", m_confidence, p.confidence);
+        preview += delta(L"Stress", m_stress, p.stress);
+        preview += delta(L"Motivation", m_motivation, p.motivation);
+        preview += delta(L"Discipline", m_discipline, p.discipline);
+        preview += delta(L"Finances", m_finances, p.finances);
+        preview += delta(L"Relationships", m_relationships, p.relationships);
+
+        ConsequenceText().Text(hstring(preview));
     }
 
     void CareerHubPage::UpdateStateUI()
@@ -584,15 +630,16 @@ namespace winrt::thefootballife::implementation
 
     void CareerHubPage::ApplyWeekSimulation()
     {
-        m_fatigue = std::clamp(m_fatigue + (m_trainingBlocks * 4) + (m_workBlocks * 3) - (m_recoveryBlocks * 8), 0, 100);
-        m_injuryRisk = std::clamp(m_injuryRisk + (m_fatigue / 12) + (m_trainingBlocks * 2) - (m_recoveryBlocks * 5), 0, 100);
-        m_recoveryQuality = std::clamp(m_recoveryQuality + (m_recoveryBlocks * 7) - (m_workBlocks * 2), 0, 100);
-        m_confidence = std::clamp(m_confidence + (m_trainingBlocks * 2) + m_socialBlocks - (m_stress / 18), 0, 100);
-        m_stress = std::clamp(m_stress + (m_schoolBlocks * 2) + (m_workBlocks * 3) - (m_recoveryBlocks * 4), 0, 100);
-        m_motivation = std::clamp(m_motivation + m_trainingBlocks + m_socialBlocks - (m_fatigue / 20), 0, 100);
-        m_discipline = std::clamp(m_discipline + (m_schoolBlocks * 2) + m_trainingBlocks - (m_socialBlocks * 2), 0, 100);
-        m_finances = std::clamp(m_finances + (m_workBlocks * 6) - m_recoveryBlocks, 0, 100);
-        m_relationships = std::clamp(m_relationships + (m_socialBlocks * 4) - m_workBlocks, 0, 100);
+        ProjectedStats result = ComputeProjectedStats();
+        m_fatigue = result.fatigue;
+        m_injuryRisk = result.injuryRisk;
+        m_recoveryQuality = result.recoveryQuality;
+        m_confidence = result.confidence;
+        m_stress = result.stress;
+        m_motivation = result.motivation;
+        m_discipline = result.discipline;
+        m_finances = result.finances;
+        m_relationships = result.relationships;
 
         std::wstring consequence;
         if (m_recoveryBlocks == 0)
@@ -602,10 +649,7 @@ namespace winrt::thefootballife::implementation
         if (m_workBlocks >= 4)
             consequence += L"Heavy work schedule improved finances while reducing recovery quality. ";
         if (m_socialBlocks >= 4)
-        {
             consequence += L"Social time improved morale and relationships, but discipline dipped. ";
-            m_discipline = std::clamp(m_discipline - 4, 0, 100);
-        }
         if (consequence.empty())
             consequence = L"Balanced week. No major penalties triggered.";
 

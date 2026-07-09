@@ -96,6 +96,23 @@ namespace winrt::thefootballife::implementation
         void RenderLadder();
         void RenderFixtures();
 
+        // Pure projection of what the current block allocation would produce
+        // if the week were committed right now. Shared by ApplyWeekSimulation
+        // (which commits it) and the live preview shown while allocating.
+        struct ProjectedStats
+        {
+            int fatigue{ 0 };
+            int injuryRisk{ 0 };
+            int recoveryQuality{ 0 };
+            int confidence{ 0 };
+            int stress{ 0 };
+            int motivation{ 0 };
+            int discipline{ 0 };
+            int finances{ 0 };
+            int relationships{ 0 };
+        };
+        ProjectedStats ComputeProjectedStats() const;
+
     private:
         winrt::hstring m_pageTitle{ L"Career Hub" };
 

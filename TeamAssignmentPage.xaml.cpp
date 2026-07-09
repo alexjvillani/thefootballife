@@ -7,6 +7,7 @@
 #include "GameState.h"
 #include "SaveGameService.h"
 #include "FixtureService.h"
+#include "CareerDayService.h"
 
 #include <algorithm>
 #include <random>
@@ -601,6 +602,7 @@ namespace winrt::thefootballife::implementation
         // Reset career progression state for a fresh save
         GameState::CurrentWeek = 1;
         GameState::LastChoice = L"";
+        CareerDayService::InitializeSeason(2026);
 
         std::vector<std::wstring> clubNames;
         clubNames.reserve(m_stateTeams.size());

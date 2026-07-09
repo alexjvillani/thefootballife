@@ -367,7 +367,7 @@
                     Margin="0,0,10,0"/>
 
             <Button Grid.Column="2"
-                    Content="Advance Week"
+                    Content="Advance Day"
                     Click="AdvanceWeekButton_Click"
                     MinWidth="160"
                     MinHeight="44"
