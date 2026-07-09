@@ -106,16 +106,11 @@ namespace CareerDayService
             GameState::CurrentWeek++;
         }
 
-        if (GameState::CurrentDay == DayPhase::Saturday)
-        {
-            // TODO: wire up your existing weekly match simulation here once
-            // you tell me where SimulateWeekMatches() (or equivalent) lives,
-            // e.g.:
-            //   SaveGameService::SimulateWeekMatches();
-            return true;
-        }
-
-        return false;
+        // Deliberately does NOT trigger match simulation itself -
+        // CareerHubPage owns m_fixtures/m_teamStats and its own
+        // ApplyWeekSimulation()/SimulateWeekMatches(). The caller should
+        // check this return value and run those when it's true.
+        return GameState::CurrentDay == DayPhase::Saturday;
     }
 
     std::wstring GetDayPhaseName(DayPhase day)
@@ -145,6 +140,28 @@ namespace CareerDayService
             std::to_wstring(GameState::CurrentDate.Day) + L" " +
             monthNames[GameState::CurrentDate.Month - 1] + L" " +
             std::to_wstring(GameState::CurrentDate.Year);
+    }
+
+    std::wstring GetDayFlavorText(DayPhase day)
+    {
+        switch (day)
+        {
+        case DayPhase::Monday:
+            return L"Recovery from the weekend, then the first team run of the week. Set your intentions early.";
+        case DayPhase::Tuesday:
+            return L"Main training day - the heaviest work of the week happens here.";
+        case DayPhase::Wednesday:
+            return L"Midweek grind. Balancing football with school, work, and everything else competing for your time.";
+        case DayPhase::Thursday:
+            return L"Taper begins. Sharpen up your touch, but don't leave your best form in the shed before Saturday.";
+        case DayPhase::Friday:
+            return L"Final preparations. Whatever isn't locked in tonight won't be ready for matchday.";
+        case DayPhase::Saturday:
+            return L"Matchday. Everything this week has built to today.";
+        case DayPhase::Sunday:
+            return L"A free day to recover, reflect, and reset before the week begins again.";
+        }
+        return L"";
     }
 
     bool IsMatchday()

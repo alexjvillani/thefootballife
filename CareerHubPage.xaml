@@ -113,6 +113,13 @@
                                        Text="Season Phase: School Season"
                                        FontSize="16"
                                        Foreground="#BBBBBB"/>
+                            <TextBlock x:Name="TodayFocusText"
+                                       Text=""
+                                       TextWrapping="Wrap"
+                                       FontSize="14"
+                                       FontStyle="Italic"
+                                       Foreground="#8FCB87"
+                                       Margin="0,4,0,0"/>
                         </StackPanel>
                     </Border>
 
@@ -367,7 +374,7 @@
                     Margin="0,0,10,0"/>
 
             <Button Grid.Column="2"
-                    Content="Advance Day"
+                    Content="Advance Week"
                     Click="AdvanceWeekButton_Click"
                     MinWidth="160"
                     MinHeight="44"

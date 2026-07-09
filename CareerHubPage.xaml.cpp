@@ -515,7 +515,11 @@ namespace winrt::thefootballife::implementation
 
     CareerHubPage::ProjectedStats CareerHubPage::ComputeProjectedStats() const
     {
-        //allow for user to see what COULD happen if they went with their choices
+        // Mirrors ApplyWeekSimulation's math exactly, including the order-
+        // dependent cascading (injuryRisk reads the NEW fatigue, motivation
+        // reads the NEW fatigue, but confidence reads the OLD stress because
+        // stress hasn't been recalculated yet at that point) - read-only, so
+        // it's safe to call on every block adjustment for a live preview.
         ProjectedStats p;
         p.fatigue = std::clamp(m_fatigue + (m_trainingBlocks * 4) + (m_workBlocks * 3) - (m_recoveryBlocks * 8), 0, 100);
         p.injuryRisk = std::clamp(m_injuryRisk + (p.fatigue / 12) + (m_trainingBlocks * 2) - (m_recoveryBlocks * 5), 0, 100);
@@ -738,6 +742,7 @@ namespace winrt::thefootballife::implementation
     {
         WeekText().Text(L"Week " + to_hstring(m_currentWeek) + L" - " + hstring(CareerDayService::GetTodayLabel()));
         LastChoiceText().Text(m_lastChoice);
+        TodayFocusText().Text(hstring(CareerDayService::GetDayFlavorText(GameState::CurrentDay)));
 
         if (m_currentWeek <= 4)
         {

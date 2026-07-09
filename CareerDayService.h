@@ -19,6 +19,7 @@ namespace CareerDayService
     // Display helpers for CareerHubPage
     std::wstring GetDayPhaseName(DayPhase day);
     std::wstring GetTodayLabel(); // e.g. "Wednesday, 15 April 2026"
+    std::wstring GetDayFlavorText(DayPhase day); // what a young footballer's week looks like, day by day
 
     bool IsMatchday();
     bool IsSeasonComplete();

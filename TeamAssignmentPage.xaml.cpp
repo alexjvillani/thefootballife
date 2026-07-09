@@ -602,6 +602,9 @@ namespace winrt::thefootballife::implementation
         // Reset career progression state for a fresh save
         GameState::CurrentWeek = 1;
         GameState::LastChoice = L"";
+        GameState::TeamStats.clear(); // otherwise old clubs' W/L records from a
+        // previous career leak into this one, since
+        // TeamStats is only ever written into, never reset
         CareerDayService::InitializeSeason(2026);
 
         std::vector<std::wstring> clubNames;
