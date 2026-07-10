@@ -18,6 +18,24 @@ namespace SaveGameService
         int pointsAgainst{ 0 };
     };
 
+    // Mirrors GameState's SimpleDate/DayPhase as plain ints so this header
+    // doesn't need to include GameState.h (which already includes this header).
+    // currentDayPhase uses the same ordinal values as the DayPhase enum
+    // (Monday=0 ... Sunday=6).
+    struct CalendarState
+    {
+        int currentYear{ 2026 };
+        int currentMonth{ 3 };
+        int currentDay{ 27 };
+        int currentDayPhase{ 0 };
+        int seasonStartYear{ 2026 };
+        int seasonStartMonth{ 3 };
+        int seasonStartDay{ 27 };
+        int seasonEndYear{ 2026 };
+        int seasonEndMonth{ 8 };
+        int seasonEndDay{ 30 };
+    };
+
     std::wstring GetSaveFolder();
     std::wstring GetSaveSlotPath(int slot);
     bool SlotExists(int slot);
@@ -29,7 +47,8 @@ namespace SaveGameService
         int currentWeek,
         std::wstring const& lastChoice,
         std::unordered_map<std::wstring, TeamSeasonStats> const& teamStats = {},
-        std::vector<FixtureService::Fixture> const& fixtures = {}
+        std::vector<FixtureService::Fixture> const& fixtures = {},
+        CalendarState const& calendar = {}
     );
 
     bool LoadFromSlot(
@@ -38,7 +57,8 @@ namespace SaveGameService
         int& currentWeek,
         std::wstring& lastChoice,
         std::unordered_map<std::wstring, TeamSeasonStats>& teamStats,
-        std::vector<FixtureService::Fixture>& fixtures
+        std::vector<FixtureService::Fixture>& fixtures,
+        CalendarState& calendar
     );
 
     bool GetSavePreview(int slot, std::wstring& playerName, int& week);

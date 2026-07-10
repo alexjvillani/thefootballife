@@ -124,6 +124,7 @@ namespace winrt::thefootballife::implementation
                         std::wstring loadedChoice;
                         std::unordered_map<std::wstring, SaveGameService::TeamSeasonStats> loadedTeamStats;
                         std::vector<FixtureService::Fixture> fixtures;
+                        SaveGameService::CalendarState loadedCalendar;
 
                         bool loaded = SaveGameService::LoadFromSlot(
                             slot,
@@ -131,7 +132,8 @@ namespace winrt::thefootballife::implementation
                             loadedWeek,
                             loadedChoice,
                             loadedTeamStats,
-                            fixtures
+                            fixtures,
+                            loadedCalendar
                         );
 
                         if (!loaded)
@@ -150,6 +152,23 @@ namespace winrt::thefootballife::implementation
                         GameState::LastChoice = loadedChoice;
                         GameState::TeamStats = loadedTeamStats;
                         GameState::Fixtures = fixtures;
+
+                        GameState::CurrentDate = SimpleDate{
+                            loadedCalendar.currentYear,
+                            loadedCalendar.currentMonth,
+                            loadedCalendar.currentDay
+                        };
+                        GameState::CurrentDay = static_cast<DayPhase>(loadedCalendar.currentDayPhase);
+                        GameState::SeasonStartDate = SimpleDate{
+                            loadedCalendar.seasonStartYear,
+                            loadedCalendar.seasonStartMonth,
+                            loadedCalendar.seasonStartDay
+                        };
+                        GameState::SeasonEndDate = SimpleDate{
+                            loadedCalendar.seasonEndYear,
+                            loadedCalendar.seasonEndMonth,
+                            loadedCalendar.seasonEndDay
+                        };
 
                         self->Frame().Navigate(
                             winrt::Windows::UI::Xaml::Interop::TypeName{

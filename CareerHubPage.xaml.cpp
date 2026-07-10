@@ -885,11 +885,25 @@ namespace winrt::thefootballife::implementation
                     if (op.GetResults() != ContentDialogResult::Primary) return;
 
                     int slot = static_cast<int>(slotComboBox.SelectedIndex()) + 1;
+
+                    SaveGameService::CalendarState calendar;
+                    calendar.currentYear = GameState::CurrentDate.Year;
+                    calendar.currentMonth = GameState::CurrentDate.Month;
+                    calendar.currentDay = GameState::CurrentDate.Day;
+                    calendar.currentDayPhase = static_cast<int>(GameState::CurrentDay);
+                    calendar.seasonStartYear = GameState::SeasonStartDate.Year;
+                    calendar.seasonStartMonth = GameState::SeasonStartDate.Month;
+                    calendar.seasonStartDay = GameState::SeasonStartDate.Day;
+                    calendar.seasonEndYear = GameState::SeasonEndDate.Year;
+                    calendar.seasonEndMonth = GameState::SeasonEndDate.Month;
+                    calendar.seasonEndDay = GameState::SeasonEndDate.Day;
+
                     bool saved = SaveGameService::SaveToSlot(
                         slot, GameState::CurrentPlayer,
                         self->m_currentWeek, self->m_lastChoice.c_str(),
                         self->m_teamStats,
-                        self->m_fixtures
+                        self->m_fixtures,
+                        calendar
                     );
 
                     ContentDialog result;

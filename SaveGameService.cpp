@@ -48,7 +48,7 @@ namespace SaveGameService
         std::filesystem::path docPath(path);
         CoTaskMemFree(path);
 
-        docPath /= L"The Football Life"; 
+        docPath /= L"The Football Life";
 
         // ensure folder exists
         std::filesystem::create_directories(docPath);
@@ -97,7 +97,8 @@ namespace SaveGameService
         int currentWeek,
         std::wstring const& lastChoice,
         std::unordered_map<std::wstring, TeamSeasonStats> const& teamStats,
-        std::vector<FixtureService::Fixture> const& fixtures
+        std::vector<FixtureService::Fixture> const& fixtures,
+        CalendarState const& calendar
     )
     {
         if (slot < 1 || slot > MaxSaveSlots) return false;
@@ -133,6 +134,19 @@ namespace SaveGameService
         file << L"ProfileImagePath=" << player.profileImagePath << L"\n";
         file << L"CurrentWeek=" << currentWeek << L"\n";
         file << L"LastChoice=" << lastChoice << L"\n";
+
+        // Season calendar - previously not persisted at all, so loading a
+        // save left the in-memory date/day wherever it happened to be.
+        file << L"CurrentDateYear=" << calendar.currentYear << L"\n";
+        file << L"CurrentDateMonth=" << calendar.currentMonth << L"\n";
+        file << L"CurrentDateDay=" << calendar.currentDay << L"\n";
+        file << L"CurrentDayPhase=" << calendar.currentDayPhase << L"\n";
+        file << L"SeasonStartYear=" << calendar.seasonStartYear << L"\n";
+        file << L"SeasonStartMonth=" << calendar.seasonStartMonth << L"\n";
+        file << L"SeasonStartDay=" << calendar.seasonStartDay << L"\n";
+        file << L"SeasonEndYear=" << calendar.seasonEndYear << L"\n";
+        file << L"SeasonEndMonth=" << calendar.seasonEndMonth << L"\n";
+        file << L"SeasonEndDay=" << calendar.seasonEndDay << L"\n";
 
         // Team stats section
         if (!teamStats.empty())
@@ -180,7 +194,8 @@ namespace SaveGameService
         int& currentWeek,
         std::wstring& lastChoice,
         std::unordered_map<std::wstring, TeamSeasonStats>& teamStats,
-        std::vector<FixtureService::Fixture>& fixtures
+        std::vector<FixtureService::Fixture>& fixtures,
+        CalendarState& calendar
     )
     {
         if (slot < 1 || slot > MaxSaveSlots) return false;
@@ -300,6 +315,20 @@ namespace SaveGameService
         if (!TryParseInt(values[L"DistanceToClubKm"], player.distanceToClubKm))  player.distanceToClubKm = 0;
         if (!TryParseInt(values[L"OriginalTeamReputation"], player.originalTeamReputation)) player.originalTeamReputation = 50;
         if (!TryParseInt(values[L"CurrentWeek"], currentWeek))              currentWeek = 1;
+
+        // Calendar fields - missing entirely in saves written before this was
+        // added, so each one falls back to InitializeSeason's default rather
+        // than leaving garbage/zeroed values for old saves.
+        if (!TryParseInt(values[L"CurrentDateYear"], calendar.currentYear))         calendar.currentYear = 2026;
+        if (!TryParseInt(values[L"CurrentDateMonth"], calendar.currentMonth))       calendar.currentMonth = 3;
+        if (!TryParseInt(values[L"CurrentDateDay"], calendar.currentDay))           calendar.currentDay = 27;
+        if (!TryParseInt(values[L"CurrentDayPhase"], calendar.currentDayPhase))     calendar.currentDayPhase = 0;
+        if (!TryParseInt(values[L"SeasonStartYear"], calendar.seasonStartYear))     calendar.seasonStartYear = 2026;
+        if (!TryParseInt(values[L"SeasonStartMonth"], calendar.seasonStartMonth))   calendar.seasonStartMonth = 3;
+        if (!TryParseInt(values[L"SeasonStartDay"], calendar.seasonStartDay))       calendar.seasonStartDay = 27;
+        if (!TryParseInt(values[L"SeasonEndYear"], calendar.seasonEndYear))         calendar.seasonEndYear = 2026;
+        if (!TryParseInt(values[L"SeasonEndMonth"], calendar.seasonEndMonth))       calendar.seasonEndMonth = 8;
+        if (!TryParseInt(values[L"SeasonEndDay"], calendar.seasonEndDay))           calendar.seasonEndDay = 30;
 
         lastChoice = values[L"LastChoice"];
         if (lastChoice.empty()) lastChoice = L"No action chosen yet.";
