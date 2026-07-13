@@ -8,6 +8,7 @@
 #include "SaveGameService.h"
 #include "FixtureService.h"
 #include "CareerDayService.h"
+#include "DayEventService.h"
 
 #include <algorithm>
 #include <fstream>
@@ -171,6 +172,7 @@ namespace winrt::thefootballife::implementation
         m_lastChoice = hstring(GameState::LastChoice);
         m_teamStats = GameState::TeamStats;
         m_fixtures = GameState::Fixtures;
+        m_dayEvents = DayEventService::LoadEvents();
         LoadPlayerData();
         UpdateWeekDisplay();
         UpdateBlockUI();
@@ -850,9 +852,71 @@ namespace winrt::thefootballife::implementation
         else
         {
             BottomHintText().Text(L"Day advanced.");
+
+            // Only Monday-Friday roll for events - Saturday/Sunday already
+            // have their own fixed identity (matchday / free recovery).
+            auto const* triggeredEvent = DayEventService::RollForEvent(m_dayEvents, kDayEventChancePercent);
+            if (triggeredEvent)
+            {
+                ShowDayEventDialog(*triggeredEvent);
+            }
         }
 
         UpdateWeekDisplay();
+    }
+
+    void CareerHubPage::ShowDayEventDialog(DayEventService::DayEvent const& event)
+    {
+        ContentDialog dlg;
+        dlg.Title(box_value(hstring(event.Title)));
+        dlg.Content(box_value(hstring(event.Description)));
+        dlg.XamlRoot(this->XamlRoot());
+
+
+        if (event.Choices.size() >= 1) dlg.PrimaryButtonText(hstring(event.Choices[0].Label));
+        if (event.Choices.size() >= 2) dlg.SecondaryButtonText(hstring(event.Choices[1].Label));
+        if (event.Choices.size() >= 3) dlg.CloseButtonText(hstring(event.Choices[2].Label));
+
+        auto weakThis = get_weak();
+        auto choicesCopy = event.Choices; 
+        dlg.ShowAsync().Completed(
+            [weakThis, choicesCopy](auto const& op, auto const&)
+            {
+                if (auto self = weakThis.get())
+                {
+                    ContentDialogResult result = op.GetResults();
+                    int index = -1;
+                    if (result == ContentDialogResult::Primary) index = 0;
+                    else if (result == ContentDialogResult::Secondary) index = 1;
+                    else if (result == ContentDialogResult::None && choicesCopy.size() >= 3) index = 2;
+
+                   
+                    if (index < 0 || index >= static_cast<int>(choicesCopy.size())) return;
+
+                    self->ApplyEventChoice(choicesCopy[index]);
+                }
+            });
+    }
+
+    void CareerHubPage::ApplyEventChoice(DayEventService::EventChoice const& choice)
+    {
+        auto applyDelta = [](int& stat, int delta) { stat = std::clamp(stat + delta, 0, 100); };
+
+        for (auto const& [statName, delta] : choice.StatDeltas)
+        {
+            if (statName == L"Fatigue") applyDelta(m_fatigue, delta);
+            else if (statName == L"InjuryRisk") applyDelta(m_injuryRisk, delta);
+            else if (statName == L"RecoveryQuality") applyDelta(m_recoveryQuality, delta);
+            else if (statName == L"Confidence") applyDelta(m_confidence, delta);
+            else if (statName == L"Stress") applyDelta(m_stress, delta);
+            else if (statName == L"Motivation") applyDelta(m_motivation, delta);
+            else if (statName == L"Discipline") applyDelta(m_discipline, delta);
+            else if (statName == L"Finances") applyDelta(m_finances, delta);
+            else if (statName == L"Relationships") applyDelta(m_relationships, delta);
+        }
+
+        BottomHintText().Text(L"You chose: " + hstring(choice.Label));
+        UpdateStateUI();
     }
 
     void CareerHubPage::SaveGameButton_Click(IInspectable const&, RoutedEventArgs const&)

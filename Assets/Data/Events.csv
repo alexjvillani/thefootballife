@@ -1,0 +1,11 @@
+EventId,Title,Description,Choice1Label,Choice1Effects,Choice2Label,Choice2Effects,Choice3Label,Choice3Effects
+media_request,Local Paper Wants a Chat,A journalist from the local paper wants a quick interview about your season so far.,Do the interview,Confidence:+3;Stress:+2,Politely decline,Discipline:+1;Relationships:-1,,
+minor_niggle,A Bit Sore,You wake up with some tightness in your hamstring after a hard session.,Push through training,InjuryRisk:+6;Fatigue:+3,Ease off and stretch it out,RecoveryQuality:+4;Discipline:-1,,
+teammate_help,Teammate Needs a Hand,A younger teammate asks if you can stay back and help with their kicking technique.,Stay back and help,Relationships:+4;Fatigue:+2,Head home you're tired,Fatigue:-2;Relationships:-2,,
+family_commitment,Family Time Clashes,A family dinner has been planned for the same night as your usual extra training session.,Go to training anyway,Discipline:+2;Relationships:-3,Go to the family dinner,Relationships:+3;Discipline:-1,,
+coach_feedback,Coach Pulls You Aside,Your coach wants a word about your recent form and effort at training.,Take the feedback on board,Motivation:+3;Confidence:-1,Brush it off,Confidence:+1;Motivation:-2,,
+social_invite,Night Out Invite,Some mates invite you out the night before a lighter training day.,Go out for a bit,Relationships:+3;Fatigue:+3;Discipline:-2,Stay in and rest,RecoveryQuality:+3;Relationships:-1,,
+school_work_pressure,Assignment Due,A school or work assignment is due soon and it's eating into your football time.,Prioritise the assignment,Discipline:+2;Fatigue:+2,Prioritise football,Motivation:+2;Discipline:-2,,
+money_tight,Boots Are Wearing Out,Your boots are falling apart and new ones aren't cheap.,Buy new boots,Finances:-8;Confidence:+2,Make do for now,Discipline:+1;Confidence:-1,,
+recruiter_interest,A Scout Was Watching,Word gets around that a state league scout was at your last session.,Let it motivate you,Motivation:+4;Stress:+1,Try not to think about it,Stress:-2;Confidence:-1,,
+bad_sleep,Rough Night's Sleep,You didn't sleep well before a big training day.,Push through anyway,Fatigue:+5;Discipline:+1,Take it easy today,RecoveryQuality:+3;Motivation:-1,,

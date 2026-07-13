@@ -2,6 +2,7 @@
 #include "CareerHubPage.g.h"
 #include "SaveGameService.h"
 #include "FixtureService.h"
+#include "DayEventService.h"
 #include <vector>
 #include <string>
 #include <unordered_map>
@@ -95,6 +96,8 @@ namespace winrt::thefootballife::implementation
         void LoadLadderFromCsv();
         void RenderLadder();
         void RenderFixtures();
+        void ShowDayEventDialog(DayEventService::DayEvent const& event);
+        void ApplyEventChoice(DayEventService::EventChoice const& choice);
 
         // Pure projection of what the current block allocation would produce
         // if the week were committed right now. Shared by ApplyWeekSimulation
@@ -141,6 +144,9 @@ namespace winrt::thefootballife::implementation
         std::unordered_map<std::wstring, SaveGameService::TeamSeasonStats> m_teamStats;
         std::vector<LadderEntry> m_ladder;
         std::vector<FixtureService::Fixture> m_fixtures;
+
+        static constexpr int kDayEventChancePercent{ 20 }; // per Mon-Fri day advance
+        std::vector<DayEventService::DayEvent> m_dayEvents;
     };
 }
 

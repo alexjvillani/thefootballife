@@ -129,6 +129,7 @@
     <ClInclude Include="CreditPage.xaml.h">
       <DependentUpon>CreditPage.xaml</DependentUpon>
     </ClInclude>
+    <ClInclude Include="DayEventService.h" />
     <ClInclude Include="FixtureService.h" />
     <ClInclude Include="Gamestate.h" />
     <ClInclude Include="MainMenuPage.xaml.h">
@@ -183,6 +184,7 @@
     <ClCompile Include="CreditPage.xaml.cpp">
       <DependentUpon>CreditPage.xaml</DependentUpon>
     </ClCompile>
+    <ClCompile Include="DayEventService.cpp" />
     <ClCompile Include="FixtureService.cpp" />
     <ClCompile Include="Gamestate.cpp" />
     <ClCompile Include="MainMenuPage.xaml.cpp">
