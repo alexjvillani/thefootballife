@@ -629,7 +629,27 @@ namespace winrt::thefootballife::implementation
 		}
 
 		*target = proposed;
-		m_blocksSpentToday = std::clamp(m_blocksSpentToday + delta, 0, kBlocksPerDay);
+
+		std::wstring key = tag.c_str();
+		if (delta > 0)
+		{
+			// Already validated against the daily cap above - safe to add directly.
+			m_blocksAddedTodayByCategory[key] += delta;
+			m_blocksSpentToday += delta;
+		}
+		else if (delta < 0)
+		{
+			// Only give back daily-cap room for the portion of this decrement
+			// that undoes blocks actually added TODAY. Decrementing older
+			// stock (e.g. undoing Monday's allocation on Wednesday) frees
+			// room in the weekly 14-total, but must NOT also free up more
+			// of today's 3-block allowance - that was the original bug.
+			int& addedToday = m_blocksAddedTodayByCategory[key];
+			int giveBack = (std::min)(-delta, addedToday);
+			addedToday -= giveBack;
+			m_blocksSpentToday = (std::max)(0, m_blocksSpentToday - giveBack);
+		}
+
 		BottomHintText().Text(L"Weekly schedule updated.");
 		UpdateBlockUI();
 	}
@@ -836,6 +856,7 @@ namespace winrt::thefootballife::implementation
 		bool isMatchday = CareerDayService::AdvanceDay();
 		m_currentWeek = GameState::CurrentWeek;
 		m_blocksSpentToday = 0; // fresh daily cap for the new day
+		m_blocksAddedTodayByCategory.clear();
 
 		if (isMatchday)
 		{
@@ -983,11 +1004,12 @@ namespace winrt::thefootballife::implementation
 					int index = -1;
 					if (result == ContentDialogResult::Primary) index = 0;
 					else if (result == ContentDialogResult::Secondary) index = 1;
-					else if (result == ContentDialogResult::None && choicesCopy.size() >= 3) index = 2;
+					else if (result == ContentDialogResult::None)
+					{
 
-					// A 2-choice event dismissed via Escape/X (also returns
-					// None) intentionally applies nothing rather than
-					// guessing which choice was "meant."
+						index = (choicesCopy.size() >= 3) ? 2 : 0;
+					}
+
 					if (index < 0 || index >= static_cast<int>(choicesCopy.size())) return;
 
 					self->ApplyEventChoice(choicesCopy[index]);

@@ -131,7 +131,8 @@ namespace winrt::thefootballife::implementation
 		int m_workBlocks{ 2 };
 		int m_socialBlocks{ 2 };
 		int m_recoveryBlocks{ 1 };
-		int m_blocksSpentToday{ 0 }; // resets each day; NOT decremented correctly if you undo a block spent on a PREVIOUS day (known limitation, flagged not fixed)
+		int m_blocksSpentToday{ 0 }; // resets each day; equals sum of m_blocksAddedTodayByCategory
+		std::unordered_map<std::wstring, int> m_blocksAddedTodayByCategory; // per-category "added today" so decrementing PREVIOUS days' stock doesn't falsely free up today's cap
 
 		int m_fatigue{ 30 };
 		int m_injuryRisk{ 20 };
