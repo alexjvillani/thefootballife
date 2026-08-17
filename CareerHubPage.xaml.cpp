@@ -843,20 +843,22 @@ namespace winrt::thefootballife::implementation
 		AdjustBlockByTag(unbox_value_or<hstring>(button.Tag(), L""), -1);
 	}
 
-	void CareerHubPage::AdvanceWeekButton_Click(IInspectable const&, RoutedEventArgs const&)
+	CareerHubPage::DayStepResult CareerHubPage::AdvanceSingleDayStep()
 	{
 		// Friday is the hard gate: whatever's left of the 14 blocks must be
 		// spent today, since there's no catch-up day after Saturday's match.
 		if (GameState::CurrentDay == DayPhase::Friday && BlocksUsed() != kTotalBlocks)
 		{
 			BottomHintText().Text(L"You must allocate all 14 blocks for the week before Saturday.");
-			return;
+			return DayStepResult::NeedsBlocksBeforeFriday;
 		}
 
 		bool isMatchday = CareerDayService::AdvanceDay();
 		m_currentWeek = GameState::CurrentWeek;
 		m_blocksSpentToday = 0; // fresh daily cap for the new day
 		m_blocksAddedTodayByCategory.clear();
+
+		DayStepResult stepResult = DayStepResult::Continue;
 
 		if (isMatchday)
 		{
@@ -880,6 +882,11 @@ namespace winrt::thefootballife::implementation
 			{
 				ResolveMatchday(0, 0, L"Bye week - no personal match today, but the rest of the league plays on.");
 			}
+
+			// Saturday always halts auto-advance, whether it produced a
+			// dialog (fixture) or resolved immediately (bye week) - the
+			// player should see the week's match outcome before skipping on.
+			stepResult = DayStepResult::StoppedAtKeyDay;
 		}
 		else if (GameState::CurrentDay == DayPhase::Sunday)
 		{
@@ -909,10 +916,28 @@ namespace winrt::thefootballife::implementation
 			if (triggeredEvent)
 			{
 				ShowDayEventDialog(*triggeredEvent);
+				stepResult = DayStepResult::StoppedAtKeyDay;
 			}
 		}
 
 		UpdateWeekDisplay();
+		return stepResult;
+	}
+
+	void CareerHubPage::AdvanceWeekButton_Click(IInspectable const&, RoutedEventArgs const&)
+	{
+		// With auto-advance off this is just a single day step, same as
+		// before. With it on, keep stepping until something needs the
+		// player's attention (a dialog) or blocks it (Friday's cap).
+		bool autoAdvance = AutoAdvanceToggle().IsOn();
+
+		DayStepResult result;
+		do
+		{
+			result = AdvanceSingleDayStep();
+		} while (autoAdvance
+			&& result == DayStepResult::Continue
+			&& !CareerDayService::IsSeasonComplete());
 	}
 
 	void CareerHubPage::ResolveMatchday(int playerClubBonus, int opponentPenalty, hstring const& hintMessage)

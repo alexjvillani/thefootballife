@@ -101,6 +101,17 @@ namespace winrt::thefootballife::implementation
 		void ShowDayEventDialog(DayEventService::DayEvent const& event);
 		void ApplyEventChoice(DayEventService::EventChoice const& choice);
 
+		// Result of advancing exactly one day, used to drive the auto-advance
+		// loop in AdvanceWeekButton_Click. A single day-step behaves the same
+		// whether auto-advance is on or off - only the looping differs.
+		enum class DayStepResult
+		{
+			NeedsBlocksBeforeFriday, // Blocked: Friday's 14 blocks aren't fully allocated yet
+			StoppedAtKeyDay,         // Matchday (dialog or bye) or a day event fired - always halt here
+			Continue                 // Nothing needed player attention - safe to keep auto-advancing
+		};
+		DayStepResult AdvanceSingleDayStep();
+
 		// Pure projection of what the current block allocation would produce
 		// if the week were committed right now. Shared by ApplyWeekSimulation
 		// (which commits it) and the live preview shown while allocating.

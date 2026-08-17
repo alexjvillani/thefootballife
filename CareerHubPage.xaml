@@ -358,6 +358,7 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <TextBlock x:Name="BottomHintText"
@@ -366,21 +367,31 @@
                        Foreground="#AAAAAA"
                        VerticalAlignment="Center"/>
 
-            <Button Grid.Column="1"
+            <ToggleSwitch x:Name="AutoAdvanceToggle"
+                          Grid.Column="1"
+                          Header=""
+                          OnContent="Auto-Advance: On"
+                          OffContent="Auto-Advance: Off"
+                          IsOn="False"
+                          Foreground="White"
+                          VerticalAlignment="Center"
+                          Margin="0,0,10,0"/>
+
+            <Button Grid.Column="2"
                     Content="Save Game"
                     Click="SaveGameButton_Click"
                     MinWidth="140"
                     MinHeight="44"
                     Margin="0,0,10,0"/>
 
-            <Button Grid.Column="2"
+            <Button Grid.Column="3"
                     Content="Advance Week"
                     Click="AdvanceWeekButton_Click"
                     MinWidth="160"
                     MinHeight="44"
                     Margin="0,0,10,0"/>
 
-            <Button Grid.Column="3"
+            <Button Grid.Column="4"
                     Content="Exit to Main Menu"
                     Click="ExitToMainMenuButton_Click"
                     MinWidth="170"
