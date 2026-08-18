@@ -100,6 +100,8 @@ namespace winrt::thefootballife::implementation
 		void RenderFixtures();
 		void ShowDayEventDialog(DayEventService::DayEvent const& event);
 		void ApplyEventChoice(DayEventService::EventChoice const& choice);
+		void CheckForFinalsProgression();
+		void ShowFinalsAnnouncementDialog(winrt::hstring const& title, winrt::hstring const& message);
 
 		// Result of advancing exactly one day, used to drive the auto-advance
 		// loop in AdvanceWeekButton_Click. A single day-step behaves the same

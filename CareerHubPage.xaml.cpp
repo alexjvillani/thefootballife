@@ -362,7 +362,7 @@ namespace winrt::thefootballife::implementation
 			return;
 		}
 
-		const std::wstring playerClub = GameState::CurrentPlayer.originalTeam;
+		const std::wstring playerClub = GameState::CurrentPlayer.team;
 
 		for (int pos = 0; pos < static_cast<int>(m_ladder.size()); ++pos)
 		{
@@ -434,7 +434,7 @@ namespace winrt::thefootballife::implementation
 	{
 		FixtureRowsPanel().Children().Clear();
 
-		const std::wstring playerClub = GameState::CurrentPlayer.originalTeam;
+		const std::wstring playerClub = GameState::CurrentPlayer.team;
 
 		std::vector<FixtureService::Fixture> myFixtures;
 		for (auto const& f : m_fixtures)
@@ -477,7 +477,10 @@ namespace winrt::thefootballife::implementation
 			content.Spacing(2);
 
 			TextBlock roundLine;
-			std::wstring label = L"Round " + std::to_wstring(f.Round) + L"  \u2022  " +
+			std::wstring roundLabel = f.FinalsLabel.empty()
+				? (L"Round " + std::to_wstring(f.Round))
+				: f.FinalsLabel;
+			std::wstring label = roundLabel + L"  \u2022  " +
 				(isHome ? L"vs " : L"@ ") + opponent;
 			roundLine.Text(hstring(label));
 			roundLine.Foreground(SolidColorBrush(winrt::Windows::UI::Colors::White()));
@@ -948,6 +951,129 @@ namespace winrt::thefootballife::implementation
 		LoadLadderFromCsv();
 		RenderLadder();
 		RenderFixtures();
+		CheckForFinalsProgression();
+	}
+
+	void CareerHubPage::ShowFinalsAnnouncementDialog(hstring const& title, hstring const& message)
+	{
+		ContentDialog dlg;
+		dlg.Title(box_value(title));
+		dlg.Content(box_value(message));
+		dlg.CloseButtonText(L"OK");
+		dlg.XamlRoot(this->XamlRoot());
+		dlg.ShowAsync(); // fire-and-forget - purely informational, nothing branches on the result
+	}
+
+	// Drives the top-4 McIntyre finals system purely off fixture state, so it
+	// needs no separate "season phase" flag to persist: it just looks at what
+	// finals fixtures already exist in m_fixtures and what's been Played, and
+	// generates the next round if one is due.
+	void CareerHubPage::CheckForFinalsProgression()
+	{
+		using FixtureService::Fixture;
+
+		bool anyFinalsExist = std::any_of(m_fixtures.begin(), m_fixtures.end(),
+			[](Fixture const& f) { return !f.FinalsLabel.empty(); });
+
+		if (!anyFinalsExist)
+		{
+			if (m_fixtures.empty()) return;
+
+			bool allHomeAndAwayPlayed = std::all_of(m_fixtures.begin(), m_fixtures.end(),
+				[](Fixture const& f) { return f.Played; });
+			if (!allHomeAndAwayPlayed) return; // home-and-away season still in progress
+
+			// Home-and-away just finished and finals haven't been generated
+			// yet - declare them. m_ladder was just refreshed by the
+			// LoadLadderFromCsv() call in ResolveMatchday right above.
+			if (m_ladder.size() < 4)
+			{
+				// Known limitation: a top-4 system needs at least 4 clubs.
+				// Push a played marker fixture so this only announces once.
+				Fixture marker; marker.Round = m_currentWeek + 1; marker.FinalsLabel = L"Season Over"; marker.Played = true;
+				m_fixtures.push_back(marker);
+				GameState::Fixtures = m_fixtures;
+
+				ShowFinalsAnnouncementDialog(L"Season Complete",
+					L"The home-and-away season has finished. Not enough clubs in this competition for a finals series.");
+				return;
+			}
+
+			int finalsRound = m_currentWeek + 1;
+			std::vector<std::wstring> top4 = {
+				m_ladder[0].clubName, m_ladder[1].clubName, m_ladder[2].clubName, m_ladder[3].clubName
+			};
+
+			auto week1 = FixtureService::GenerateFinalsWeek1(top4, finalsRound);
+			m_fixtures.insert(m_fixtures.end(), week1.begin(), week1.end());
+			GameState::Fixtures = m_fixtures;
+
+			ShowFinalsAnnouncementDialog(L"Finals Week 1",
+				L"Qualifying Final: " + hstring(top4[0]) + L" vs " + hstring(top4[1]) + L"\n" +
+				L"Elimination Final: " + hstring(top4[2]) + L" vs " + hstring(top4[3]));
+			return;
+		}
+
+		// Finals are underway - find the latest finals round and see if it
+		// just finished with no next round generated yet.
+		int maxFinalsRound = 0;
+		for (auto const& f : m_fixtures)
+			if (!f.FinalsLabel.empty()) maxFinalsRound = (std::max)(maxFinalsRound, f.Round);
+
+		bool nextRoundAlreadyExists = std::any_of(m_fixtures.begin(), m_fixtures.end(),
+			[maxFinalsRound](Fixture const& f) { return f.Round == maxFinalsRound + 1; });
+		if (nextRoundAlreadyExists) return; // already generated (or terminal marker present) - nothing to do
+
+		std::vector<Fixture> currentRoundFinals;
+		for (auto const& f : m_fixtures)
+			if (f.Round == maxFinalsRound && !f.FinalsLabel.empty())
+				currentRoundFinals.push_back(f);
+
+		bool currentRoundPlayed = !currentRoundFinals.empty() &&
+			std::all_of(currentRoundFinals.begin(), currentRoundFinals.end(),
+				[](Fixture const& f) { return f.Played; });
+		if (!currentRoundPlayed) return; // this finals round isn't finished yet
+
+		if (currentRoundFinals.size() == 2) // Qualifying Final + Elimination Final, both played
+		{
+			Fixture prelim = FixtureService::GenerateFinalsWeek2(currentRoundFinals, maxFinalsRound + 1);
+			m_fixtures.push_back(prelim);
+			GameState::Fixtures = m_fixtures;
+
+			ShowFinalsAnnouncementDialog(L"Preliminary Final",
+				hstring(prelim.HomeClub) + L" vs " + hstring(prelim.AwayClub) +
+				L"\nThe winner meets the Qualifying Final winner in the Grand Final.");
+			return;
+		}
+
+		if (currentRoundFinals.size() == 1 && currentRoundFinals[0].FinalsLabel == L"Preliminary Final")
+		{
+			std::vector<Fixture> week1;
+			for (auto const& f : m_fixtures)
+				if (f.FinalsLabel == L"Qualifying Final" || f.FinalsLabel == L"Elimination Final")
+					week1.push_back(f);
+
+			Fixture gf = FixtureService::GenerateGrandFinal(week1, currentRoundFinals[0], maxFinalsRound + 1);
+			m_fixtures.push_back(gf);
+			GameState::Fixtures = m_fixtures;
+
+			ShowFinalsAnnouncementDialog(L"Grand Final", hstring(gf.HomeClub) + L" vs " + hstring(gf.AwayClub));
+			return;
+		}
+
+		if (currentRoundFinals.size() == 1 && currentRoundFinals[0].FinalsLabel == L"Grand Final")
+		{
+			Fixture const& gf = currentRoundFinals[0];
+			std::wstring premier = (gf.HomeScore >= gf.AwayScore) ? gf.HomeClub : gf.AwayClub;
+
+			// Terminal marker so this dialog only ever fires once, even if
+			// the player keeps clicking Advance Week after the season ends.
+			Fixture marker; marker.Round = maxFinalsRound + 1; marker.FinalsLabel = L"Season Over"; marker.Played = true;
+			m_fixtures.push_back(marker);
+			GameState::Fixtures = m_fixtures;
+
+			ShowFinalsAnnouncementDialog(L"Season Complete", hstring(premier) + L" are the premiers! Season complete.");
+		}
 	}
 
 	void CareerHubPage::ShowPreMatchDialog()
