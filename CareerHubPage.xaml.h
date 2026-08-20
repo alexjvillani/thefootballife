@@ -64,6 +64,10 @@ namespace winrt::thefootballife::implementation
 			winrt::Windows::Foundation::IInspectable const& sender,
 			winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
 
+		void NextSeasonButton_Click(
+			winrt::Windows::Foundation::IInspectable const& sender,
+			winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
+
 	private:
 		struct LadderEntry
 		{
@@ -110,9 +114,12 @@ namespace winrt::thefootballife::implementation
 		{
 			NeedsBlocksBeforeFriday, // Blocked: Friday's 14 blocks aren't fully allocated yet
 			StoppedAtKeyDay,         // Matchday (dialog or bye) or a day event fired - always halt here
+			SeasonOver,              // Season Over marker present - calendar is frozen until Start Next Season
 			Continue                 // Nothing needed player attention - safe to keep auto-advancing
 		};
 		DayStepResult AdvanceSingleDayStep();
+		bool IsSeasonOver() const;
+		void UpdateSeasonRolloverUI();
 
 		// Pure projection of what the current block allocation would produce
 		// if the week were committed right now. Shared by ApplyWeekSimulation

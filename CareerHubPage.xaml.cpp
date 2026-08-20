@@ -180,6 +180,7 @@ namespace winrt::thefootballife::implementation
 		LoadLadderFromCsv();
 		RenderLadder();
 		RenderFixtures();
+		UpdateSeasonRolloverUI();
 	}
 
 	hstring CareerHubPage::PageTitle() { return m_pageTitle; }
@@ -848,6 +849,16 @@ namespace winrt::thefootballife::implementation
 
 	CareerHubPage::DayStepResult CareerHubPage::AdvanceSingleDayStep()
 	{
+		// Once the season is over, the calendar is frozen - clicking Advance
+		// Week further would just quietly march the date past SeasonEndDate
+		// with nothing left to simulate. Start Next Season is the only way
+		// forward from here.
+		if (IsSeasonOver())
+		{
+			BottomHintText().Text(L"The season has ended - click Start Next Season to continue your career.");
+			return DayStepResult::SeasonOver;
+		}
+
 		// Friday is the hard gate: whatever's left of the 14 blocks must be
 		// spent today, since there's no catch-up day after Saturday's match.
 		if (GameState::CurrentDay == DayPhase::Friday && BlocksUsed() != kTotalBlocks)
@@ -952,6 +963,7 @@ namespace winrt::thefootballife::implementation
 		RenderLadder();
 		RenderFixtures();
 		CheckForFinalsProgression();
+		UpdateSeasonRolloverUI();
 	}
 
 	void CareerHubPage::ShowFinalsAnnouncementDialog(hstring const& title, hstring const& message)
@@ -964,10 +976,23 @@ namespace winrt::thefootballife::implementation
 		dlg.ShowAsync(); // fire-and-forget - purely informational, nothing branches on the result
 	}
 
-	// Drives the top-4 McIntyre finals system purely off fixture state, so it
-	// needs no separate "season phase" flag to persist: it just looks at what
-	// finals fixtures already exist in m_fixtures and what's been Played, and
-	// generates the next round if one is due.
+	// Reuses the "Season Over" terminal marker fixture as the single source
+	// of truth for "has this season fully finished" - no separate flag
+	// needs to be persisted or kept in sync.
+	bool CareerHubPage::IsSeasonOver() const
+	{
+		return std::any_of(m_fixtures.begin(), m_fixtures.end(),
+			[](FixtureService::Fixture const& f) { return f.FinalsLabel == L"Season Over"; });
+	}
+
+	void CareerHubPage::UpdateSeasonRolloverUI()
+	{
+		bool seasonOver = IsSeasonOver();
+		NextSeasonButton().Visibility(seasonOver ? Visibility::Visible : Visibility::Collapsed);
+		AdvanceWeekButton().IsEnabled(!seasonOver);
+	}
+
+	// Drives the top-4 McIntyre finals system purely off fixture state
 	void CareerHubPage::CheckForFinalsProgression()
 	{
 		using FixtureService::Fixture;
@@ -1270,5 +1295,61 @@ namespace winrt::thefootballife::implementation
 		Frame().Navigate(winrt::Windows::UI::Xaml::Interop::TypeName{
 			L"thefootballife.MainMenuPage",
 			winrt::Windows::UI::Xaml::Interop::TypeKind::Custom });
+	}
+
+	void CareerHubPage::NextSeasonButton_Click(IInspectable const&, RoutedEventArgs const&)
+	{
+		// New season, same competition: reuse last season's club list 
+		int nextYear = GameState::SeasonStartDate.Year + 1;
+		CareerDayService::InitializeSeason(nextYear);
+		m_currentWeek = GameState::CurrentWeek; // InitializeSeason resets this to 1
+
+		std::unordered_map<std::wstring, bool> clubSet;
+		for (auto const& f : m_fixtures)
+		{
+			if (!f.FinalsLabel.empty()) continue;
+			clubSet[f.HomeClub] = true;
+			clubSet[f.AwayClub] = true;
+		}
+		std::vector<std::wstring> clubs;
+		for (auto const& kv : clubSet) clubs.push_back(kv.first);
+
+		m_fixtures = FixtureService::GenerateDoubleRoundRobin(clubs, /*startWeek*/ 1);
+		GameState::Fixtures = m_fixtures;
+
+		// TeamStats must be explicitly cleared here, same as at new-career.
+		m_teamStats.clear();
+		GameState::TeamStats.clear();
+
+
+		m_fatigue = 30;
+		m_injuryRisk = 20;
+		m_recoveryQuality = 55;
+		m_confidence = 55;
+		m_stress = 35;
+		m_motivation = 60;
+		m_discipline = 60;
+		m_finances = 35;
+		m_relationships = 50;
+
+		// Fresh week's block allocation, same treatment as a Sunday reset.
+		m_trainingBlocks = 0;
+		m_schoolBlocks = 0;
+		m_workBlocks = 0;
+		m_socialBlocks = 0;
+		m_recoveryBlocks = 0;
+		m_blocksSpentToday = 0;
+		m_blocksAddedTodayByCategory.clear();
+
+		UpdateBlockUI();
+		UpdateStateUI();
+		UpdateWeekDisplay();
+		LoadLadderFromCsv();
+		RenderLadder();
+		RenderFixtures();
+		UpdateSeasonRolloverUI();
+
+		ShowFinalsAnnouncementDialog(L"New Season",
+			L"Season " + to_hstring(nextYear) + L" begins! Fresh fixtures, fresh ladder - good luck.");
 	}
 }

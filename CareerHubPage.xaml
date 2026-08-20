@@ -359,6 +359,7 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <TextBlock x:Name="BottomHintText"
@@ -384,14 +385,26 @@
                     MinHeight="44"
                     Margin="0,0,10,0"/>
 
-            <Button Grid.Column="3"
+            <Button x:Name="AdvanceWeekButton"
+                    Grid.Column="3"
                     Content="Advance Week"
                     Click="AdvanceWeekButton_Click"
                     MinWidth="160"
                     MinHeight="44"
                     Margin="0,0,10,0"/>
 
-            <Button Grid.Column="4"
+            <Button x:Name="NextSeasonButton"
+                    Grid.Column="4"
+                    Content="Start Next Season"
+                    Click="NextSeasonButton_Click"
+                    Background="#2E7D32"
+                    Foreground="White"
+                    MinWidth="170"
+                    MinHeight="44"
+                    Margin="0,0,10,0"
+                    Visibility="Collapsed"/>
+
+            <Button Grid.Column="5"
                     Content="Exit to Main Menu"
                     Click="ExitToMainMenuButton_Click"
                     MinWidth="170"
