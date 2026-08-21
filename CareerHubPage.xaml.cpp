@@ -900,7 +900,16 @@ namespace winrt::thefootballife::implementation
 			}
 			else
 			{
-				ResolveMatchday(0, 0, L"Bye week - no personal match today, but the rest of the league plays on.");
+				// A round with finals fixtures but no fixture for the player
+				// means their club didn't make the top 4 or was eliminated
+				// in an earlier finals week - distinct from a normal
+				// home-and-away bye round.
+				bool isFinalsRound = std::any_of(m_fixtures.begin(), m_fixtures.end(),
+					[this](FixtureService::Fixture const& f) { return f.Round == m_currentWeek && !f.FinalsLabel.empty(); });
+
+				ResolveMatchday(0, 0, isFinalsRound
+					? L"Your season's done - your club didn't make the cut, but the finals race continues without you."
+					: L"Bye week - no personal match today, but the rest of the league plays on.");
 			}
 
 			// Saturday always halts auto-advance, whether it produced a
