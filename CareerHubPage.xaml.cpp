@@ -527,19 +527,23 @@ namespace winrt::thefootballife::implementation
 		// stress hasn't been recalculated yet at that point) - read-only, so
 		// it's safe to call on every block adjustment for a live preview.
 		ProjectedStats p;
-		p.fatigue = std::clamp(m_fatigue + (m_trainingBlocks * 4) + (m_workBlocks * 3) - (m_recoveryBlocks * 8), 0, 100);
-		p.injuryRisk = std::clamp(m_injuryRisk + (p.fatigue / 12) + (m_trainingBlocks * 2) - (m_recoveryBlocks * 5), 0, 100);
+		p.fatigue = std::clamp(m_fatigue + (m_trainingBlocks * 3) + (m_workBlocks * 3) - (m_recoveryBlocks * 8), 0, 100);
+		p.injuryRisk = std::clamp(m_injuryRisk + (p.fatigue / 12) + (m_trainingBlocks * 1) - (m_recoveryBlocks * 5), 0, 100);
 		p.recoveryQuality = std::clamp(m_recoveryQuality + (m_recoveryBlocks * 7) - (m_workBlocks * 2), 0, 100);
-		p.confidence = std::clamp(m_confidence + (m_trainingBlocks * 2) + m_socialBlocks - (m_stress / 18), 0, 100);
+		p.confidence = std::clamp(m_confidence + (m_trainingBlocks * 2) + m_socialBlocks - (m_stress / 6), 0, 100);
 		p.stress = std::clamp(m_stress + (m_schoolBlocks * 2) + (m_workBlocks * 3) - (m_recoveryBlocks * 4), 0, 100);
 		p.motivation = std::clamp(m_motivation + m_trainingBlocks + m_socialBlocks - (p.fatigue / 20), 0, 100);
 		p.discipline = std::clamp(m_discipline + (m_schoolBlocks * 2) + m_trainingBlocks - (m_socialBlocks * 2), 0, 100);
 		p.finances = std::clamp(m_finances + (m_workBlocks * 6) - m_recoveryBlocks, 0, 100);
 		p.relationships = std::clamp(m_relationships + (m_socialBlocks * 4) - m_workBlocks, 0, 100);
 
-		if (m_socialBlocks >= 4)
+		// Too much idle recovery breeds complacency - a single threshold
+		// motivation hit once Recovery dominates the week. Deliberately not
+		// stacked onto an existing linear term (that's the double-penalty
+		// pattern Social/Discipline used to have, removed below).
+		if (m_recoveryBlocks >= 4)
 		{
-			p.discipline = std::clamp(p.discipline - 4, 0, 100);
+			p.motivation = std::clamp(p.motivation - 3, 0, 100);
 		}
 
 		return p;
@@ -680,6 +684,8 @@ namespace winrt::thefootballife::implementation
 			consequence += L"Heavy work schedule improved finances while reducing recovery quality. ";
 		if (m_socialBlocks >= 4)
 			consequence += L"Social time improved morale and relationships, but discipline dipped. ";
+		if (m_recoveryBlocks >= 4)
+			consequence += L"Excess downtime kept you fresh, but too much comfort blunted your motivation. ";
 		if (consequence.empty())
 			consequence = L"Balanced week. No major penalties triggered.";
 
@@ -1299,7 +1305,7 @@ namespace winrt::thefootballife::implementation
 
 	void CareerHubPage::NextSeasonButton_Click(IInspectable const&, RoutedEventArgs const&)
 	{
-		// New season, same competition: reuse last season's club list 
+		// New season, same competition: reuse last season's club list
 		int nextYear = GameState::SeasonStartDate.Year + 1;
 		CareerDayService::InitializeSeason(nextYear);
 		m_currentWeek = GameState::CurrentWeek; // InitializeSeason resets this to 1
@@ -1317,7 +1323,6 @@ namespace winrt::thefootballife::implementation
 		m_fixtures = FixtureService::GenerateDoubleRoundRobin(clubs, /*startWeek*/ 1);
 		GameState::Fixtures = m_fixtures;
 
-		// TeamStats must be explicitly cleared here, same as at new-career.
 		m_teamStats.clear();
 		GameState::TeamStats.clear();
 
