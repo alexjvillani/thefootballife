@@ -13,6 +13,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Header -->
@@ -351,8 +352,66 @@
             </Border>
         </Grid>
 
+        <!-- Last match summary -->
+        <Border x:Name="MatchSummaryPanel"
+                Grid.Row="2"
+                Background="#1C1C1C"
+                CornerRadius="12"
+                Padding="20"
+                Margin="0,16,0,0"
+                Visibility="Collapsed">
+            <StackPanel Spacing="12">
+                <TextBlock x:Name="MatchSummaryTitleText"
+                           Text="Last Match"
+                           FontSize="20"
+                           FontWeight="SemiBold"
+                           Foreground="White"/>
+
+                <TextBlock x:Name="MatchSummaryScoreText"
+                           Text=""
+                           FontSize="22"
+                           FontWeight="Bold"
+                           Foreground="#D4A24C"
+                           TextWrapping="Wrap"/>
+
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Background="#262626" CornerRadius="8" Padding="10">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Q1" FontSize="11" Foreground="#888888"/>
+                            <TextBlock x:Name="Quarter1Text" Text="" FontSize="13" Foreground="#DDDDDD" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="1" Background="#262626" CornerRadius="8" Padding="10">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Q2" FontSize="11" Foreground="#888888"/>
+                            <TextBlock x:Name="Quarter2Text" Text="" FontSize="13" Foreground="#DDDDDD" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="2" Background="#262626" CornerRadius="8" Padding="10">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Q3" FontSize="11" Foreground="#888888"/>
+                            <TextBlock x:Name="Quarter3Text" Text="" FontSize="13" Foreground="#DDDDDD" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="3" Background="#262626" CornerRadius="8" Padding="10">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Q4 (Final)" FontSize="11" Foreground="#888888"/>
+                            <TextBlock x:Name="Quarter4Text" Text="" FontSize="13" Foreground="#DDDDDD" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </StackPanel>
+        </Border>
+
         <!-- Footer -->
-        <Grid Grid.Row="2" Margin="0,20,0,0">
+        <Grid Grid.Row="3" Margin="0,20,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>

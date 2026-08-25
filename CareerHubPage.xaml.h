@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include <random>
 
 namespace winrt::thefootballife::implementation
 {
@@ -107,6 +108,21 @@ namespace winrt::thefootballife::implementation
 		void CheckForFinalsProgression();
 		void ShowFinalsAnnouncementDialog(winrt::hstring const& title, winrt::hstring const& message);
 
+		// One quarter's raw goals/behinds for both sides of a single match -
+		// AFL scoring, not a running total (RenderLastMatchSummary computes
+		// the cumulative view for display).
+		struct QuarterScore
+		{
+			int homeGoals{ 0 };
+			int homeBehinds{ 0 };
+			int awayGoals{ 0 };
+			int awayBehinds{ 0 };
+		};
+		std::vector<QuarterScore> GenerateMatchQuarters(std::mt19937& gen) const;
+		void ApplyPointAdjustment(int& goals, int& behinds, int delta) const;
+		std::wstring FormatAflScore(int goals, int behinds) const;
+		void RenderLastMatchSummary();
+
 		// Result of advancing exactly one day, used to drive the auto-advance
 		// loop in AdvanceWeekButton_Click. A single day-step behaves the same
 		// whether auto-advance is on or off - only the looping differs.
@@ -170,6 +186,14 @@ namespace winrt::thefootballife::implementation
 
 		static constexpr int kDayEventChancePercent{ 20 }; // per Mon-Fri day advance
 		std::vector<DayEventService::DayEvent> m_dayEvents;
+
+		// Last match's quarter-by-quarter breakdown, for the "down the
+		// bottom" summary panel. Empty until the player's first match of
+		// the career; deliberately not persisted to save files (same as
+		// BottomHintText/ConsequenceText - transient session display only).
+		std::vector<QuarterScore> m_lastMatchQuarters;
+		std::wstring m_lastMatchHomeClub;
+		std::wstring m_lastMatchAwayClub;
 	};
 }
 

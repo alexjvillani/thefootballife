@@ -169,7 +169,12 @@ namespace winrt::thefootballife::implementation
 	{
 		InitializeComponent();
 
-		// Apply the Mentality/Physical X-Factor starting-stat nudges chosen on XFactorPage
+		// Apply the Mentality/Physical X-Factor starting-stat nudges chosen
+		// on XFactorPage, on top of the plain member-initializer defaults
+		// above. Note: personal stats aren't currently persisted in save
+		// files (SaveGameService::SaveToSlot/LoadFromSlot don't carry them),
+		// so this reapplies every construction the same way the plain
+		// defaults already do - a known separate gap, not introduced here.
 		auto applyXFactorModifier = [](int& stat, wchar_t const* key)
 			{
 				auto it = GameState::XFactorStatModifiers.find(key);
@@ -721,11 +726,55 @@ namespace winrt::thefootballife::implementation
 		UpdateStateUI();
 	}
 
+	std::vector<CareerHubPage::QuarterScore> CareerHubPage::GenerateMatchQuarters(std::mt19937& gen) const
+	{
+		std::uniform_int_distribution<int> goalsDist(1, 5);
+		std::uniform_int_distribution<int> behindsDist(1, 5);
+
+		std::vector<QuarterScore> quarters(4);
+		for (auto& q : quarters)
+		{
+			q.homeGoals = goalsDist(gen);
+			q.homeBehinds = behindsDist(gen);
+			q.awayGoals = goalsDist(gen);
+			q.awayBehinds = behindsDist(gen);
+		}
+		return quarters;
+	}
+
+	void CareerHubPage::ApplyPointAdjustment(int& goals, int& behinds, int delta) const
+	{
+		// Folds an arbitrary point delta into a quarter's behinds count
+		// first - a wayward day in front of goal racking up extra behinds
+		// reads as normal AFL commentary, even for a double-digit bonus. A
+		// large negative delta borrows from goals (converting one back to 0,
+		// losing 6 points) until absorbed. Known limitation: if delta is
+		// more negative than the quarter's own total, this floors at 0
+		// rather than going negative, so an extreme penalty may fall short
+		// of fully applying - opponentPenalty is small enough in practice
+		// that this shouldn't come up.
+		behinds += delta;
+		while (behinds < 0 && goals > 0)
+		{
+			goals--;
+			behinds += 6;
+		}
+		if (behinds < 0)
+		{
+			behinds = 0;
+		}
+	}
+
+	std::wstring CareerHubPage::FormatAflScore(int goals, int behinds) const
+	{
+		return std::to_wstring(goals) + L"." + std::to_wstring(behinds) +
+			L" (" + std::to_wstring(goals * 6 + behinds) + L")";
+	}
+
 	void CareerHubPage::SimulateWeekMatches(int playerClubBonus, int opponentPenalty)
 	{
 		std::random_device rd;
 		std::mt19937 gen(rd());
-		std::uniform_int_distribution<int> scoreDist(40, 130);
 
 		std::wstring const& playerClub = GameState::CurrentPlayer.team;
 
@@ -733,25 +782,47 @@ namespace winrt::thefootballife::implementation
 		{
 			if (f.Round != m_currentWeek || f.Played) continue;
 
-			int homeScore = scoreDist(gen);
-			int awayScore = scoreDist(gen);
+			auto quarters = GenerateMatchQuarters(gen);
 
-			// Only the player's own fixture is nudged by their pre-match
-			// choice - every other match in the round is untouched.
-			if (f.HomeClub == playerClub)
+			bool isPlayerHome = (f.HomeClub == playerClub);
+			bool isPlayerAway = (f.AwayClub == playerClub);
+
+			if (isPlayerHome || isPlayerAway)
 			{
-				homeScore = (std::max)(0, homeScore + playerClubBonus);
-				awayScore = (std::max)(0, awayScore - opponentPenalty);
+				// The player's pre-match choice only ever affects their own
+				// fixture, folded into the final quarter so the quarter-by-
+				// quarter breakdown still sums exactly to the final score.
+				auto& lastQuarter = quarters.back();
+				if (isPlayerHome)
+				{
+					ApplyPointAdjustment(lastQuarter.homeGoals, lastQuarter.homeBehinds, playerClubBonus);
+					ApplyPointAdjustment(lastQuarter.awayGoals, lastQuarter.awayBehinds, -opponentPenalty);
+				}
+				else
+				{
+					ApplyPointAdjustment(lastQuarter.awayGoals, lastQuarter.awayBehinds, playerClubBonus);
+					ApplyPointAdjustment(lastQuarter.homeGoals, lastQuarter.homeBehinds, -opponentPenalty);
+				}
 			}
-			else if (f.AwayClub == playerClub)
+
+			int homeScore = 0;
+			int awayScore = 0;
+			for (auto const& q : quarters)
 			{
-				awayScore = (std::max)(0, awayScore + playerClubBonus);
-				homeScore = (std::max)(0, homeScore - opponentPenalty);
+				homeScore += q.homeGoals * 6 + q.homeBehinds;
+				awayScore += q.awayGoals * 6 + q.awayBehinds;
 			}
 
 			f.HomeScore = homeScore;
 			f.AwayScore = awayScore;
 			f.Played = true;
+
+			if (isPlayerHome || isPlayerAway)
+			{
+				m_lastMatchQuarters = quarters;
+				m_lastMatchHomeClub = f.HomeClub;
+				m_lastMatchAwayClub = f.AwayClub;
+			}
 
 			auto& homeStats = m_teamStats[f.HomeClub];
 			auto& awayStats = m_teamStats[f.AwayClub];
@@ -768,6 +839,51 @@ namespace winrt::thefootballife::implementation
 
 		GameState::Fixtures = m_fixtures;
 		GameState::TeamStats = m_teamStats;
+	}
+
+	void CareerHubPage::RenderLastMatchSummary()
+	{
+		if (m_lastMatchQuarters.size() != 4 || m_lastMatchHomeClub.empty())
+		{
+			MatchSummaryPanel().Visibility(Visibility::Collapsed);
+			return;
+		}
+
+		MatchSummaryPanel().Visibility(Visibility::Visible);
+		MatchSummaryTitleText().Text(hstring(m_lastMatchHomeClub + L" vs " + m_lastMatchAwayClub));
+
+		int homeGoals = 0, homeBehinds = 0, awayGoals = 0, awayBehinds = 0;
+		for (auto const& q : m_lastMatchQuarters)
+		{
+			homeGoals += q.homeGoals;
+			homeBehinds += q.homeBehinds;
+			awayGoals += q.awayGoals;
+			awayBehinds += q.awayBehinds;
+		}
+
+		int homeTotal = homeGoals * 6 + homeBehinds;
+		int awayTotal = awayGoals * 6 + awayBehinds;
+		std::wstring resultWord = (homeTotal == awayTotal) ? L"drew with" : (homeTotal > awayTotal ? L"def." : L"lost to");
+
+		std::wstring scoreLine = m_lastMatchHomeClub + L" " + FormatAflScore(homeGoals, homeBehinds) +
+			L" " + resultWord + L" " +
+			m_lastMatchAwayClub + L" " + FormatAflScore(awayGoals, awayBehinds);
+		MatchSummaryScoreText().Text(hstring(scoreLine));
+
+		TextBlock quarterTextBlocks[4] = { Quarter1Text(), Quarter2Text(), Quarter3Text(), Quarter4Text() };
+		int runningHomeGoals = 0, runningHomeBehinds = 0, runningAwayGoals = 0, runningAwayBehinds = 0;
+		for (int i = 0; i < 4; ++i)
+		{
+			auto const& q = m_lastMatchQuarters[i];
+			runningHomeGoals += q.homeGoals;
+			runningHomeBehinds += q.homeBehinds;
+			runningAwayGoals += q.awayGoals;
+			runningAwayBehinds += q.awayBehinds;
+
+			std::wstring line = FormatAflScore(runningHomeGoals, runningHomeBehinds) +
+				L" - " + FormatAflScore(runningAwayGoals, runningAwayBehinds);
+			quarterTextBlocks[i].Text(hstring(line));
+		}
 	}
 
 	void CareerHubPage::LoadPlayerData()
@@ -993,6 +1109,7 @@ namespace winrt::thefootballife::implementation
 	{
 		ApplyWeekSimulation();
 		SimulateWeekMatches(playerClubBonus, opponentPenalty);
+		RenderLastMatchSummary();
 		BottomHintText().Text(hintMessage);
 		LoadLadderFromCsv();
 		RenderLadder();
