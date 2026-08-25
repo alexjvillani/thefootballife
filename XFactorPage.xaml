@@ -8,134 +8,157 @@
     mc:Ignorable="d"
     Background="#111111">
 
-	<Grid Padding="28">
-		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto"/>
-			<RowDefinition Height="*"/>
-			<RowDefinition Height="Auto"/>
-		</Grid.RowDefinitions>
+    <Grid Padding="28">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
-		<StackPanel Grid.Row="0" Margin="0,0,0,20">
-			<TextBlock Text="Choose Your X-Factors"
-                       FontSize="32"
-                       FontWeight="Bold"
-                       Foreground="White"/>
-			<TextBlock Text="Define what makes your player stand out."
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Choose Your "
+                           FontSize="32"
+                           FontWeight="Bold"
+                           Foreground="White"/>
+                <TextBlock Text="X-Factors"
+                           FontSize="32"
+                           FontWeight="Bold"
+                           Foreground="#D4A24C"/>
+            </StackPanel>
+            <TextBlock Text="Define what makes your player stand out. Tap a trait to select it."
                        Foreground="#BBBBBB"
                        Margin="0,6,0,0"/>
-		</StackPanel>
+        </StackPanel>
 
-		<Grid Grid.Row="1" ColumnSpacing="20">
-			<Grid.ColumnDefinitions>
-				<ColumnDefinition Width="*"/>
-				<ColumnDefinition Width="*"/>
-				<ColumnDefinition Width="*"/>
-			</Grid.ColumnDefinitions>
+        <Grid Grid.Row="1" ColumnSpacing="20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-			<Border Grid.Column="0" Background="#1C1C1C" CornerRadius="12" Padding="20">
-				<StackPanel Spacing="12">
-					<TextBlock Text="Mentality"
+            <Border Grid.Column="0" Background="#1C1C1C" CornerRadius="12" Padding="20">
+                <StackPanel VerticalAlignment="Top">
+                    <TextBlock Text="Mentality"
+                               FontSize="20"
+                               FontWeight="SemiBold"
+                               Foreground="White"
+                               Margin="0,0,0,12"/>
+
+                    <ScrollViewer MaxHeight="400" VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="MentalityOptionsPanel" Spacing="8"/>
+                    </ScrollViewer>
+
+                    <Border Background="#262626"
+                            CornerRadius="8"
+                            Padding="12"
+                            Margin="0,12,0,0">
+                        <TextBlock x:Name="MentalityDescriptionText"
+                                   Text="Social, popular, high morale"
+                                   Foreground="#DDDDDD"
+                                   FontStyle="Italic"
+                                   TextWrapping="Wrap"/>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="1" Background="#1C1C1C" CornerRadius="12" Padding="20">
+                <StackPanel VerticalAlignment="Top">
+                    <TextBlock Text="Physical"
+                               FontSize="20"
+                               FontWeight="SemiBold"
+                               Foreground="White"
+                               Margin="0,0,0,12"/>
+
+                    <ScrollViewer MaxHeight="400" VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="PhysicalOptionsPanel" Spacing="8"/>
+                    </ScrollViewer>
+
+                    <Border Background="#262626"
+                            CornerRadius="8"
+                            Padding="12"
+                            Margin="0,12,0,0">
+                        <TextBlock x:Name="PhysicalDescriptionText"
+                                   Text="Explosive, fast player"
+                                   Foreground="#DDDDDD"
+                                   FontStyle="Italic"
+                                   TextWrapping="Wrap"/>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="2" Background="#1C1C1C" CornerRadius="12" Padding="20">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="Weaknesses"
                                FontSize="20"
                                FontWeight="SemiBold"
                                Foreground="White"/>
 
-					<ComboBox x:Name="MentalityComboBox"
-                              SelectedIndex="0"
-                              SelectionChanged="MentalityComboBox_SelectionChanged">
-						<ComboBoxItem Content="Extroverted"/>
-						<ComboBoxItem Content="Outspoken"/>
-						<ComboBoxItem Content="Introverted"/>
-						<ComboBoxItem Content="Professional"/>
-					</ComboBox>
-
-					<TextBlock x:Name="MentalityDescriptionText"
-                               Text="Social, popular, high morale"
-                               Foreground="#DDDDDD"
-                               TextWrapping="Wrap"/>
-				</StackPanel>
-			</Border>
-
-			<Border Grid.Column="1" Background="#1C1C1C" CornerRadius="12" Padding="20">
-				<StackPanel Spacing="12">
-					<TextBlock Text="Physical"
-                               FontSize="20"
-                               FontWeight="SemiBold"
-                               Foreground="White"/>
-
-					<ComboBox x:Name="PhysicalComboBox"
-                              SelectedIndex="0"
-                              SelectionChanged="PhysicalComboBox_SelectionChanged">
-						<ComboBoxItem Content="Explosive Speed"/>
-						<ComboBoxItem Content="Elite Endurance"/>
-						<ComboBoxItem Content="Strong Marking"/>
-						<ComboBoxItem Content="Powerful Frame"/>
-						<ComboBoxItem Content="Booming Kick"/>
-					</ComboBox>
-
-					<TextBlock x:Name="PhysicalDescriptionText"
-                               Text="Explosive, fast player"
-                               Foreground="#DDDDDD"
-                               TextWrapping="Wrap"/>
-				</StackPanel>
-			</Border>
-
-			<Border Grid.Column="2" Background="#1C1C1C" CornerRadius="12" Padding="20">
-				<StackPanel Spacing="10">
-					<TextBlock Text="Weaknesses"
-                               FontSize="20"
-                               FontWeight="SemiBold"
-                               Foreground="White"/>
-
-					<CheckBox x:Name="WeaknessKick"
+                    <Border Background="#1E1E1E" CornerRadius="8" Padding="10,8">
+                        <CheckBox x:Name="WeaknessKick"
                               Content="Inconsistent Kicking"
                               Checked="WeaknessCheckBox_Changed"
                               Unchecked="WeaknessCheckBox_Changed"
                               Foreground="White"
 							  RequestedTheme="Dark"/>
+                    </Border>
 
-					<CheckBox x:Name="WeaknessFitness"
+                    <Border Background="#1E1E1E" CornerRadius="8" Padding="10,8">
+                        <CheckBox x:Name="WeaknessFitness"
                               Content="Low Endurance"
                               Checked="WeaknessCheckBox_Changed"
                               Unchecked="WeaknessCheckBox_Changed"
                               Foreground="White"
 							  RequestedTheme="Dark"/>
+                    </Border>
 
-					<CheckBox x:Name="WeaknessDecision"
+                    <Border Background="#1E1E1E" CornerRadius="8" Padding="10,8">
+                        <CheckBox x:Name="WeaknessDecision"
                               Content="Poor Decision Making"
                               Checked="WeaknessCheckBox_Changed"
                               Unchecked="WeaknessCheckBox_Changed"
                               Foreground="White"
 							  RequestedTheme="Dark"/>
-							 
+                    </Border>
 
-					<CheckBox x:Name="WeaknessPressure"
+                    <Border Background="#1E1E1E" CornerRadius="8" Padding="10,8">
+                        <CheckBox x:Name="WeaknessPressure"
                               Content="Struggles Under Pressure"
                               Checked="WeaknessCheckBox_Changed"
                               Unchecked="WeaknessCheckBox_Changed"
                               Foreground="White"
 							  RequestedTheme="Dark"/>
+                    </Border>
 
-					<Border Background="#262626" CornerRadius="10" Padding="12" Margin="0,10,0,0">
-						<TextBlock x:Name="TraitSummaryText"
+                    <Border Background="#262626" CornerRadius="10" Padding="12" Margin="0,10,0,0">
+                        <TextBlock x:Name="TraitSummaryText"
                                    Text="Choose your standout mentality and physical strengths."
                                    Foreground="#DDDDDD"
                                    TextWrapping="Wrap"/>
-					</Border>
-				</StackPanel>
-			</Border>
-		</Grid>
+                    </Border>
+                </StackPanel>
+            </Border>
+        </Grid>
 
-		<StackPanel Grid.Row="2"
+        <StackPanel Grid.Row="2"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     Spacing="10"
                     Margin="0,20,0,0">
 
-			<Button Content="Back"
-                    Click="BackButton_Click"/>
+            <Button Content="Back"
+                    Click="BackButton_Click"
+                    MinWidth="100"
+                    MinHeight="40"/>
 
-			<Button Content="Continue"
-                    Click="ContinueButton_Click"/>
-		</StackPanel>
-	</Grid>
+            <Button Content="Continue"
+                    Click="ContinueButton_Click"
+                    Background="#D4A24C"
+                    Foreground="#111111"
+                    FontWeight="SemiBold"
+                    MinWidth="120"
+                    MinHeight="40"/>
+        </StackPanel>
+    </Grid>
 </Page>

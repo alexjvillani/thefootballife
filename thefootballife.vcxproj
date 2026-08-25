@@ -156,6 +156,7 @@
     <ClInclude Include="XFactorPage.xaml.h">
       <DependentUpon>XFactorPage.xaml</DependentUpon>
     </ClInclude>
+    <ClInclude Include="XFactorService.h" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml" />
@@ -213,6 +214,7 @@
     <ClCompile Include="XFactorPage.xaml.cpp">
       <DependentUpon>XFactorPage.xaml</DependentUpon>
     </ClCompile>
+    <ClCompile Include="XFactorService.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Midl Include="CareerHubPage.idl" />

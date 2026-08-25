@@ -168,6 +168,26 @@ namespace winrt::thefootballife::implementation
 	CareerHubPage::CareerHubPage()
 	{
 		InitializeComponent();
+
+		// Apply the Mentality/Physical X-Factor starting-stat nudges chosen on XFactorPage
+		auto applyXFactorModifier = [](int& stat, wchar_t const* key)
+			{
+				auto it = GameState::XFactorStatModifiers.find(key);
+				if (it != GameState::XFactorStatModifiers.end())
+				{
+					stat = std::clamp(stat + it->second, 0, 100);
+				}
+			};
+		applyXFactorModifier(m_fatigue, L"Fatigue");
+		applyXFactorModifier(m_injuryRisk, L"InjuryRisk");
+		applyXFactorModifier(m_recoveryQuality, L"RecoveryQuality");
+		applyXFactorModifier(m_confidence, L"Confidence");
+		applyXFactorModifier(m_stress, L"Stress");
+		applyXFactorModifier(m_motivation, L"Motivation");
+		applyXFactorModifier(m_discipline, L"Discipline");
+		applyXFactorModifier(m_finances, L"Finances");
+		applyXFactorModifier(m_relationships, L"Relationships");
+
 		m_currentWeek = GameState::CurrentWeek;
 		m_lastChoice = hstring(GameState::LastChoice);
 		m_teamStats = GameState::TeamStats;
@@ -1007,7 +1027,14 @@ namespace winrt::thefootballife::implementation
 		AdvanceWeekButton().IsEnabled(!seasonOver);
 	}
 
-	// Drives the top-4 McIntyre finals system purely off fixture state
+	// Drives the top-4 McIntyre finals system purely off fixture state, so it
+	// needs no separate "season phase" flag to persist: it just looks at what
+	// finals fixtures already exist in m_fixtures and what's been Played, and
+	// generates the next round if one is due. Because Fixture::Round and
+	// GameState::CurrentWeek already stay in lockstep (both increment once a
+	// week regardless of what's being played), finals fixtures generated here
+	// at "next round" numbers automatically line up with the calendar - no
+	// special-casing needed elsewhere for week numbering.
 	void CareerHubPage::CheckForFinalsProgression()
 	{
 		using FixtureService::Fixture;
@@ -1314,7 +1341,9 @@ namespace winrt::thefootballife::implementation
 
 	void CareerHubPage::NextSeasonButton_Click(IInspectable const&, RoutedEventArgs const&)
 	{
-		// New season, same competition: reuse last season's club list
+		// New season, same competition: reuse last season's club list (drawn
+		// from home-and-away fixtures only - finals fixtures and the
+		// terminal marker are excluded) and roll the calendar forward a year.
 		int nextYear = GameState::SeasonStartDate.Year + 1;
 		CareerDayService::InitializeSeason(nextYear);
 		m_currentWeek = GameState::CurrentWeek; // InitializeSeason resets this to 1
@@ -1332,10 +1361,14 @@ namespace winrt::thefootballife::implementation
 		m_fixtures = FixtureService::GenerateDoubleRoundRobin(clubs, /*startWeek*/ 1);
 		GameState::Fixtures = m_fixtures;
 
+		// TeamStats must be explicitly cleared here, same as at new-career
+		// creation - otherwise last season's wins/losses/percentage bleed
+		// into the fresh ladder.
 		m_teamStats.clear();
 		GameState::TeamStats.clear();
 
-
+		// Personal stats reset to baseline for the fresh season, per design
+		// choice - these mirror the member initializer defaults above.
 		m_fatigue = 30;
 		m_injuryRisk = 20;
 		m_recoveryQuality = 55;

@@ -1,0 +1,17 @@
+Category,Id,Title,Description,StatEffects
+Mentality,extroverted,Extroverted,Thrives around others and is always the life of the group.,Relationships:+8;Confidence:+4;Discipline:-3
+Mentality,outspoken,Outspoken,Says what's on his mind for better or worse.,Confidence:+6;Relationships:-4;Stress:+3
+Mentality,introverted,Introverted,Quiet and focused - prefers to let his actions do the talking.,Discipline:+5;Stress:-4;Relationships:-3
+Mentality,professional,Professional,Meticulous and disciplined in absolutely everything he does.,Discipline:+8;Stress:+2
+Mentality,competitive,Competitive,Hates losing far more than he loves winning.,Motivation:+7;Confidence:+3;Stress:+3
+Mentality,laid_back,Laid-Back,Takes everything in stride and rarely looks rattled.,Stress:-8;Motivation:-3
+Mentality,resilient,Resilient,Bounces back fast from setbacks and criticism alike.,Confidence:+5;Stress:-3
+Mentality,anxious,Anxious,Feels the weight of every big moment more than most.,Discipline:+3;Stress:+6;Confidence:-4
+Physical,explosive_speed,Explosive Speed,Explodes away from a standing start and is hard to run down.,Confidence:+5;InjuryRisk:+3
+Physical,elite_endurance,Elite Endurance,Never seems to run out of legs even deep into games.,RecoveryQuality:+6;Fatigue:-4
+Physical,strong_marking,Strong Marking,Dominates the air and is a genuine target overhead.,Confidence:+6;Discipline:+2
+Physical,powerful_frame,Powerful Frame,Built to win the physical battles every single week.,InjuryRisk:-4;Confidence:+4
+Physical,booming_kick,Booming Kick,Can hit a target from almost anywhere on the ground.,Confidence:+5;Motivation:+2
+Physical,elite_agility,Elite Agility,Slippery in traffic and hard to pin down in a tackle.,InjuryRisk:-3;Confidence:+4
+Physical,iron_constitution,Iron Constitution,Rarely misses time - a genuine ever-present on the field.,InjuryRisk:-6;RecoveryQuality:+3
+Physical,explosive_leap,Explosive Leap,Gets off the ground higher than anyone else on the field.,Confidence:+6;InjuryRisk:+2
