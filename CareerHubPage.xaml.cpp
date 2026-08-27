@@ -205,6 +205,7 @@ namespace winrt::thefootballife::implementation
 		LoadLadderFromCsv();
 		RenderLadder();
 		RenderFixtures();
+		RenderSquad();
 		UpdateSeasonRolloverUI();
 	}
 
@@ -534,12 +535,207 @@ namespace winrt::thefootballife::implementation
 	{
 		LadderContentPanel().Visibility(Visibility::Visible);
 		FixturesContentPanel().Visibility(Visibility::Collapsed);
+		SquadContentPanel().Visibility(Visibility::Collapsed);
 	}
 
 	void CareerHubPage::FixturesViewButton_Click(IInspectable const&, RoutedEventArgs const&)
 	{
 		LadderContentPanel().Visibility(Visibility::Collapsed);
 		FixturesContentPanel().Visibility(Visibility::Visible);
+		SquadContentPanel().Visibility(Visibility::Collapsed);
+	}
+
+	void CareerHubPage::SquadViewButton_Click(IInspectable const&, RoutedEventArgs const&)
+	{
+		LadderContentPanel().Visibility(Visibility::Collapsed);
+		FixturesContentPanel().Visibility(Visibility::Collapsed);
+		SquadContentPanel().Visibility(Visibility::Visible);
+		RenderSquad();
+	}
+
+	// ── Squad ────────────────────────────────────────────────────────────────
+
+	CareerHubPage::CompetitionTier CareerHubPage::DetermineTier(std::wstring const& league) const
+	{
+		if (league == L"AFL") return CompetitionTier::Afl;
+		if (league == L"VFL" || league == L"SANFL" || league == L"WAFL") return CompetitionTier::StateLeague;
+		if (league == L"Talent League" || league == L"NAB League") return CompetitionTier::TalentLeague;
+		return CompetitionTier::Local; // VPL and anything unrecognised defaults here
+	}
+
+	CareerHubPage::OverallRange CareerHubPage::GetTierOverallRange(CompetitionTier tier) const
+	{
+		switch (tier)
+		{
+		case CompetitionTier::Local:        return { 35, 60 };
+		case CompetitionTier::TalentLeague: return { 45, 70 };
+		case CompetitionTier::StateLeague:  return { 55, 79 };
+		case CompetitionTier::Afl:          return { 65, 99 };
+		}
+		return { 35, 60 };
+	}
+
+	int CareerHubPage::ComputePlayerOverall() const
+	{
+		// Single FIFA-card-style Overall, computed live from existing state
+		// rather than a new persisted field - personal stats aren't saved
+		// to file yet either (see the flagged known gap), so this
+		// recomputes fresh each session same as everything it's built from.
+		auto tier = DetermineTier(GameState::CurrentPlayer.originalTeamLeague);
+		auto range = GetTierOverallRange(tier);
+
+		// Baseline sits at the tier's midpoint - "a promising prospect for
+		// this level," same framing regardless of which tier that turns
+		// out to be.
+		int baseline = (range.Min + range.Max) / 2;
+
+		// Current mental form nudges it up or down a little either way.
+		int formModifier = ((m_confidence + m_discipline + m_motivation) / 3 - 50) / 3;
+
+		// Being run down or stressed drags it back towards the baseline.
+		int fatigueStressPenalty = (m_fatigue + m_stress) / 20;
+
+		// A small permanent nudge from the X-Factors chosen at career start,
+		// standing in for "natural talent" until a dedicated skill-attribute
+		// system exists.
+		int talentBonus = 0;
+		for (auto const& kv : GameState::XFactorStatModifiers)
+		{
+			talentBonus += kv.second;
+		}
+		talentBonus /= 4;
+
+		return std::clamp(baseline + formModifier - fatigueStressPenalty + talentBonus, range.Min, range.Max);
+	}
+
+	winrt::Windows::UI::Color CareerHubPage::OverallColour(int overall, OverallRange const& range) const
+	{
+		// Thresholds are relative to the current tier's own band, not
+		// absolute AFL-scale numbers - otherwise a Local-tier cap of 60
+		// would never reach a fixed "gold" cutoff like 70.
+		int span = range.Max - range.Min;
+		int goldThreshold = range.Min + (span * 2) / 3;
+		int greenThreshold = range.Min + span / 3;
+
+		if (overall >= goldThreshold) return winrt::Windows::UI::ColorHelper::FromArgb(255, 212, 162, 76);  // gold - stands out
+		if (overall >= greenThreshold) return winrt::Windows::UI::ColorHelper::FromArgb(255, 143, 224, 174); // green - solid
+		return winrt::Windows::UI::ColorHelper::FromArgb(255, 190, 190, 190);                                // grey - fringe
+	}
+
+	void CareerHubPage::RenderSquad()
+	{
+		if (!SquadRowsPanel())
+		{
+			return;
+		}
+
+		// Generated once per season (lazily here, or eagerly cleared by
+		// Start Next Season) rather than every render - a real list doesn't
+		// reshuffle names week to week.
+		if (m_squad.empty())
+		{
+			auto tier = DetermineTier(GameState::CurrentPlayer.originalTeamLeague);
+			auto range = GetTierOverallRange(tier);
+			m_squad = SquadService::GenerateSquad(20, range.Min, range.Max);
+		}
+
+		SquadRowsPanel().Children().Clear();
+
+		struct DisplayEntry
+		{
+			std::wstring Name;
+			std::wstring Position;
+			int Overall{ 0 };
+			bool IsPlayer{ false };
+		};
+
+		std::vector<DisplayEntry> entries;
+		for (auto const& member : m_squad)
+		{
+			entries.push_back({ member.FirstName + L" " + member.LastName, member.Position, member.Overall, false });
+		}
+
+		auto const& player = GameState::CurrentPlayer;
+		entries.push_back({ player.firstName + L" " + player.lastName + L" (You)", player.position, ComputePlayerOverall(), true });
+
+		std::sort(entries.begin(), entries.end(), [](DisplayEntry const& a, DisplayEntry const& b)
+			{
+				return a.Overall > b.Overall;
+			});
+
+		auto currentTierRange = GetTierOverallRange(DetermineTier(player.originalTeamLeague));
+
+		for (auto const& entry : entries)
+		{
+			Border row;
+			Microsoft::UI::Xaml::CornerRadius cr{};
+			cr.TopLeft = cr.TopRight = cr.BottomRight = cr.BottomLeft = 8;
+			row.CornerRadius(cr);
+			row.Padding(Thickness{ 10, 6, 10, 6 });
+
+			auto bgColour = entry.IsPlayer
+				? winrt::Windows::UI::ColorHelper::FromArgb(255, 46, 39, 23)
+				: winrt::Windows::UI::ColorHelper::FromArgb(255, 30, 30, 30);
+			row.Background(SolidColorBrush(bgColour));
+
+			if (entry.IsPlayer)
+			{
+				row.BorderBrush(SolidColorBrush(winrt::Windows::UI::ColorHelper::FromArgb(255, 212, 162, 76)));
+				row.BorderThickness(Thickness{ 2, 2, 2, 2 });
+			}
+
+			Grid g;
+			GridLength star{ 1.0, Microsoft::UI::Xaml::GridUnitType::Star };
+			GridLength posWidth{ 90, Microsoft::UI::Xaml::GridUnitType::Pixel };
+			GridLength ovrWidth{ 46, Microsoft::UI::Xaml::GridUnitType::Pixel };
+
+			ColumnDefinition c0; c0.Width(star);     g.ColumnDefinitions().Append(c0);
+			ColumnDefinition c1; c1.Width(posWidth); g.ColumnDefinitions().Append(c1);
+			ColumnDefinition c2; c2.Width(ovrWidth); g.ColumnDefinitions().Append(c2);
+
+			TextBlock nameText;
+			nameText.Text(hstring(entry.Name));
+			nameText.FontSize(13);
+			nameText.VerticalAlignment(VerticalAlignment::Center);
+			nameText.TextTrimming(TextTrimming::CharacterEllipsis);
+			nameText.Foreground(SolidColorBrush(entry.IsPlayer
+				? winrt::Windows::UI::ColorHelper::FromArgb(255, 212, 162, 76)
+				: winrt::Windows::UI::ColorHelper::FromArgb(255, 220, 220, 220)));
+			if (entry.IsPlayer)
+			{
+				nameText.FontWeight(winrt::Windows::UI::Text::FontWeights::SemiBold());
+			}
+			Grid::SetColumn(nameText, 0);
+			g.Children().Append(nameText);
+
+			TextBlock posText;
+			posText.Text(hstring(entry.Position));
+			posText.FontSize(12);
+			posText.VerticalAlignment(VerticalAlignment::Center);
+			posText.Foreground(SolidColorBrush(winrt::Windows::UI::ColorHelper::FromArgb(255, 136, 136, 136)));
+			Grid::SetColumn(posText, 1);
+			g.Children().Append(posText);
+
+			Border ovrPill;
+			Microsoft::UI::Xaml::CornerRadius ovrCr{};
+			ovrCr.TopLeft = ovrCr.TopRight = ovrCr.BottomRight = ovrCr.BottomLeft = 6;
+			ovrPill.CornerRadius(ovrCr);
+			ovrPill.Padding(Thickness{ 6, 2, 6, 2 });
+			ovrPill.HorizontalAlignment(HorizontalAlignment::Right);
+			ovrPill.Background(SolidColorBrush(OverallColour(entry.Overall, currentTierRange)));
+
+			TextBlock ovrText;
+			ovrText.Text(hstring(std::to_wstring(entry.Overall)));
+			ovrText.FontSize(13);
+			ovrText.FontWeight(winrt::Windows::UI::Text::FontWeights::Bold());
+			ovrText.Foreground(SolidColorBrush(winrt::Windows::UI::Colors::Black()));
+			ovrPill.Child(ovrText);
+			Grid::SetColumn(ovrPill, 2);
+			g.Children().Append(ovrPill);
+
+			row.Child(g);
+			SquadRowsPanel().Children().Append(row);
+		}
 	}
 
 	// ── Block UI ─────────────────────────────────────────────────────────────
@@ -1114,6 +1310,7 @@ namespace winrt::thefootballife::implementation
 		LoadLadderFromCsv();
 		RenderLadder();
 		RenderFixtures();
+		RenderSquad();
 		CheckForFinalsProgression();
 		UpdateSeasonRolloverUI();
 	}
@@ -1505,12 +1702,16 @@ namespace winrt::thefootballife::implementation
 		m_blocksSpentToday = 0;
 		m_blocksAddedTodayByCategory.clear();
 
+		// Fresh squad for the new season - some faces change year to year.
+		m_squad.clear();
+
 		UpdateBlockUI();
 		UpdateStateUI();
 		UpdateWeekDisplay();
 		LoadLadderFromCsv();
 		RenderLadder();
 		RenderFixtures();
+		RenderSquad();
 		UpdateSeasonRolloverUI();
 
 		ShowFinalsAnnouncementDialog(L"New Season",

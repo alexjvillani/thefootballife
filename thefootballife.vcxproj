@@ -150,6 +150,7 @@
     </ClInclude>
     <ClInclude Include="PlayerData.h" />
     <ClInclude Include="SaveGameService.h" />
+    <ClInclude Include="SquadService.h" />
     <ClInclude Include="TeamAssignmentPage.xaml.h">
       <DependentUpon>TeamAssignmentPage.xaml</DependentUpon>
     </ClInclude>
@@ -208,6 +209,7 @@
       <DependentUpon>PlayerCreationPage.xaml</DependentUpon>
     </ClCompile>
     <ClCompile Include="SaveGameService.cpp" />
+    <ClCompile Include="SquadService.cpp" />
     <ClCompile Include="TeamAssignmentPage.xaml.cpp">
       <DependentUpon>TeamAssignmentPage.xaml</DependentUpon>
     </ClCompile>

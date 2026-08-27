@@ -284,6 +284,7 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Button Grid.Column="0"
                                 Content="Ladder"
@@ -292,6 +293,10 @@
                         <Button Grid.Column="1"
                                 Content="Fixtures"
                                 Click="FixturesViewButton_Click"
+                                HorizontalAlignment="Stretch"/>
+                        <Button Grid.Column="2"
+                                Content="Squad"
+                                Click="SquadViewButton_Click"
                                 HorizontalAlignment="Stretch"/>
                     </Grid>
 
@@ -345,6 +350,20 @@
                                       HorizontalScrollBarVisibility="Disabled"
                                       MaxHeight="520">
                             <StackPanel x:Name="FixtureRowsPanel" Spacing="6"/>
+                        </ScrollViewer>
+                    </StackPanel>
+
+                    <!-- Squad view -->
+                    <StackPanel x:Name="SquadContentPanel" Spacing="10" Visibility="Collapsed">
+                        <TextBlock Text="Squad"
+                                   FontSize="22"
+                                   FontWeight="SemiBold"
+                                   Foreground="White"/>
+
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      MaxHeight="520">
+                            <StackPanel x:Name="SquadRowsPanel" Spacing="6"/>
                         </ScrollViewer>
                     </StackPanel>
 

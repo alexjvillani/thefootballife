@@ -34,6 +34,7 @@
     <ClCompile Include="CareerDayService.cpp" />
     <ClCompile Include="DayEventService.cpp" />
     <ClCompile Include="XFactorService.cpp" />
+    <ClCompile Include="SquadService.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -44,6 +45,7 @@
     <ClInclude Include="CareerDayService.h" />
     <ClInclude Include="DayEventService.h" />
     <ClInclude Include="XFactorService.h" />
+    <ClInclude Include="SquadService.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Wide310x150Logo.scale-200.png">

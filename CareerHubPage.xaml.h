@@ -3,6 +3,8 @@
 #include "SaveGameService.h"
 #include "FixtureService.h"
 #include "DayEventService.h"
+#include "SquadService.h"
+#include <winrt/Windows.UI.h>
 #include <vector>
 #include <string>
 #include <unordered_map>
@@ -65,6 +67,10 @@ namespace winrt::thefootballife::implementation
 			winrt::Windows::Foundation::IInspectable const& sender,
 			winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
 
+		void SquadViewButton_Click(
+			winrt::Windows::Foundation::IInspectable const& sender,
+			winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
+
 		void NextSeasonButton_Click(
 			winrt::Windows::Foundation::IInspectable const& sender,
 			winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
@@ -103,6 +109,17 @@ namespace winrt::thefootballife::implementation
 		void LoadLadderFromCsv();
 		void RenderLadder();
 		void RenderFixtures();
+		void RenderSquad();
+		int ComputePlayerOverall() const;
+
+		// Real-world AFL pathway: Local -> Talent League -> VFL/SANFL/WAFL -> AFL
+
+		enum class CompetitionTier { Local, TalentLeague, StateLeague, Afl };
+		struct OverallRange { int Min{ 0 }; int Max{ 0 }; };
+		CompetitionTier DetermineTier(std::wstring const& league) const;
+		OverallRange GetTierOverallRange(CompetitionTier tier) const;
+
+		winrt::Windows::UI::Color OverallColour(int overall, OverallRange const& range) const;
 		void ShowDayEventDialog(DayEventService::DayEvent const& event);
 		void ApplyEventChoice(DayEventService::EventChoice const& choice);
 		void CheckForFinalsProgression();
@@ -183,6 +200,12 @@ namespace winrt::thefootballife::implementation
 		std::unordered_map<std::wstring, SaveGameService::TeamSeasonStats> m_teamStats;
 		std::vector<LadderEntry> m_ladder;
 		std::vector<FixtureService::Fixture> m_fixtures;
+
+		// Teammate roster for the Squad view - generated once per season
+		// (lazily on first render, regenerated on Start Next Season). Not
+		// persisted to save files, same as the personal stats it partly
+		// depends on via ComputePlayerOverall.
+		std::vector<SquadService::SquadMember> m_squad;
 
 		static constexpr int kDayEventChancePercent{ 20 }; // per Mon-Fri day advance
 		std::vector<DayEventService::DayEvent> m_dayEvents;
