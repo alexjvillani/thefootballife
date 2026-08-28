@@ -19,386 +19,422 @@ namespace fs = std::filesystem;
 
 namespace
 {
-    bool TryParseInt(std::wstring const& value, int& output)
-    {
-        try
-        {
-            output = std::stoi(value);
-            return true;
-        }
-        catch (...)
-        {
-            return false;
-        }
-    }
+	bool TryParseInt(std::wstring const& value, int& output)
+	{
+		try
+		{
+			output = std::stoi(value);
+			return true;
+		}
+		catch (...)
+		{
+			return false;
+		}
+	}
 }
 
 namespace SaveGameService
 {
-    std::wstring GetSaveFolder()
-    {
-        PWSTR path = nullptr;
+	std::wstring GetSaveFolder()
+	{
+		PWSTR path = nullptr;
 
-        HRESULT hr = SHGetKnownFolderPath(FOLDERID_Documents, 0, NULL, &path);
-        if (FAILED(hr))
-        {
-            return L"";
-        }
+		HRESULT hr = SHGetKnownFolderPath(FOLDERID_Documents, 0, NULL, &path);
+		if (FAILED(hr))
+		{
+			return L"";
+		}
 
-        std::filesystem::path docPath(path);
-        CoTaskMemFree(path);
+		std::filesystem::path docPath(path);
+		CoTaskMemFree(path);
 
-        docPath /= L"The Football Life";
+		docPath /= L"The Football Life";
 
-        // ensure folder exists
-        std::filesystem::create_directories(docPath);
+		// ensure folder exists
+		std::filesystem::create_directories(docPath);
 
-        return docPath.wstring();
-    }
+		return docPath.wstring();
+	}
 
-    std::wstring GetSaveSlotPath(int slot)
-    {
-        std::wstring path = GetSaveFolder();
+	std::wstring GetSaveSlotPath(int slot)
+	{
+		std::wstring path = GetSaveFolder();
 
-        path += L"\\career_save_slot";
-        path += std::to_wstring(slot);
-        path += L".txt";
+		path += L"\\career_save_slot";
+		path += std::to_wstring(slot);
+		path += L".txt";
 
-        return path;
-    }
+		return path;
+	}
 
-    bool SlotExists(int slot)
-    {
-        if (slot < 1 || slot > MaxSaveSlots)
-        {
-            return false;
-        }
+	bool SlotExists(int slot)
+	{
+		if (slot < 1 || slot > MaxSaveSlots)
+		{
+			return false;
+		}
 
-        std::wifstream file(GetSaveSlotPath(slot));
-        return file.is_open();
-    }
+		std::wifstream file(GetSaveSlotPath(slot));
+		return file.is_open();
+	}
 
-    int FindFirstAvailableSlot()
-    {
-        for (int slot = 1; slot <= MaxSaveSlots; ++slot)
-        {
-            if (!SlotExists(slot))
-            {
-                return slot;
-            }
-        }
+	int FindFirstAvailableSlot()
+	{
+		for (int slot = 1; slot <= MaxSaveSlots; ++slot)
+		{
+			if (!SlotExists(slot))
+			{
+				return slot;
+			}
+		}
 
-        return 1;
-    }
+		return 1;
+	}
 
-    bool SaveToSlot(
-        int slot,
-        PlayerData const& player,
-        int currentWeek,
-        std::wstring const& lastChoice,
-        std::unordered_map<std::wstring, TeamSeasonStats> const& teamStats,
-        std::vector<FixtureService::Fixture> const& fixtures,
-        CalendarState const& calendar
-    )
-    {
-        if (slot < 1 || slot > MaxSaveSlots) return false;
+	bool SaveToSlot(
+		int slot,
+		PlayerData const& player,
+		int currentWeek,
+		std::wstring const& lastChoice,
+		std::unordered_map<std::wstring, TeamSeasonStats> const& teamStats,
+		std::vector<FixtureService::Fixture> const& fixtures,
+		CalendarState const& calendar,
+		PersonalStats const& personalStats
+	)
+	{
+		if (slot < 1 || slot > MaxSaveSlots) return false;
 
-        std::wofstream file(GetSaveSlotPath(slot));
-        if (!file.is_open()) return false;
+		std::wofstream file(GetSaveSlotPath(slot));
+		if (!file.is_open()) return false;
 
-        file << L"FirstName=" << player.firstName << L"\n";
-        file << L"LastName=" << player.lastName << L"\n";
-        file << L"Position=" << player.position << L"\n";
-        file << L"Foot=" << player.foot << L"\n";
-        file << L"Number=" << player.number << L"\n";
-        file << L"Team=" << player.team << L"\n";
-        file << L"OriginalTeam=" << player.originalTeam << L"\n";
-        file << L"OriginalTeamSuburb=" << player.originalTeamSuburb << L"\n";
-        file << L"OriginalTeamPrimaryColour=" << player.originalTeamPrimaryColour << L"\n";
-        file << L"OriginalTeamSecondaryColour=" << player.originalTeamSecondaryColour << L"\n";
-        file << L"OriginalTeamHomeGround=" << player.originalTeamHomeGround << L"\n";
-        file << L"OriginalTeamLeague=" << player.originalTeamLeague << L"\n";
-        file << L"OriginalTeamReputation=" << player.originalTeamReputation << L"\n";
-        file << L"State=" << player.state << L"\n";
-        file << L"SchoolType=" << player.schoolType << L"\n";
-        file << L"Region=" << player.region << L"\n";
-        file << L"FamilySituation=" << player.familySituation << L"\n";
-        file << L"Finances=" << player.finances << L"\n";
-        file << L"HeightCm=" << player.heightCm << L"\n";
-        file << L"WeightKg=" << player.weightKg << L"\n";
-        file << L"PotentialHeightCm=" << player.potentialHeightCm << L"\n";
-        file << L"DistanceToClubKm=" << player.distanceToClubKm << L"\n";
-        file << L"MentalityXFactor=" << player.mentalityXFactor << L"\n";
-        file << L"PhysicalXFactor=" << player.physicalXFactor << L"\n";
-        file << L"Weaknesses=" << player.weaknesses << L"\n";
-        file << L"ProfileImagePath=" << player.profileImagePath << L"\n";
-        file << L"CurrentWeek=" << currentWeek << L"\n";
-        file << L"LastChoice=" << lastChoice << L"\n";
+		file << L"FirstName=" << player.firstName << L"\n";
+		file << L"LastName=" << player.lastName << L"\n";
+		file << L"Position=" << player.position << L"\n";
+		file << L"Foot=" << player.foot << L"\n";
+		file << L"Number=" << player.number << L"\n";
+		file << L"Team=" << player.team << L"\n";
+		file << L"OriginalTeam=" << player.originalTeam << L"\n";
+		file << L"OriginalTeamSuburb=" << player.originalTeamSuburb << L"\n";
+		file << L"OriginalTeamPrimaryColour=" << player.originalTeamPrimaryColour << L"\n";
+		file << L"OriginalTeamSecondaryColour=" << player.originalTeamSecondaryColour << L"\n";
+		file << L"OriginalTeamHomeGround=" << player.originalTeamHomeGround << L"\n";
+		file << L"OriginalTeamLeague=" << player.originalTeamLeague << L"\n";
+		file << L"OriginalTeamReputation=" << player.originalTeamReputation << L"\n";
+		file << L"State=" << player.state << L"\n";
+		file << L"SchoolType=" << player.schoolType << L"\n";
+		file << L"Region=" << player.region << L"\n";
+		file << L"FamilySituation=" << player.familySituation << L"\n";
+		file << L"Finances=" << player.finances << L"\n";
+		file << L"HeightCm=" << player.heightCm << L"\n";
+		file << L"WeightKg=" << player.weightKg << L"\n";
+		file << L"PotentialHeightCm=" << player.potentialHeightCm << L"\n";
+		file << L"DistanceToClubKm=" << player.distanceToClubKm << L"\n";
+		file << L"MentalityXFactor=" << player.mentalityXFactor << L"\n";
+		file << L"PhysicalXFactor=" << player.physicalXFactor << L"\n";
+		file << L"Weaknesses=" << player.weaknesses << L"\n";
+		file << L"ProfileImagePath=" << player.profileImagePath << L"\n";
+		file << L"CurrentWeek=" << currentWeek << L"\n";
+		file << L"LastChoice=" << lastChoice << L"\n";
 
-        // Season calendar - previously not persisted at all, so loading a
-        // save left the in-memory date/day wherever it happened to be.
-        file << L"CurrentDateYear=" << calendar.currentYear << L"\n";
-        file << L"CurrentDateMonth=" << calendar.currentMonth << L"\n";
-        file << L"CurrentDateDay=" << calendar.currentDay << L"\n";
-        file << L"CurrentDayPhase=" << calendar.currentDayPhase << L"\n";
-        file << L"SeasonStartYear=" << calendar.seasonStartYear << L"\n";
-        file << L"SeasonStartMonth=" << calendar.seasonStartMonth << L"\n";
-        file << L"SeasonStartDay=" << calendar.seasonStartDay << L"\n";
-        file << L"SeasonEndYear=" << calendar.seasonEndYear << L"\n";
-        file << L"SeasonEndMonth=" << calendar.seasonEndMonth << L"\n";
-        file << L"SeasonEndDay=" << calendar.seasonEndDay << L"\n";
+		// Season calendar - previously not persisted at all, so loading a
+		// save left the in-memory date/day wherever it happened to be.
+		file << L"CurrentDateYear=" << calendar.currentYear << L"\n";
+		file << L"CurrentDateMonth=" << calendar.currentMonth << L"\n";
+		file << L"CurrentDateDay=" << calendar.currentDay << L"\n";
+		file << L"CurrentDayPhase=" << calendar.currentDayPhase << L"\n";
+		file << L"SeasonStartYear=" << calendar.seasonStartYear << L"\n";
+		file << L"SeasonStartMonth=" << calendar.seasonStartMonth << L"\n";
+		file << L"SeasonStartDay=" << calendar.seasonStartDay << L"\n";
+		file << L"SeasonEndYear=" << calendar.seasonEndYear << L"\n";
+		file << L"SeasonEndMonth=" << calendar.seasonEndMonth << L"\n";
+		file << L"SeasonEndDay=" << calendar.seasonEndDay << L"\n";
 
-        // Team stats section
-        if (!teamStats.empty())
-        {
-            file << L"[TeamStats]\n";
-            for (auto const& [clubName, s] : teamStats)
-            {
-                file << clubName << L"="
-                    << s.wins << L","
-                    << s.losses << L","
-                    << s.draws << L","
-                    << s.pointsFor << L","
-                    << s.pointsAgainst << L"\n";
-            }
-        }
+		// Personal stats and this week's block allocation - previously not
+		// persisted at all, so every reload reset to the brand-new-career
+		// baseline regardless of how far into the career the save was.
+		file << L"Fatigue=" << personalStats.fatigue << L"\n";
+		file << L"InjuryRisk=" << personalStats.injuryRisk << L"\n";
+		file << L"RecoveryQuality=" << personalStats.recoveryQuality << L"\n";
+		file << L"Confidence=" << personalStats.confidence << L"\n";
+		file << L"Stress=" << personalStats.stress << L"\n";
+		file << L"Motivation=" << personalStats.motivation << L"\n";
+		file << L"Discipline=" << personalStats.discipline << L"\n";
+		file << L"PersonalFinances=" << personalStats.finances << L"\n";
+		file << L"Relationships=" << personalStats.relationships << L"\n";
+		file << L"TrainingBlocks=" << personalStats.trainingBlocks << L"\n";
+		file << L"SchoolBlocks=" << personalStats.schoolBlocks << L"\n";
+		file << L"WorkBlocks=" << personalStats.workBlocks << L"\n";
+		file << L"SocialBlocks=" << personalStats.socialBlocks << L"\n";
+		file << L"RecoveryBlocks=" << personalStats.recoveryBlocks << L"\n";
 
-        // Fixtures section
-        if (!fixtures.empty())
-        {
-            file << L"[Fixtures]\n";
-            int currentRound = -1;
-            for (auto const& f : fixtures)
-            {
-                if (f.Round != currentRound)
-                {
-                    if (currentRound != -1) file << L"\n";
-                    file << L"Round" << f.Round << L"=";
-                    currentRound = f.Round;
-                }
-                else
-                {
-                    file << L";";
-                }
-                file << f.HomeClub << L"," << f.AwayClub << L","
-                    << f.Played << L"," << f.HomeScore << L"," << f.AwayScore;
-            }
-            file << L"\n";
-        }
-        return true;
-    }
+		// Team stats section
+		if (!teamStats.empty())
+		{
+			file << L"[TeamStats]\n";
+			for (auto const& [clubName, s] : teamStats)
+			{
+				file << clubName << L"="
+					<< s.wins << L","
+					<< s.losses << L","
+					<< s.draws << L","
+					<< s.pointsFor << L","
+					<< s.pointsAgainst << L"\n";
+			}
+		}
 
-    bool LoadFromSlot(
-        int slot,
-        PlayerData& player,
-        int& currentWeek,
-        std::wstring& lastChoice,
-        std::unordered_map<std::wstring, TeamSeasonStats>& teamStats,
-        std::vector<FixtureService::Fixture>& fixtures,
-        CalendarState& calendar
-    )
-    {
-        if (slot < 1 || slot > MaxSaveSlots) return false;
+		// Fixtures section
+		if (!fixtures.empty())
+		{
+			file << L"[Fixtures]\n";
+			int currentRound = -1;
+			for (auto const& f : fixtures)
+			{
+				if (f.Round != currentRound)
+				{
+					if (currentRound != -1) file << L"\n";
+					file << L"Round" << f.Round << L"=";
+					currentRound = f.Round;
+				}
+				else
+				{
+					file << L";";
+				}
+				file << f.HomeClub << L"," << f.AwayClub << L","
+					<< f.Played << L"," << f.HomeScore << L"," << f.AwayScore;
+			}
+			file << L"\n";
+		}
+		return true;
+	}
 
-        std::wifstream file(GetSaveSlotPath(slot));
-        if (!file.is_open()) return false;
+	bool LoadFromSlot(
+		int slot,
+		PlayerData& player,
+		int& currentWeek,
+		std::wstring& lastChoice,
+		std::unordered_map<std::wstring, TeamSeasonStats>& teamStats,
+		std::vector<FixtureService::Fixture>& fixtures,
+		CalendarState& calendar,
+		PersonalStats& personalStats
+	)
+	{
+		if (slot < 1 || slot > MaxSaveSlots) return false;
 
-        std::unordered_map<std::wstring, std::wstring> values;
-        teamStats.clear();
-        fixtures.clear();
+		std::wifstream file(GetSaveSlotPath(slot));
+		if (!file.is_open()) return false;
 
-        bool inTeamStats = false;
-        bool inFixtures = false;
-        std::wstring line;
-        while (std::getline(file, line))
-        {
-            if (line == L"[TeamStats]") { inTeamStats = true; inFixtures = false; continue; }
-            if (line == L"[Fixtures]") { inFixtures = true; inTeamStats = false; continue; }
+		std::unordered_map<std::wstring, std::wstring> values;
+		teamStats.clear();
+		fixtures.clear();
 
-            if (inFixtures)
-            {
-                if (line.empty()) continue;
-                size_t eq = line.find(L'=');
-                if (eq == std::wstring::npos) continue;
+		bool inTeamStats = false;
+		bool inFixtures = false;
+		std::wstring line;
+		while (std::getline(file, line))
+		{
+			if (line == L"[TeamStats]") { inTeamStats = true; inFixtures = false; continue; }
+			if (line == L"[Fixtures]") { inFixtures = true; inTeamStats = false; continue; }
 
-                // "RoundN" -> N
-                int round = 0;
-                try { round = std::stoi(line.substr(5, eq - 5)); }
-                catch (...) { continue; }
+			if (inFixtures)
+			{
+				if (line.empty()) continue;
+				size_t eq = line.find(L'=');
+				if (eq == std::wstring::npos) continue;
 
-                std::wstring rest = line.substr(eq + 1);
-                std::wistringstream gameStream(rest);
-                std::wstring game;
-                while (std::getline(gameStream, game, L';'))
-                {
-                    std::wistringstream fieldStream(game);
-                    std::wstring home, away, played, hs, as;
-                    std::getline(fieldStream, home, L',');
-                    std::getline(fieldStream, away, L',');
-                    std::getline(fieldStream, played, L',');
-                    std::getline(fieldStream, hs, L',');
-                    std::getline(fieldStream, as, L',');
+				// "RoundN" -> N
+				int round = 0;
+				try { round = std::stoi(line.substr(5, eq - 5)); }
+				catch (...) { continue; }
 
-                    FixtureService::Fixture f;
-                    f.Round = round;
-                    f.HomeClub = home;
-                    f.AwayClub = away;
-                    f.Played = (played == L"1");
-                    try { f.HomeScore = std::stoi(hs); }
-                    catch (...) { f.HomeScore = 0; }
-                    try { f.AwayScore = std::stoi(as); }
-                    catch (...) { f.AwayScore = 0; }
-                    fixtures.push_back(f);
-                }
-                continue;
-            }
+				std::wstring rest = line.substr(eq + 1);
+				std::wistringstream gameStream(rest);
+				std::wstring game;
+				while (std::getline(gameStream, game, L';'))
+				{
+					std::wistringstream fieldStream(game);
+					std::wstring home, away, played, hs, as;
+					std::getline(fieldStream, home, L',');
+					std::getline(fieldStream, away, L',');
+					std::getline(fieldStream, played, L',');
+					std::getline(fieldStream, hs, L',');
+					std::getline(fieldStream, as, L',');
 
-            if (inTeamStats)
-            {
-                // Format: ClubName=W,L,D,PF,PA
-                size_t eq = line.find(L'=');
-                if (eq == std::wstring::npos) continue;
-                std::wstring club = line.substr(0, eq);
-                std::wstring data = line.substr(eq + 1);
+					FixtureService::Fixture f;
+					f.Round = round;
+					f.HomeClub = home;
+					f.AwayClub = away;
+					f.Played = (played == L"1");
+					try { f.HomeScore = std::stoi(hs); }
+					catch (...) { f.HomeScore = 0; }
+					try { f.AwayScore = std::stoi(as); }
+					catch (...) { f.AwayScore = 0; }
+					fixtures.push_back(f);
+				}
+				continue;
+			}
 
-                TeamSeasonStats s;
-                std::wistringstream ss(data);
-                std::wstring tok;
-                int idx = 0;
-                while (std::getline(ss, tok, L','))
-                {
-                    try {
-                        int v = std::stoi(tok);
-                        if (idx == 0) s.wins = v;
-                        else if (idx == 1) s.losses = v;
-                        else if (idx == 2) s.draws = v;
-                        else if (idx == 3) s.pointsFor = v;
-                        else if (idx == 4) s.pointsAgainst = v;
-                    }
-                    catch (...) {}
-                    ++idx;
-                }
-                teamStats[club] = s;
-                continue;
-            }
+			if (inTeamStats)
+			{
+				// Format: ClubName=W,L,D,PF,PA
+				size_t eq = line.find(L'=');
+				if (eq == std::wstring::npos) continue;
+				std::wstring club = line.substr(0, eq);
+				std::wstring data = line.substr(eq + 1);
 
-            size_t sep = line.find(L'=');
-            if (sep == std::wstring::npos) continue;
-            values[line.substr(0, sep)] = line.substr(sep + 1);
-        }
+				TeamSeasonStats s;
+				std::wistringstream ss(data);
+				std::wstring tok;
+				int idx = 0;
+				while (std::getline(ss, tok, L','))
+				{
+					try {
+						int v = std::stoi(tok);
+						if (idx == 0) s.wins = v;
+						else if (idx == 1) s.losses = v;
+						else if (idx == 2) s.draws = v;
+						else if (idx == 3) s.pointsFor = v;
+						else if (idx == 4) s.pointsAgainst = v;
+					}
+					catch (...) {}
+					++idx;
+				}
+				teamStats[club] = s;
+				continue;
+			}
 
-        player.firstName = values[L"FirstName"];
-        player.lastName = values[L"LastName"];
-        player.position = values[L"Position"];
-        player.foot = values[L"Foot"];
-        player.number = values[L"Number"];
-        player.team = values[L"Team"];
-        player.state = values[L"State"];
-        player.originalTeam = values[L"OriginalTeam"];
-        player.originalTeamSuburb = values[L"OriginalTeamSuburb"];
-        player.originalTeamPrimaryColour = values[L"OriginalTeamPrimaryColour"];
-        player.originalTeamSecondaryColour = values[L"OriginalTeamSecondaryColour"];
-        player.originalTeamHomeGround = values[L"OriginalTeamHomeGround"];
-        player.originalTeamLeague = values[L"OriginalTeamLeague"];
-        player.schoolType = values[L"SchoolType"];
-        player.region = values[L"Region"];
-        player.familySituation = values[L"FamilySituation"];
-        player.finances = values[L"Finances"];
-        player.mentalityXFactor = values[L"MentalityXFactor"];
-        player.physicalXFactor = values[L"PhysicalXFactor"];
-        player.weaknesses = values[L"Weaknesses"];
-        player.profileImagePath = values[L"ProfileImagePath"];
+			size_t sep = line.find(L'=');
+			if (sep == std::wstring::npos) continue;
+			values[line.substr(0, sep)] = line.substr(sep + 1);
+		}
 
-        if (!TryParseInt(values[L"HeightCm"], player.heightCm))         player.heightCm = 0;
-        if (!TryParseInt(values[L"WeightKg"], player.weightKg))          player.weightKg = 0;
-        if (!TryParseInt(values[L"PotentialHeightCm"], player.potentialHeightCm)) player.potentialHeightCm = 0;
-        if (!TryParseInt(values[L"DistanceToClubKm"], player.distanceToClubKm))  player.distanceToClubKm = 0;
-        if (!TryParseInt(values[L"OriginalTeamReputation"], player.originalTeamReputation)) player.originalTeamReputation = 50;
-        if (!TryParseInt(values[L"CurrentWeek"], currentWeek))              currentWeek = 1;
+		player.firstName = values[L"FirstName"];
+		player.lastName = values[L"LastName"];
+		player.position = values[L"Position"];
+		player.foot = values[L"Foot"];
+		player.number = values[L"Number"];
+		player.team = values[L"Team"];
+		player.state = values[L"State"];
+		player.originalTeam = values[L"OriginalTeam"];
+		player.originalTeamSuburb = values[L"OriginalTeamSuburb"];
+		player.originalTeamPrimaryColour = values[L"OriginalTeamPrimaryColour"];
+		player.originalTeamSecondaryColour = values[L"OriginalTeamSecondaryColour"];
+		player.originalTeamHomeGround = values[L"OriginalTeamHomeGround"];
+		player.originalTeamLeague = values[L"OriginalTeamLeague"];
+		player.schoolType = values[L"SchoolType"];
+		player.region = values[L"Region"];
+		player.familySituation = values[L"FamilySituation"];
+		player.finances = values[L"Finances"];
+		player.mentalityXFactor = values[L"MentalityXFactor"];
+		player.physicalXFactor = values[L"PhysicalXFactor"];
+		player.weaknesses = values[L"Weaknesses"];
+		player.profileImagePath = values[L"ProfileImagePath"];
 
-        // Calendar fields - missing entirely in saves written before this was
-        // added, so each one falls back to InitializeSeason's default rather
-        // than leaving garbage/zeroed values for old saves.
-        if (!TryParseInt(values[L"CurrentDateYear"], calendar.currentYear))         calendar.currentYear = 2026;
-        if (!TryParseInt(values[L"CurrentDateMonth"], calendar.currentMonth))       calendar.currentMonth = 3;
-        if (!TryParseInt(values[L"CurrentDateDay"], calendar.currentDay))           calendar.currentDay = 27;
-        if (!TryParseInt(values[L"CurrentDayPhase"], calendar.currentDayPhase))     calendar.currentDayPhase = 0;
-        if (!TryParseInt(values[L"SeasonStartYear"], calendar.seasonStartYear))     calendar.seasonStartYear = 2026;
-        if (!TryParseInt(values[L"SeasonStartMonth"], calendar.seasonStartMonth))   calendar.seasonStartMonth = 3;
-        if (!TryParseInt(values[L"SeasonStartDay"], calendar.seasonStartDay))       calendar.seasonStartDay = 27;
-        if (!TryParseInt(values[L"SeasonEndYear"], calendar.seasonEndYear))         calendar.seasonEndYear = 2026;
-        if (!TryParseInt(values[L"SeasonEndMonth"], calendar.seasonEndMonth))       calendar.seasonEndMonth = 8;
-        if (!TryParseInt(values[L"SeasonEndDay"], calendar.seasonEndDay))           calendar.seasonEndDay = 30;
+		if (!TryParseInt(values[L"HeightCm"], player.heightCm))         player.heightCm = 0;
+		if (!TryParseInt(values[L"WeightKg"], player.weightKg))          player.weightKg = 0;
+		if (!TryParseInt(values[L"PotentialHeightCm"], player.potentialHeightCm)) player.potentialHeightCm = 0;
+		if (!TryParseInt(values[L"DistanceToClubKm"], player.distanceToClubKm))  player.distanceToClubKm = 0;
+		if (!TryParseInt(values[L"OriginalTeamReputation"], player.originalTeamReputation)) player.originalTeamReputation = 50;
+		if (!TryParseInt(values[L"CurrentWeek"], currentWeek))              currentWeek = 1;
 
-        lastChoice = values[L"LastChoice"];
-        if (lastChoice.empty()) lastChoice = L"No action chosen yet.";
+		// Calendar fields - missing entirely in saves written before this was
+		// added, so each one falls back to InitializeSeason's default rather
+		// than leaving garbage/zeroed values for old saves.
+		if (!TryParseInt(values[L"CurrentDateYear"], calendar.currentYear))         calendar.currentYear = 2026;
+		if (!TryParseInt(values[L"CurrentDateMonth"], calendar.currentMonth))       calendar.currentMonth = 3;
+		if (!TryParseInt(values[L"CurrentDateDay"], calendar.currentDay))           calendar.currentDay = 27;
+		if (!TryParseInt(values[L"CurrentDayPhase"], calendar.currentDayPhase))     calendar.currentDayPhase = 0;
+		if (!TryParseInt(values[L"SeasonStartYear"], calendar.seasonStartYear))     calendar.seasonStartYear = 2026;
+		if (!TryParseInt(values[L"SeasonStartMonth"], calendar.seasonStartMonth))   calendar.seasonStartMonth = 3;
+		if (!TryParseInt(values[L"SeasonStartDay"], calendar.seasonStartDay))       calendar.seasonStartDay = 27;
+		if (!TryParseInt(values[L"SeasonEndYear"], calendar.seasonEndYear))         calendar.seasonEndYear = 2026;
+		if (!TryParseInt(values[L"SeasonEndMonth"], calendar.seasonEndMonth))       calendar.seasonEndMonth = 8;
+		if (!TryParseInt(values[L"SeasonEndDay"], calendar.seasonEndDay))           calendar.seasonEndDay = 30;
 
-        return true;
-    }
 
-    bool GetSavePreview(int slot, std::wstring& playerName, int& week)
-    {
-        if (slot < 1 || slot > MaxSaveSlots)
-        {
-            return false;
-        }
+		if (!TryParseInt(values[L"Fatigue"], personalStats.fatigue))                 personalStats.fatigue = 30;
+		if (!TryParseInt(values[L"InjuryRisk"], personalStats.injuryRisk))           personalStats.injuryRisk = 20;
+		if (!TryParseInt(values[L"RecoveryQuality"], personalStats.recoveryQuality)) personalStats.recoveryQuality = 55;
+		if (!TryParseInt(values[L"Confidence"], personalStats.confidence))           personalStats.confidence = 55;
+		if (!TryParseInt(values[L"Stress"], personalStats.stress))                   personalStats.stress = 35;
+		if (!TryParseInt(values[L"Motivation"], personalStats.motivation))           personalStats.motivation = 60;
+		if (!TryParseInt(values[L"Discipline"], personalStats.discipline))           personalStats.discipline = 60;
+		if (!TryParseInt(values[L"PersonalFinances"], personalStats.finances))       personalStats.finances = 35;
+		if (!TryParseInt(values[L"Relationships"], personalStats.relationships))     personalStats.relationships = 50;
+		if (!TryParseInt(values[L"TrainingBlocks"], personalStats.trainingBlocks))   personalStats.trainingBlocks = 4;
+		if (!TryParseInt(values[L"SchoolBlocks"], personalStats.schoolBlocks))       personalStats.schoolBlocks = 5;
+		if (!TryParseInt(values[L"WorkBlocks"], personalStats.workBlocks))           personalStats.workBlocks = 2;
+		if (!TryParseInt(values[L"SocialBlocks"], personalStats.socialBlocks))       personalStats.socialBlocks = 2;
+		if (!TryParseInt(values[L"RecoveryBlocks"], personalStats.recoveryBlocks))   personalStats.recoveryBlocks = 1;
 
-        std::wifstream file(GetSaveSlotPath(slot));
-        if (!file.is_open())
-        {
-            return false;
-        }
+		lastChoice = values[L"LastChoice"];
+		if (lastChoice.empty()) lastChoice = L"No action chosen yet.";
 
-        std::unordered_map<std::wstring, std::wstring> values;
-        std::wstring line;
-        while (std::getline(file, line))
-        {
-            size_t separator = line.find(L'=');
-            if (separator == std::wstring::npos)
-            {
-                continue;
-            }
+		return true;
+	}
 
-            values[line.substr(0, separator)] = line.substr(separator + 1);
-        }
+	bool GetSavePreview(int slot, std::wstring& playerName, int& week)
+	{
+		if (slot < 1 || slot > MaxSaveSlots)
+		{
+			return false;
+		}
 
-        std::wstring firstName = values[L"FirstName"];
-        std::wstring lastName = values[L"LastName"];
+		std::wifstream file(GetSaveSlotPath(slot));
+		if (!file.is_open())
+		{
+			return false;
+		}
 
-        playerName = firstName;
-        if (!firstName.empty() && !lastName.empty())
-        {
-            playerName += L" ";
-        }
-        playerName += lastName;
+		std::unordered_map<std::wstring, std::wstring> values;
+		std::wstring line;
+		while (std::getline(file, line))
+		{
+			size_t separator = line.find(L'=');
+			if (separator == std::wstring::npos)
+			{
+				continue;
+			}
 
-        if (playerName.empty())
-        {
-            playerName = L"Unknown Player";
-        }
+			values[line.substr(0, separator)] = line.substr(separator + 1);
+		}
 
-        if (!TryParseInt(values[L"CurrentWeek"], week))
-        {
-            week = 1;
-        }
+		std::wstring firstName = values[L"FirstName"];
+		std::wstring lastName = values[L"LastName"];
 
-        return true;
-    }
+		playerName = firstName;
+		if (!firstName.empty() && !lastName.empty())
+		{
+			playerName += L" ";
+		}
+		playerName += lastName;
 
-    bool DeleteSlot(int slot)
-    {
-        if (slot < 1 || slot > MaxSaveSlots)
-        {
-            return false;
-        }
+		if (playerName.empty())
+		{
+			playerName = L"Unknown Player";
+		}
 
-        std::wstring path = GetSaveSlotPath(slot);
+		if (!TryParseInt(values[L"CurrentWeek"], week))
+		{
+			week = 1;
+		}
 
-        if (!fs::exists(path))
-        {
-            return false;
-        }
+		return true;
+	}
 
-        return fs::remove(path);
-    }
+	bool DeleteSlot(int slot)
+	{
+		if (slot < 1 || slot > MaxSaveSlots)
+		{
+			return false;
+		}
+
+		std::wstring path = GetSaveSlotPath(slot);
+
+		if (!fs::exists(path))
+		{
+			return false;
+		}
+
+		return fs::remove(path);
+	}
 }

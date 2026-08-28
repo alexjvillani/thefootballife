@@ -47,6 +47,9 @@ struct GameState
 	static std::vector<FixtureService::Fixture> Fixtures;
 	static std::unordered_map<std::wstring, int> XFactorStatModifiers;
 
+
+	static SaveGameService::PersonalStats CurrentPersonalStats;
+
 	// Season calendar - source of truth for the day-by-day loop
 	static DayPhase CurrentDay;
 	static SimpleDate CurrentDate;

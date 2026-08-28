@@ -169,29 +169,25 @@ namespace winrt::thefootballife::implementation
 	{
 		InitializeComponent();
 
-		// Apply the Mentality/Physical X-Factor starting-stat nudges chosen
-		// on XFactorPage, on top of the plain member-initializer defaults
-		// above. Note: personal stats aren't currently persisted in save
-		// files (SaveGameService::SaveToSlot/LoadFromSlot don't carry them),
-		// so this reapplies every construction the same way the plain
-		// defaults already do - a known separate gap, not introduced here.
-		auto applyXFactorModifier = [](int& stat, wchar_t const* key)
-			{
-				auto it = GameState::XFactorStatModifiers.find(key);
-				if (it != GameState::XFactorStatModifiers.end())
-				{
-					stat = std::clamp(stat + it->second, 0, 100);
-				}
-			};
-		applyXFactorModifier(m_fatigue, L"Fatigue");
-		applyXFactorModifier(m_injuryRisk, L"InjuryRisk");
-		applyXFactorModifier(m_recoveryQuality, L"RecoveryQuality");
-		applyXFactorModifier(m_confidence, L"Confidence");
-		applyXFactorModifier(m_stress, L"Stress");
-		applyXFactorModifier(m_motivation, L"Motivation");
-		applyXFactorModifier(m_discipline, L"Discipline");
-		applyXFactorModifier(m_finances, L"Finances");
-		applyXFactorModifier(m_relationships, L"Relationships");
+		// Personal stats and this week's block allocation come from
+		// GameState::CurrentPersonalStats unconditionally - no "is this a
+		// new career or a loaded one" branching needed here, since whoever
+		// got us to this page already set it correctly (TeamAssignmentPage
+		// for a new career, the load flow for a continued one).
+		m_fatigue = GameState::CurrentPersonalStats.fatigue;
+		m_injuryRisk = GameState::CurrentPersonalStats.injuryRisk;
+		m_recoveryQuality = GameState::CurrentPersonalStats.recoveryQuality;
+		m_confidence = GameState::CurrentPersonalStats.confidence;
+		m_stress = GameState::CurrentPersonalStats.stress;
+		m_motivation = GameState::CurrentPersonalStats.motivation;
+		m_discipline = GameState::CurrentPersonalStats.discipline;
+		m_finances = GameState::CurrentPersonalStats.finances;
+		m_relationships = GameState::CurrentPersonalStats.relationships;
+		m_trainingBlocks = GameState::CurrentPersonalStats.trainingBlocks;
+		m_schoolBlocks = GameState::CurrentPersonalStats.schoolBlocks;
+		m_workBlocks = GameState::CurrentPersonalStats.workBlocks;
+		m_socialBlocks = GameState::CurrentPersonalStats.socialBlocks;
+		m_recoveryBlocks = GameState::CurrentPersonalStats.recoveryBlocks;
 
 		m_currentWeek = GameState::CurrentWeek;
 		m_lastChoice = hstring(GameState::LastChoice);
@@ -1613,12 +1609,29 @@ namespace winrt::thefootballife::implementation
 					calendar.seasonEndMonth = GameState::SeasonEndDate.Month;
 					calendar.seasonEndDay = GameState::SeasonEndDate.Day;
 
+					SaveGameService::PersonalStats personalStats;
+					personalStats.fatigue = self->m_fatigue;
+					personalStats.injuryRisk = self->m_injuryRisk;
+					personalStats.recoveryQuality = self->m_recoveryQuality;
+					personalStats.confidence = self->m_confidence;
+					personalStats.stress = self->m_stress;
+					personalStats.motivation = self->m_motivation;
+					personalStats.discipline = self->m_discipline;
+					personalStats.finances = self->m_finances;
+					personalStats.relationships = self->m_relationships;
+					personalStats.trainingBlocks = self->m_trainingBlocks;
+					personalStats.schoolBlocks = self->m_schoolBlocks;
+					personalStats.workBlocks = self->m_workBlocks;
+					personalStats.socialBlocks = self->m_socialBlocks;
+					personalStats.recoveryBlocks = self->m_recoveryBlocks;
+
 					bool saved = SaveGameService::SaveToSlot(
 						slot, GameState::CurrentPlayer,
 						self->m_currentWeek, self->m_lastChoice.c_str(),
 						self->m_teamStats,
 						self->m_fixtures,
-						calendar
+						calendar,
+						personalStats
 					);
 
 					ContentDialog result;

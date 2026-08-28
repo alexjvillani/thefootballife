@@ -608,6 +608,31 @@ namespace winrt::thefootballife::implementation
 		// TeamStats is only ever written into, never reset
 		CareerDayService::InitializeSeason(2026);
 
+		// Personal stats start at their plain baseline (the PersonalStats
+		// struct's own defaults), nudged once by whichever X-Factors were
+		// chosen back on XFactorPage. This is the ONLY place this nudge is
+		// applied - CareerHubPage just reads CurrentPersonalStats
+		// unconditionally, so reloading a save later never re-applies it.
+		SaveGameService::PersonalStats freshStats;
+		auto applyXFactorModifier = [](int& stat, wchar_t const* key)
+			{
+				auto it = GameState::XFactorStatModifiers.find(key);
+				if (it != GameState::XFactorStatModifiers.end())
+				{
+					stat = std::clamp(stat + it->second, 0, 100);
+				}
+			};
+		applyXFactorModifier(freshStats.fatigue, L"Fatigue");
+		applyXFactorModifier(freshStats.injuryRisk, L"InjuryRisk");
+		applyXFactorModifier(freshStats.recoveryQuality, L"RecoveryQuality");
+		applyXFactorModifier(freshStats.confidence, L"Confidence");
+		applyXFactorModifier(freshStats.stress, L"Stress");
+		applyXFactorModifier(freshStats.motivation, L"Motivation");
+		applyXFactorModifier(freshStats.discipline, L"Discipline");
+		applyXFactorModifier(freshStats.finances, L"Finances");
+		applyXFactorModifier(freshStats.relationships, L"Relationships");
+		GameState::CurrentPersonalStats = freshStats;
+
 		std::vector<std::wstring> clubNames;
 		clubNames.reserve(m_stateTeams.size());
 		for (auto const& t : m_stateTeams)
