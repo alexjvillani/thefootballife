@@ -482,6 +482,18 @@
                     Margin="0,0,10,0"
                     Visibility="Collapsed"/>
 
+            <Button x:Name="DraftNightButton"
+                    Grid.Column="4"
+                    Content="Draft Night"
+                    Click="DraftNightButton_Click"
+                    Background="#D4A24C"
+                    Foreground="#111111"
+                    FontWeight="Bold"
+                    MinWidth="170"
+                    MinHeight="44"
+                    Margin="0,0,10,0"
+                    Visibility="Collapsed"/>
+
             <Button Grid.Column="5"
                     Content="Exit to Main Menu"
                     Click="ExitToMainMenuButton_Click"

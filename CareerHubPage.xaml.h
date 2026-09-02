@@ -75,6 +75,10 @@ namespace winrt::thefootballife::implementation
 			winrt::Windows::Foundation::IInspectable const& sender,
 			winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
 
+		void DraftNightButton_Click(
+			winrt::Windows::Foundation::IInspectable const& sender,
+			winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
+
 	private:
 		struct LadderEntry
 		{
@@ -102,7 +106,7 @@ namespace winrt::thefootballife::implementation
 		void ApplyWeekSimulation();
 		void SimulateWeekMatches(int playerClubBonus = 0, int opponentPenalty = 0);
 		void ShowPreMatchDialog();
-		void ResolveMatchday(int playerClubBonus, int opponentPenalty, winrt::hstring const& hintMessage);
+		void ResolveMatchday(int playerClubBonus, int opponentPenalty, winrt::hstring const& hintMessage, bool isPlayerMatch);
 		void AdjustBlockByTag(winrt::hstring const& tag, int delta);
 		int  BlocksUsed() const;
 		winrt::hstring FormatHeightFeet(int totalCm);
@@ -111,6 +115,15 @@ namespace winrt::thefootballife::implementation
 		void RenderFixtures();
 		void RenderSquad();
 		int ComputePlayerOverall() const;
+		int RollMatchVotes() const;
+		struct BestAndFairestResult
+		{
+			std::wstring winnerName;
+			int winnerVotes{ 0 };
+			bool playerWon{ false };
+		};
+		BestAndFairestResult DetermineBestAndFairestWinner() const;
+		bool IsEligibleForPromotion() const;
 
 		// Real-world AFL pathway: Local -> Talent League -> VFL/SANFL/WAFL -> AFL
 
@@ -206,6 +219,12 @@ namespace winrt::thefootballife::implementation
 		// persisted to save files, same as the personal stats it partly
 		// depends on via ComputePlayerOverall.
 		std::vector<SquadService::SquadMember> m_squad;
+
+		// Career-total games played and this season's Best & Fairest vote
+		int m_gamesPlayed{ 0 };
+		int m_seasonVotes{ 0 };
+
+		bool m_wonBestAndFairestThisSeason{ false };
 
 		static constexpr int kDayEventChancePercent{ 20 }; // per Mon-Fri day advance
 		std::vector<DayEventService::DayEvent> m_dayEvents;

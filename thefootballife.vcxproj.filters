@@ -13,6 +13,7 @@
     <Page Include="ConfirmPlayerPage.xaml" />
     <Page Include="MyCareerPage.xaml" />
     <Page Include="CreditPage.xaml" />
+    <Page Include="DraftNightPage.xaml" />
   </ItemGroup>
   <ItemGroup>
     <Midl Include="MainWindow.idl" />
@@ -24,6 +25,7 @@
     <Midl Include="ConfirmPlayerPage.idl" />
     <Midl Include="MyCareerPage.idl" />
     <Midl Include="CreditPage.idl" />
+    <Midl Include="DraftNightPage.idl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />

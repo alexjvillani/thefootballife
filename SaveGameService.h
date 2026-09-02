@@ -35,6 +35,9 @@ namespace SaveGameService
 		int workBlocks{ 2 };
 		int socialBlocks{ 2 };
 		int recoveryBlocks{ 1 };
+
+		int gamesPlayed{ 0 };
+		int seasonVotes{ 0 };
 	};
 
 	// Mirrors GameState's SimpleDate/DayPhase as plain ints so this header

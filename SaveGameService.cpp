@@ -113,6 +113,7 @@ namespace SaveGameService
 		file << L"Foot=" << player.foot << L"\n";
 		file << L"Number=" << player.number << L"\n";
 		file << L"Team=" << player.team << L"\n";
+		file << L"CurrentLeague=" << player.currentLeague << L"\n";
 		file << L"OriginalTeam=" << player.originalTeam << L"\n";
 		file << L"OriginalTeamSuburb=" << player.originalTeamSuburb << L"\n";
 		file << L"OriginalTeamPrimaryColour=" << player.originalTeamPrimaryColour << L"\n";
@@ -166,6 +167,8 @@ namespace SaveGameService
 		file << L"WorkBlocks=" << personalStats.workBlocks << L"\n";
 		file << L"SocialBlocks=" << personalStats.socialBlocks << L"\n";
 		file << L"RecoveryBlocks=" << personalStats.recoveryBlocks << L"\n";
+		file << L"GamesPlayed=" << personalStats.gamesPlayed << L"\n";
+		file << L"SeasonVotes=" << personalStats.seasonVotes << L"\n";
 
 		// Team stats section
 		if (!teamStats.empty())
@@ -313,6 +316,7 @@ namespace SaveGameService
 		player.foot = values[L"Foot"];
 		player.number = values[L"Number"];
 		player.team = values[L"Team"];
+		player.currentLeague = values[L"CurrentLeague"];
 		player.state = values[L"State"];
 		player.originalTeam = values[L"OriginalTeam"];
 		player.originalTeamSuburb = values[L"OriginalTeamSuburb"];
@@ -365,6 +369,8 @@ namespace SaveGameService
 		if (!TryParseInt(values[L"WorkBlocks"], personalStats.workBlocks))           personalStats.workBlocks = 2;
 		if (!TryParseInt(values[L"SocialBlocks"], personalStats.socialBlocks))       personalStats.socialBlocks = 2;
 		if (!TryParseInt(values[L"RecoveryBlocks"], personalStats.recoveryBlocks))   personalStats.recoveryBlocks = 1;
+		if (!TryParseInt(values[L"GamesPlayed"], personalStats.gamesPlayed))         personalStats.gamesPlayed = 0;
+		if (!TryParseInt(values[L"SeasonVotes"], personalStats.seasonVotes))         personalStats.seasonVotes = 0;
 
 		lastChoice = values[L"LastChoice"];
 		if (lastChoice.empty()) lastChoice = L"No action chosen yet.";

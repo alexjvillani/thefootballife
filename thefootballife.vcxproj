@@ -130,6 +130,9 @@
       <DependentUpon>CreditPage.xaml</DependentUpon>
     </ClInclude>
     <ClInclude Include="DayEventService.h" />
+    <ClInclude Include="DraftNightPage.xaml.h">
+      <DependentUpon>DraftNightPage.xaml</DependentUpon>
+    </ClInclude>
     <ClInclude Include="FixtureService.h" />
     <ClInclude Include="Gamestate.h" />
     <ClInclude Include="MainMenuPage.xaml.h">
@@ -164,6 +167,7 @@
     <Page Include="CareerHubPage.xaml" />
     <Page Include="ConfirmPlayerPage.xaml" />
     <Page Include="CreditPage.xaml" />
+    <Page Include="DraftNightPage.xaml" />
     <Page Include="MainMenuPage.xaml">
       <SubType>Designer</SubType>
     </Page>
@@ -187,6 +191,9 @@
       <DependentUpon>CreditPage.xaml</DependentUpon>
     </ClCompile>
     <ClCompile Include="DayEventService.cpp" />
+    <ClCompile Include="DraftNightPage.xaml.cpp">
+      <DependentUpon>DraftNightPage.xaml</DependentUpon>
+    </ClCompile>
     <ClCompile Include="FixtureService.cpp" />
     <ClCompile Include="Gamestate.cpp" />
     <ClCompile Include="MainMenuPage.xaml.cpp">
@@ -222,6 +229,7 @@
     <Midl Include="CareerHubPage.idl" />
     <Midl Include="ConfirmPlayerPage.idl" />
     <Midl Include="CreditPage.idl" />
+    <Midl Include="DraftNightPage.idl" />
     <Midl Include="MainMenuPage.idl" />
     <Midl Include="MainWindow.idl">
       <SubType>Code</SubType>

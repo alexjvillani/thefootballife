@@ -188,6 +188,8 @@ namespace winrt::thefootballife::implementation
 		m_workBlocks = GameState::CurrentPersonalStats.workBlocks;
 		m_socialBlocks = GameState::CurrentPersonalStats.socialBlocks;
 		m_recoveryBlocks = GameState::CurrentPersonalStats.recoveryBlocks;
+		m_gamesPlayed = GameState::CurrentPersonalStats.gamesPlayed;
+		m_seasonVotes = GameState::CurrentPersonalStats.seasonVotes;
 
 		m_currentWeek = GameState::CurrentWeek;
 		m_lastChoice = hstring(GameState::LastChoice);
@@ -227,7 +229,7 @@ namespace winrt::thefootballife::implementation
 
 		auto const& player = GameState::CurrentPlayer;
 		std::wstring playerState = player.state.empty() ? L"Victoria" : player.state;
-		std::wstring playerLeague = player.originalTeamLeague;
+		std::wstring playerLeague = player.currentLeague;
 
 
 		std::unordered_map<std::wstring, bool> leagueClubs;
@@ -577,7 +579,7 @@ namespace winrt::thefootballife::implementation
 		// rather than a new persisted field - personal stats aren't saved
 		// to file yet either (see the flagged known gap), so this
 		// recomputes fresh each session same as everything it's built from.
-		auto tier = DetermineTier(GameState::CurrentPlayer.originalTeamLeague);
+		auto tier = DetermineTier(GameState::CurrentPlayer.currentLeague);
 		auto range = GetTierOverallRange(tier);
 
 		// Baseline sits at the tier's midpoint - "a promising prospect for
@@ -630,7 +632,7 @@ namespace winrt::thefootballife::implementation
 		// reshuffle names week to week.
 		if (m_squad.empty())
 		{
-			auto tier = DetermineTier(GameState::CurrentPlayer.originalTeamLeague);
+			auto tier = DetermineTier(GameState::CurrentPlayer.currentLeague);
 			auto range = GetTierOverallRange(tier);
 			m_squad = SquadService::GenerateSquad(20, range.Min, range.Max);
 		}
@@ -659,7 +661,7 @@ namespace winrt::thefootballife::implementation
 				return a.Overall > b.Overall;
 			});
 
-		auto currentTierRange = GetTierOverallRange(DetermineTier(player.originalTeamLeague));
+		auto currentTierRange = GetTierOverallRange(DetermineTier(player.currentLeague));
 
 		for (auto const& entry : entries)
 		{
@@ -1092,10 +1094,10 @@ namespace winrt::thefootballife::implementation
 		PlayerNameText().Text(hstring(player.firstName + L" " + player.lastName));
 
 		std::wstring teamLine = player.position + L" | " + player.foot + L" Foot | #" + player.number;
-		if (!player.originalTeam.empty())
-			teamLine += L" | " + player.originalTeam;
-		if (!player.originalTeamLeague.empty())
-			teamLine += L" (" + player.originalTeamLeague + L")";
+		if (!player.team.empty())
+			teamLine += L" | " + player.team;
+		if (!player.currentLeague.empty())
+			teamLine += L" (" + player.currentLeague + L")";
 		PlayerInfoText().Text(hstring(teamLine));
 
 		HeightText().Text(L"Height: " + FormatHeightFeet(player.heightCm));
@@ -1237,7 +1239,8 @@ namespace winrt::thefootballife::implementation
 
 				ResolveMatchday(0, 0, isFinalsRound
 					? L"Your season's done - your club didn't make the cut, but the finals race continues without you."
-					: L"Bye week - no personal match today, but the rest of the league plays on.");
+					: L"Bye week - no personal match today, but the rest of the league plays on.",
+					false);
 			}
 
 			// Saturday always halts auto-advance, whether it produced a
@@ -1297,12 +1300,100 @@ namespace winrt::thefootballife::implementation
 			&& !CareerDayService::IsSeasonComplete());
 	}
 
-	void CareerHubPage::ResolveMatchday(int playerClubBonus, int opponentPenalty, hstring const& hintMessage)
+	int CareerHubPage::RollMatchVotes() const
+	{
+		// A simple 3-2-1(-0) votes system, loosely modelled on real AFL
+		// best-afield voting. Performance mixes current form (Confidence
+		// and Motivation) with a random roll, so the same stats can still
+		// produce a quiet game or a best-afield one - reinforces the
+		// training economy without making votes fully deterministic.
+		std::random_device rd;
+		std::mt19937 gen(rd());
+		std::uniform_int_distribution<int> roll(0, 10);
+
+		int performance = roll(gen) + ((m_confidence + m_motivation) / 2 - 50) / 10;
+
+		if (performance >= 9) return 3;
+		if (performance >= 6) return 2;
+		if (performance >= 3) return 1;
+		return 0;
+	}
+
+	CareerHubPage::BestAndFairestResult CareerHubPage::DetermineBestAndFairestWinner() const
+	{
+		// Competitive Best & Fairest: the player's real season vote tally
+		// (accumulated via RollMatchVotes each match) is compared against a
+		// simulated season tally for every Squad teammate, weighted by
+		// their Overall rating within the current tier's range - a higher-
+		// rated teammate is more likely to have had a strong vote-getting
+		// season too, so winning isn't guaranteed just for being the
+		// player character.
+		std::random_device rd;
+		std::mt19937 gen(rd());
+
+		auto range = GetTierOverallRange(DetermineTier(GameState::CurrentPlayer.currentLeague));
+
+		BestAndFairestResult result;
+		result.winnerName = GameState::CurrentPlayer.firstName + L" " + GameState::CurrentPlayer.lastName;
+		result.winnerVotes = m_seasonVotes;
+		result.playerWon = true;
+
+		for (auto const& member : m_squad)
+		{
+			double ratio = static_cast<double>(member.Overall - range.Min) /
+				static_cast<double>((std::max)(1, range.Max - range.Min));
+			int expected = static_cast<int>(ratio * 30); // top-of-tier player might average ~30 votes across a season
+			std::uniform_int_distribution<int> spread(-8, 8);
+			int simulatedVotes = (std::max)(0, expected + spread(gen));
+
+			if (simulatedVotes > result.winnerVotes)
+			{
+				result.winnerVotes = simulatedVotes;
+				result.winnerName = member.FirstName + L" " + member.LastName;
+				result.playerWon = false;
+			}
+		}
+
+		return result;
+	}
+
+	bool CareerHubPage::IsEligibleForPromotion() const
+	{
+		auto tier = DetermineTier(GameState::CurrentPlayer.currentLeague);
+		if (tier == CompetitionTier::Afl) return false; // already at the top - nowhere further to go
+
+		auto range = GetTierOverallRange(tier);
+		bool eliteOverall = ComputePlayerOverall() >= range.Min + static_cast<int>((range.Max - range.Min) * 0.8);
+
+		return m_wonBestAndFairestThisSeason || eliteOverall;
+	}
+
+	void CareerHubPage::ResolveMatchday(int playerClubBonus, int opponentPenalty, hstring const& hintMessage, bool isPlayerMatch)
 	{
 		ApplyWeekSimulation();
 		SimulateWeekMatches(playerClubBonus, opponentPenalty);
 		RenderLastMatchSummary();
-		BottomHintText().Text(hintMessage);
+
+		std::wstring finalHint = hintMessage.c_str();
+
+		if (isPlayerMatch)
+		{
+			m_gamesPlayed++;
+			m_seasonVotes += RollMatchVotes();
+
+			// Milestone note folds into the hint text rather than its own
+			// dialog - CheckForFinalsProgression below can also show a
+			// dialog this same call (Finals Week 1, Season Complete, etc.),
+			// and only one ContentDialog can be open at a time.
+			static const std::vector<int> milestones = { 10, 25, 50, 100, 150, 200, 250, 300 };
+			if (std::find(milestones.begin(), milestones.end(), m_gamesPlayed) != milestones.end())
+			{
+				finalHint += L" Milestone: career game #" + std::to_wstring(m_gamesPlayed) + L"!";
+			}
+		}
+
+		BottomHintText().Text(hstring(finalHint));
+
 		LoadLadderFromCsv();
 		RenderLadder();
 		RenderFixtures();
@@ -1333,7 +1424,14 @@ namespace winrt::thefootballife::implementation
 	void CareerHubPage::UpdateSeasonRolloverUI()
 	{
 		bool seasonOver = IsSeasonOver();
-		NextSeasonButton().Visibility(seasonOver ? Visibility::Visible : Visibility::Collapsed);
+		bool eligible = seasonOver && IsEligibleForPromotion();
+
+		// When eligible, Draft Night replaces Start Next Season entirely -
+		// a strong enough season earns a promotion shot, and taking it is
+		// the only way forward from here (no "decline and stay" option in
+		// this first pass).
+		NextSeasonButton().Visibility((seasonOver && !eligible) ? Visibility::Visible : Visibility::Collapsed);
+		DraftNightButton().Visibility(eligible ? Visibility::Visible : Visibility::Collapsed);
 		AdvanceWeekButton().IsEnabled(!seasonOver);
 	}
 
@@ -1371,8 +1469,12 @@ namespace winrt::thefootballife::implementation
 				m_fixtures.push_back(marker);
 				GameState::Fixtures = m_fixtures;
 
+				auto bf = DetermineBestAndFairestWinner();
+				m_wonBestAndFairestThisSeason = bf.playerWon;
+
 				ShowFinalsAnnouncementDialog(L"Season Complete",
-					L"The home-and-away season has finished. Not enough clubs in this competition for a finals series.");
+					L"The home-and-away season has finished. Not enough clubs in this competition for a finals series.\n\nBest & Fairest: " +
+					hstring(bf.winnerName) + L" (" + std::to_wstring(bf.winnerVotes) + L" votes)");
 				return;
 			}
 
@@ -1449,7 +1551,12 @@ namespace winrt::thefootballife::implementation
 			m_fixtures.push_back(marker);
 			GameState::Fixtures = m_fixtures;
 
-			ShowFinalsAnnouncementDialog(L"Season Complete", hstring(premier) + L" are the premiers! Season complete.");
+			auto bf = DetermineBestAndFairestWinner();
+			m_wonBestAndFairestThisSeason = bf.playerWon;
+
+			ShowFinalsAnnouncementDialog(L"Season Complete",
+				hstring(premier) + L" are the premiers! Season complete.\n\n" +
+				L"Best & Fairest: " + hstring(bf.winnerName) + L" (" + std::to_wstring(bf.winnerVotes) + L" votes)");
 		}
 	}
 
@@ -1502,7 +1609,7 @@ namespace winrt::thefootballife::implementation
 						hint = L"You conserved energy - easier on the body, but a quieter performance.";
 					}
 
-					self->ResolveMatchday(bonus, penalty, hint);
+					self->ResolveMatchday(bonus, penalty, hint, true);
 				}
 			});
 	}
@@ -1624,6 +1731,8 @@ namespace winrt::thefootballife::implementation
 					personalStats.workBlocks = self->m_workBlocks;
 					personalStats.socialBlocks = self->m_socialBlocks;
 					personalStats.recoveryBlocks = self->m_recoveryBlocks;
+					personalStats.gamesPlayed = self->m_gamesPlayed;
+					personalStats.seasonVotes = self->m_seasonVotes;
 
 					bool saved = SaveGameService::SaveToSlot(
 						slot, GameState::CurrentPlayer,
@@ -1706,6 +1815,11 @@ namespace winrt::thefootballife::implementation
 		m_finances = 35;
 		m_relationships = 50;
 
+		// Best & Fairest votes reset per season - gamesPlayed is
+		// deliberately left untouched, it's a career total.
+		m_seasonVotes = 0;
+		m_wonBestAndFairestThisSeason = false;
+
 		// Fresh week's block allocation, same treatment as a Sunday reset.
 		m_trainingBlocks = 0;
 		m_schoolBlocks = 0;
@@ -1729,5 +1843,18 @@ namespace winrt::thefootballife::implementation
 
 		ShowFinalsAnnouncementDialog(L"New Season",
 			L"Season " + to_hstring(nextYear) + L" begins! Fresh fixtures, fresh ladder - good luck.");
+	}
+
+	void CareerHubPage::DraftNightButton_Click(IInspectable const&, RoutedEventArgs const&)
+	{
+		// DraftNightPage does all of its own GameState mutation (new club,
+		// new league, fresh fixtures/stats) before navigating back here -
+		// this handler is just the doorway in.
+		Frame().Navigate(
+			winrt::Windows::UI::Xaml::Interop::TypeName{
+				L"thefootballife.DraftNightPage",
+				winrt::Windows::UI::Xaml::Interop::TypeKind::Custom
+			}
+		);
 	}
 }

@@ -1,0 +1,122 @@
+<Page
+    x:Class="thefootballife.DraftNightPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:thefootballife"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="#111111">
+
+    <Grid Padding="28">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Draft "
+                           FontSize="32"
+                           FontWeight="Bold"
+                           Foreground="White"/>
+                <TextBlock Text="Night"
+                           FontSize="32"
+                           FontWeight="Bold"
+                           Foreground="#D4A24C"/>
+            </StackPanel>
+            <TextBlock Text="A strong season has scouts talking. Somewhere out there, a club is about to call your name."
+                       Foreground="#BBBBBB"
+                       Margin="0,6,0,0"
+                       TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <Grid Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+
+            <!-- Pre-reveal -->
+            <StackPanel x:Name="PreRevealPanel" HorizontalAlignment="Center" Spacing="24">
+                <Border Background="#1C1C1C" CornerRadius="16" Padding="40" MinWidth="360">
+                    <StackPanel HorizontalAlignment="Center" Spacing="10">
+                        <TextBlock Text="?"
+                                   FontSize="64"
+                                   FontWeight="Bold"
+                                   Foreground="#D4A24C"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="Who's calling your name?"
+                                   FontSize="16"
+                                   Foreground="#DDDDDD"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <Button x:Name="RevealButton"
+                        Content="Enter the Draft"
+                        Click="RevealButton_Click"
+                        Background="#D4A24C"
+                        Foreground="#111111"
+                        FontWeight="Bold"
+                        MinWidth="200"
+                        MinHeight="48"
+                        HorizontalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Post-reveal -->
+            <StackPanel x:Name="RevealedPanel" HorizontalAlignment="Center" Spacing="24" Visibility="Collapsed">
+                <Border Background="#1C1C1C" CornerRadius="16" Padding="40" MinWidth="360">
+                    <StackPanel HorizontalAlignment="Center" Spacing="10">
+                        <TextBlock Text="You've been drafted by"
+                                   FontSize="14"
+                                   Foreground="#AAAAAA"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="RevealedClubNameText"
+                                   Text=""
+                                   FontSize="28"
+                                   FontWeight="Bold"
+                                   Foreground="#D4A24C"
+                                   HorizontalAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"/>
+                        <TextBlock x:Name="RevealedClubLeagueText"
+                                   Text=""
+                                   FontSize="16"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="RevealedClubSuburbText"
+                                   Text=""
+                                   FontSize="13"
+                                   Foreground="#BBBBBB"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="RevealedClubColoursText"
+                                   Text=""
+                                   FontSize="13"
+                                   Foreground="#BBBBBB"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="RevealedClubGroundText"
+                                   Text=""
+                                   FontSize="13"
+                                   Foreground="#BBBBBB"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <Button x:Name="ContinueButton"
+                        Content="Begin the Next Chapter"
+                        Click="ContinueButton_Click"
+                        Background="#2E7D32"
+                        Foreground="White"
+                        FontWeight="Bold"
+                        MinWidth="220"
+                        MinHeight="48"
+                        HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+
+        <TextBlock Grid.Row="2"
+                   Text="Fresh fixtures, a new ladder, and a new squad await once you begin the next chapter."
+                   Foreground="#777777"
+                   FontStyle="Italic"
+                   HorizontalAlignment="Center"
+                   Margin="0,20,0,0"/>
+    </Grid>
+</Page>

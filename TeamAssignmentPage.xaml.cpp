@@ -598,6 +598,7 @@ namespace winrt::thefootballife::implementation
 		GameState::CurrentPlayer.originalTeamSecondaryColour = m_assignedTeam.secondaryColour;
 		GameState::CurrentPlayer.originalTeamHomeGround = m_assignedTeam.homeGround;
 		GameState::CurrentPlayer.originalTeamLeague = m_assignedTeam.league;
+		GameState::CurrentPlayer.currentLeague = m_assignedTeam.league; // starts equal to the original - promotion is the only thing that changes this
 		GameState::CurrentPlayer.originalTeamReputation = m_assignedTeam.reputation;
 
 		// Reset career progression state for a fresh save
