@@ -5,6 +5,7 @@
 #endif
 
 #include "GameState.h"
+#include <unordered_set>
 #include "SaveGameService.h"
 #include "FixtureService.h"
 #include "CareerDayService.h"
@@ -607,6 +608,7 @@ namespace winrt::thefootballife::implementation
 		GameState::TeamStats.clear(); // otherwise old clubs' W/L records from a
 		// previous career leak into this one, since
 		// TeamStats is only ever written into, never reset
+		GameState::StoryFlags.clear(); // a new career shouldn't inherit an old one's branching-narrative choices
 		CareerDayService::InitializeSeason(2026);
 
 		// Personal stats start at their plain baseline (the PersonalStats

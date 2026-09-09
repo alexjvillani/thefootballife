@@ -1272,7 +1272,7 @@ namespace winrt::thefootballife::implementation
 
 			// Only Monday-Friday roll for events - Saturday/Sunday already
 			// have their own fixed identity (matchday / free recovery).
-			auto const* triggeredEvent = DayEventService::RollForEvent(m_dayEvents, kDayEventChancePercent);
+			auto const* triggeredEvent = DayEventService::RollForEvent(m_dayEvents, kDayEventChancePercent, GameState::StoryFlags);
 			if (triggeredEvent)
 			{
 				ShowDayEventDialog(*triggeredEvent);
@@ -1669,6 +1669,14 @@ namespace winrt::thefootballife::implementation
 			else if (statName == L"Relationships") applyDelta(m_relationships, delta);
 		}
 
+		// Branching narrative: this choice may mark a story flag, gating
+		// which later events (a different stage of the same arc, or an
+		// alternate branch) are eligible to roll from here on.
+		if (!choice.SetFlag.empty())
+		{
+			GameState::StoryFlags.insert(choice.SetFlag);
+		}
+
 		BottomHintText().Text(L"You chose: " + hstring(choice.Label));
 		UpdateStateUI();
 	}
@@ -1740,7 +1748,8 @@ namespace winrt::thefootballife::implementation
 						self->m_teamStats,
 						self->m_fixtures,
 						calendar,
-						personalStats
+						personalStats,
+						GameState::StoryFlags
 					);
 
 					ContentDialog result;

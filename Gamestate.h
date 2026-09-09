@@ -3,6 +3,7 @@
 #include "FixtureService.h"
 #include "SaveGameService.h"
 #include <unordered_map>
+#include <unordered_set>
 #include <string>
 #include <vector>
 
@@ -46,9 +47,16 @@ struct GameState
 	static std::unordered_map<std::wstring, SaveGameService::TeamSeasonStats> TeamStats;
 	static std::vector<FixtureService::Fixture> Fixtures;
 	static std::unordered_map<std::wstring, int> XFactorStatModifiers;
-
-
 	static SaveGameService::PersonalStats CurrentPersonalStats;
+
+	// Branching-narrative flags, set when the player makes a key choice in
+	// a multi-stage day-event arc (see DayEventService::EventChoice::SetFlag)
+	// and read to gate which later events are eligible to roll
+	// (DayEvent::RequiresFlag/ExcludesFlag). Career-scoped: cleared at true
+	// new-career creation (TeamAssignmentPage), deliberately NOT cleared by
+	// season rollover or Draft Night promotion - a choice made in Local
+	// tier should still matter after being drafted to the AFL.
+	static std::unordered_set<std::wstring> StoryFlags;
 
 	// Season calendar - source of truth for the day-by-day loop
 	static DayPhase CurrentDay;

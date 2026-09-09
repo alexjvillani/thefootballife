@@ -2,37 +2,41 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 
-// Random day-events: small interrupts that can fire on a Monday-Friday
-// day-advance, presented as a 2-3 choice popup, applying an immediate
-// stat delta on top of whatever the block allocation does for the week.
-// Content lives in Assets\Data\events.csv so new events don't need a
-// recompile - same pattern as localteams.csv/stateteams.csv/aflteams.csv.
+// Loads CSV-driven day events (Assets\Data\events.csv) and rolls whether
+// one triggers on a given Mon-Fri day advance.
 namespace DayEventService
 {
-    struct EventChoice
-    {
-        std::wstring Label;
-        // Stat name (Fatigue, InjuryRisk, RecoveryQuality, Confidence,
-        // Stress, Motivation, Discipline, Finances, Relationships) -> delta.
-        std::unordered_map<std::wstring, int> StatDeltas;
-    };
+	struct EventChoice
+	{
+		std::wstring Label;
+		std::unordered_map<std::wstring, int> StatDeltas;
 
-    struct DayEvent
-    {
-        std::wstring EventId;
-        std::wstring Title;
-        std::wstring Description;
-        std::vector<EventChoice> Choices; // always 2 or 3
-    };
+		// If non-empty, picking this choice sets this flag in
+		// GameState::StoryFlags - the mechanism the branching narrative
+		// system (multi-stage arcs) is built on. Empty means this choice
+		// doesn't set anything.
+		std::wstring SetFlag;
+	};
 
-    // Loads events.csv, searching the same candidate paths as the rest of
-    // the project's CSV loading. Returns an empty vector if the file can't
-    // be found - callers should treat that as "no events this session"
-    // rather than a hard failure.
-    std::vector<DayEvent> LoadEvents();
+	struct DayEvent
+	{
+		std::wstring EventId;
+		std::wstring Title;
+		std::wstring Description;
+		std::vector<EventChoice> Choices;
 
-    // Rolls a percentChance (0-100) chance of an event firing. Returns
-    // nullptr if it doesn't fire or if events is empty.
-    DayEvent const* RollForEvent(std::vector<DayEvent> const& events, int percentChance);
+		std::wstring RequiresFlag;
+		std::wstring ExcludesFlag;
+	};
+
+
+	std::vector<DayEvent> LoadEvents();
+
+
+	DayEvent const* RollForEvent(
+		std::vector<DayEvent> const& events,
+		int percentChance,
+		std::unordered_set<std::wstring> const& activeFlags);
 }

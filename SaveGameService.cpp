@@ -99,7 +99,8 @@ namespace SaveGameService
 		std::unordered_map<std::wstring, TeamSeasonStats> const& teamStats,
 		std::vector<FixtureService::Fixture> const& fixtures,
 		CalendarState const& calendar,
-		PersonalStats const& personalStats
+		PersonalStats const& personalStats,
+		std::unordered_set<std::wstring> const& storyFlags
 	)
 	{
 		if (slot < 1 || slot > MaxSaveSlots) return false;
@@ -170,6 +171,19 @@ namespace SaveGameService
 		file << L"GamesPlayed=" << personalStats.gamesPlayed << L"\n";
 		file << L"SeasonVotes=" << personalStats.seasonVotes << L"\n";
 
+		// Branching-narrative flags - a flat comma-separated list rather
+		// than a bracketed section, since it's just a set of short
+		// identifiers, not a keyed collection like TeamStats/Fixtures.
+		{
+			std::wstring flagsLine;
+			for (auto const& flag : storyFlags)
+			{
+				if (!flagsLine.empty()) flagsLine += L",";
+				flagsLine += flag;
+			}
+			file << L"StoryFlags=" << flagsLine << L"\n";
+		}
+
 		// Team stats section
 		if (!teamStats.empty())
 		{
@@ -218,7 +232,8 @@ namespace SaveGameService
 		std::unordered_map<std::wstring, TeamSeasonStats>& teamStats,
 		std::vector<FixtureService::Fixture>& fixtures,
 		CalendarState& calendar,
-		PersonalStats& personalStats
+		PersonalStats& personalStats,
+		std::unordered_set<std::wstring>& storyFlags
 	)
 	{
 		if (slot < 1 || slot > MaxSaveSlots) return false;
@@ -354,7 +369,10 @@ namespace SaveGameService
 		if (!TryParseInt(values[L"SeasonEndMonth"], calendar.seasonEndMonth))       calendar.seasonEndMonth = 8;
 		if (!TryParseInt(values[L"SeasonEndDay"], calendar.seasonEndDay))           calendar.seasonEndDay = 30;
 
-
+		// Personal stats and block allocation - missing entirely in saves
+		// written before this was added, so each one falls back to the
+		// PersonalStats struct's own defaults (same values CareerHubPage
+		// starts a brand-new career with) rather than zeroing out.
 		if (!TryParseInt(values[L"Fatigue"], personalStats.fatigue))                 personalStats.fatigue = 30;
 		if (!TryParseInt(values[L"InjuryRisk"], personalStats.injuryRisk))           personalStats.injuryRisk = 20;
 		if (!TryParseInt(values[L"RecoveryQuality"], personalStats.recoveryQuality)) personalStats.recoveryQuality = 55;
@@ -371,6 +389,17 @@ namespace SaveGameService
 		if (!TryParseInt(values[L"RecoveryBlocks"], personalStats.recoveryBlocks))   personalStats.recoveryBlocks = 1;
 		if (!TryParseInt(values[L"GamesPlayed"], personalStats.gamesPlayed))         personalStats.gamesPlayed = 0;
 		if (!TryParseInt(values[L"SeasonVotes"], personalStats.seasonVotes))         personalStats.seasonVotes = 0;
+
+		storyFlags.clear();
+		{
+			std::wstring flagsLine = values[L"StoryFlags"];
+			std::wistringstream flagStream(flagsLine);
+			std::wstring flag;
+			while (std::getline(flagStream, flag, L','))
+			{
+				if (!flag.empty()) storyFlags.insert(flag);
+			}
+		}
 
 		lastChoice = values[L"LastChoice"];
 		if (lastChoice.empty()) lastChoice = L"No action chosen yet.";

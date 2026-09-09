@@ -9,6 +9,7 @@
 #include "CreditPage.xaml.h"
 #include "GameState.h"
 #include "SaveGameService.h"
+#include <unordered_set>
 #include <winrt/Windows.UI.Xaml.Interop.h>
 
 using namespace winrt;
@@ -126,6 +127,7 @@ namespace winrt::thefootballife::implementation
 						std::vector<FixtureService::Fixture> fixtures;
 						SaveGameService::CalendarState loadedCalendar;
 						SaveGameService::PersonalStats loadedPersonalStats;
+						std::unordered_set<std::wstring> loadedStoryFlags;
 
 						bool loaded = SaveGameService::LoadFromSlot(
 							slot,
@@ -135,7 +137,8 @@ namespace winrt::thefootballife::implementation
 							loadedTeamStats,
 							fixtures,
 							loadedCalendar,
-							loadedPersonalStats
+							loadedPersonalStats,
+							loadedStoryFlags
 						);
 
 						if (!loaded)
@@ -155,6 +158,7 @@ namespace winrt::thefootballife::implementation
 						GameState::TeamStats = loadedTeamStats;
 						GameState::Fixtures = fixtures;
 						GameState::CurrentPersonalStats = loadedPersonalStats;
+						GameState::StoryFlags = loadedStoryFlags;
 
 						GameState::CurrentDate = SimpleDate{
 							loadedCalendar.currentYear,

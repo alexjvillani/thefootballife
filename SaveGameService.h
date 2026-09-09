@@ -3,6 +3,7 @@
 #include "FixtureService.h"
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace SaveGameService
@@ -36,6 +37,11 @@ namespace SaveGameService
 		int socialBlocks{ 2 };
 		int recoveryBlocks{ 1 };
 
+		// Grouped in here for save-format convenience rather than because
+		// they're "personal life stats" like the rest of this struct.
+		// gamesPlayed is a career total - never reset. seasonVotes is the
+		// player's running Best & Fairest vote tally - reset to 0 at the
+		// start of each new season.
 		int gamesPlayed{ 0 };
 		int seasonVotes{ 0 };
 	};
@@ -71,7 +77,8 @@ namespace SaveGameService
 		std::unordered_map<std::wstring, TeamSeasonStats> const& teamStats = {},
 		std::vector<FixtureService::Fixture> const& fixtures = {},
 		CalendarState const& calendar = {},
-		PersonalStats const& personalStats = {}
+		PersonalStats const& personalStats = {},
+		std::unordered_set<std::wstring> const& storyFlags = {}
 	);
 
 	bool LoadFromSlot(
@@ -82,7 +89,8 @@ namespace SaveGameService
 		std::unordered_map<std::wstring, TeamSeasonStats>& teamStats,
 		std::vector<FixtureService::Fixture>& fixtures,
 		CalendarState& calendar,
-		PersonalStats& personalStats
+		PersonalStats& personalStats,
+		std::unordered_set<std::wstring>& storyFlags
 	);
 
 	bool GetSavePreview(int slot, std::wstring& playerName, int& week);
