@@ -634,6 +634,7 @@ namespace winrt::thefootballife::implementation
 		applyXFactorModifier(freshStats.discipline, L"Discipline");
 		applyXFactorModifier(freshStats.finances, L"Finances");
 		applyXFactorModifier(freshStats.relationships, L"Relationships");
+		freshStats.careerSeasonsPlayed = 1; // this is season 1 of the new career
 		GameState::CurrentPersonalStats = freshStats;
 
 		std::vector<std::wstring> clubNames;

@@ -170,6 +170,8 @@ namespace SaveGameService
 		file << L"RecoveryBlocks=" << personalStats.recoveryBlocks << L"\n";
 		file << L"GamesPlayed=" << personalStats.gamesPlayed << L"\n";
 		file << L"SeasonVotes=" << personalStats.seasonVotes << L"\n";
+		file << L"CareerSeasonsPlayed=" << personalStats.careerSeasonsPlayed << L"\n";
+		file << L"CareerBestAndFairestWins=" << personalStats.careerBestAndFairestWins << L"\n";
 
 		// Branching-narrative flags - a flat comma-separated list rather
 		// than a bracketed section, since it's just a set of short
@@ -389,6 +391,8 @@ namespace SaveGameService
 		if (!TryParseInt(values[L"RecoveryBlocks"], personalStats.recoveryBlocks))   personalStats.recoveryBlocks = 1;
 		if (!TryParseInt(values[L"GamesPlayed"], personalStats.gamesPlayed))         personalStats.gamesPlayed = 0;
 		if (!TryParseInt(values[L"SeasonVotes"], personalStats.seasonVotes))         personalStats.seasonVotes = 0;
+		if (!TryParseInt(values[L"CareerSeasonsPlayed"], personalStats.careerSeasonsPlayed))         personalStats.careerSeasonsPlayed = 1;
+		if (!TryParseInt(values[L"CareerBestAndFairestWins"], personalStats.careerBestAndFairestWins)) personalStats.careerBestAndFairestWins = 0;
 
 		storyFlags.clear();
 		{

@@ -190,6 +190,8 @@ namespace winrt::thefootballife::implementation
 		m_recoveryBlocks = GameState::CurrentPersonalStats.recoveryBlocks;
 		m_gamesPlayed = GameState::CurrentPersonalStats.gamesPlayed;
 		m_seasonVotes = GameState::CurrentPersonalStats.seasonVotes;
+		m_careerSeasonsPlayed = GameState::CurrentPersonalStats.careerSeasonsPlayed;
+		m_careerBestAndFairestWins = GameState::CurrentPersonalStats.careerBestAndFairestWins;
 
 		m_currentWeek = GameState::CurrentWeek;
 		m_lastChoice = hstring(GameState::LastChoice);
@@ -576,9 +578,7 @@ namespace winrt::thefootballife::implementation
 	int CareerHubPage::ComputePlayerOverall() const
 	{
 		// Single FIFA-card-style Overall, computed live from existing state
-		// rather than a new persisted field - personal stats aren't saved
-		// to file yet either (see the flagged known gap), so this
-		// recomputes fresh each session same as everything it's built from.
+		// rather than being its own persisted field.
 		auto tier = DetermineTier(GameState::CurrentPlayer.currentLeague);
 		auto range = GetTierOverallRange(tier);
 
@@ -604,6 +604,30 @@ namespace winrt::thefootballife::implementation
 		talentBonus /= 4;
 
 		return std::clamp(baseline + formModifier - fatigueStressPenalty + talentBonus, range.Min, range.Max);
+	}
+
+	SaveGameService::PersonalStats CareerHubPage::BuildCurrentPersonalStats() const
+	{
+		SaveGameService::PersonalStats stats;
+		stats.fatigue = m_fatigue;
+		stats.injuryRisk = m_injuryRisk;
+		stats.recoveryQuality = m_recoveryQuality;
+		stats.confidence = m_confidence;
+		stats.stress = m_stress;
+		stats.motivation = m_motivation;
+		stats.discipline = m_discipline;
+		stats.finances = m_finances;
+		stats.relationships = m_relationships;
+		stats.trainingBlocks = m_trainingBlocks;
+		stats.schoolBlocks = m_schoolBlocks;
+		stats.workBlocks = m_workBlocks;
+		stats.socialBlocks = m_socialBlocks;
+		stats.recoveryBlocks = m_recoveryBlocks;
+		stats.gamesPlayed = m_gamesPlayed;
+		stats.seasonVotes = m_seasonVotes;
+		stats.careerSeasonsPlayed = m_careerSeasonsPlayed;
+		stats.careerBestAndFairestWins = m_careerBestAndFairestWins;
+		return stats;
 	}
 
 	winrt::Windows::UI::Color CareerHubPage::OverallColour(int overall, OverallRange const& range) const
@@ -1289,15 +1313,26 @@ namespace winrt::thefootballife::implementation
 		// With auto-advance off this is just a single day step, same as
 		// before. With it on, keep stepping until something needs the
 		// player's attention (a dialog) or blocks it (Friday's cap).
+		//
+		// Deliberately does NOT also check CareerDayService::IsSeasonComplete()
+		// (a date-based check) - that was a safety net from before season-end
+		// was fixture-driven, and it actively caused a bug: a competition
+		// with enough clubs to need more rounds than comfortably fit in the
+		// nominal season window (e.g. a 10-club Talent League needing 18
+		// regular rounds + 3 finals rounds against a ~22-Saturday window)
+		// could tip past the date mid-season, silently degrading
+		// auto-advance to one day per click with no indication why. The
+		// DayStepResult::Continue check below already terminates the loop
+		// correctly once the season genuinely ends (IsSeasonOver() via the
+		// "Season Over" marker fixture), so this date check was redundant
+		// as well as actively harmful.
 		bool autoAdvance = AutoAdvanceToggle().IsOn();
 
 		DayStepResult result;
 		do
 		{
 			result = AdvanceSingleDayStep();
-		} while (autoAdvance
-			&& result == DayStepResult::Continue
-			&& !CareerDayService::IsSeasonComplete());
+		} while (autoAdvance && result == DayStepResult::Continue);
 	}
 
 	int CareerHubPage::RollMatchVotes() const
@@ -1428,10 +1463,10 @@ namespace winrt::thefootballife::implementation
 
 		// When eligible, Draft Night replaces Start Next Season entirely -
 		// a strong enough season earns a promotion shot, and taking it is
-		// the only way forward from here (no "decline and stay" option in
-		// this first pass).
+		// the only way forward from here (no "decline and stay" option)
 		NextSeasonButton().Visibility((seasonOver && !eligible) ? Visibility::Visible : Visibility::Collapsed);
 		DraftNightButton().Visibility(eligible ? Visibility::Visible : Visibility::Collapsed);
+		RetireButton().Visibility(seasonOver ? Visibility::Visible : Visibility::Collapsed);
 		AdvanceWeekButton().IsEnabled(!seasonOver);
 	}
 
@@ -1471,6 +1506,7 @@ namespace winrt::thefootballife::implementation
 
 				auto bf = DetermineBestAndFairestWinner();
 				m_wonBestAndFairestThisSeason = bf.playerWon;
+				if (bf.playerWon) { m_careerBestAndFairestWins++; }
 
 				ShowFinalsAnnouncementDialog(L"Season Complete",
 					L"The home-and-away season has finished. Not enough clubs in this competition for a finals series.\n\nBest & Fairest: " +
@@ -1553,6 +1589,7 @@ namespace winrt::thefootballife::implementation
 
 			auto bf = DetermineBestAndFairestWinner();
 			m_wonBestAndFairestThisSeason = bf.playerWon;
+			if (bf.playerWon) { m_careerBestAndFairestWins++; }
 
 			ShowFinalsAnnouncementDialog(L"Season Complete",
 				hstring(premier) + L" are the premiers! Season complete.\n\n" +
@@ -1724,23 +1761,7 @@ namespace winrt::thefootballife::implementation
 					calendar.seasonEndMonth = GameState::SeasonEndDate.Month;
 					calendar.seasonEndDay = GameState::SeasonEndDate.Day;
 
-					SaveGameService::PersonalStats personalStats;
-					personalStats.fatigue = self->m_fatigue;
-					personalStats.injuryRisk = self->m_injuryRisk;
-					personalStats.recoveryQuality = self->m_recoveryQuality;
-					personalStats.confidence = self->m_confidence;
-					personalStats.stress = self->m_stress;
-					personalStats.motivation = self->m_motivation;
-					personalStats.discipline = self->m_discipline;
-					personalStats.finances = self->m_finances;
-					personalStats.relationships = self->m_relationships;
-					personalStats.trainingBlocks = self->m_trainingBlocks;
-					personalStats.schoolBlocks = self->m_schoolBlocks;
-					personalStats.workBlocks = self->m_workBlocks;
-					personalStats.socialBlocks = self->m_socialBlocks;
-					personalStats.recoveryBlocks = self->m_recoveryBlocks;
-					personalStats.gamesPlayed = self->m_gamesPlayed;
-					personalStats.seasonVotes = self->m_seasonVotes;
+					SaveGameService::PersonalStats personalStats = self->BuildCurrentPersonalStats();
 
 					bool saved = SaveGameService::SaveToSlot(
 						slot, GameState::CurrentPlayer,
@@ -1828,6 +1849,7 @@ namespace winrt::thefootballife::implementation
 		// deliberately left untouched, it's a career total.
 		m_seasonVotes = 0;
 		m_wonBestAndFairestThisSeason = false;
+		m_careerSeasonsPlayed++;
 
 		// Fresh week's block allocation, same treatment as a Sunday reset.
 		m_trainingBlocks = 0;
@@ -1862,6 +1884,21 @@ namespace winrt::thefootballife::implementation
 		Frame().Navigate(
 			winrt::Windows::UI::Xaml::Interop::TypeName{
 				L"thefootballife.DraftNightPage",
+				winrt::Windows::UI::Xaml::Interop::TypeKind::Custom
+			}
+		);
+	}
+
+	void CareerHubPage::RetireButton_Click(IInspectable const&, RoutedEventArgs const&)
+	{
+		// Sync live personal stats/career totals into GameState before
+		// navigating, since RetirementPage reads GameState rather than
+		// holding a reference back to this page.
+		GameState::CurrentPersonalStats = BuildCurrentPersonalStats();
+
+		Frame().Navigate(
+			winrt::Windows::UI::Xaml::Interop::TypeName{
+				L"thefootballife.RetirementPage",
 				winrt::Windows::UI::Xaml::Interop::TypeKind::Custom
 			}
 		);

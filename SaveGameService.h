@@ -44,6 +44,11 @@ namespace SaveGameService
 		// start of each new season.
 		int gamesPlayed{ 0 };
 		int seasonVotes{ 0 };
+
+		// Career totals for the eventual retirement/legacy screen - never
+		// reset by season rollover or Draft Night, same as gamesPlayed.
+		int careerSeasonsPlayed{ 0 };
+		int careerBestAndFairestWins{ 0 };
 	};
 
 	// Mirrors GameState's SimpleDate/DayPhase as plain ints so this header

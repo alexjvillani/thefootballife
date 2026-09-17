@@ -438,6 +438,7 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <TextBlock x:Name="BottomHintText"
@@ -494,7 +495,18 @@
                     Margin="0,0,10,0"
                     Visibility="Collapsed"/>
 
-            <Button Grid.Column="5"
+            <Button x:Name="RetireButton"
+                    Grid.Column="5"
+                    Content="Retire"
+                    Click="RetireButton_Click"
+                    Background="#5C2E2E"
+                    Foreground="White"
+                    MinWidth="110"
+                    MinHeight="44"
+                    Margin="0,0,10,0"
+                    Visibility="Collapsed"/>
+
+            <Button Grid.Column="6"
                     Content="Exit to Main Menu"
                     Click="ExitToMainMenuButton_Click"
                     MinWidth="170"

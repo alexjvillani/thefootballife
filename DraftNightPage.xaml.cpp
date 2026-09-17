@@ -24,6 +24,9 @@ using namespace Microsoft::UI::Xaml::Controls;
 namespace
 {
 	// --- CSV helpers: mirror TeamAssignmentPage.xaml.cpp's private static
+	// helpers rather than sharing them, keeping this page self-contained
+	// without refactoring a working file (same convention DayEventService/
+	// XFactorService/SquadService already follow).
 
 	std::string TrimAscii(std::string s)
 	{
@@ -266,6 +269,10 @@ namespace winrt::thefootballife::implementation
 			}
 		}
 
+		// Prefer clubs matching the player's state (mirrors how the local
+		// competition is chosen), but if this tier's CSV isn't
+		// state-segmented (e.g. a single national AFL list), fall back to
+		// every club in the file rather than ending up with an empty pool.
 		clubs = !matchedByState.empty() ? matchedByState : allClubs;
 		return clubs;
 	}
@@ -323,8 +330,12 @@ namespace winrt::thefootballife::implementation
 		// normal Start Next Season - gamesPlayed is a career total and is
 		// explicitly carried over, not reset.
 		int previousGamesPlayed = GameState::CurrentPersonalStats.gamesPlayed;
+		int previousCareerSeasonsPlayed = GameState::CurrentPersonalStats.careerSeasonsPlayed;
+		int previousCareerBestAndFairestWins = GameState::CurrentPersonalStats.careerBestAndFairestWins;
 		GameState::CurrentPersonalStats = SaveGameService::PersonalStats{};
 		GameState::CurrentPersonalStats.gamesPlayed = previousGamesPlayed;
+		GameState::CurrentPersonalStats.careerSeasonsPlayed = previousCareerSeasonsPlayed + 1; // this promotion starts a new season
+		GameState::CurrentPersonalStats.careerBestAndFairestWins = previousCareerBestAndFairestWins;
 	}
 
 	void DraftNightPage::ContinueButton_Click(IInspectable const&, RoutedEventArgs const&)

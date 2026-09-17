@@ -86,7 +86,17 @@
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Label="UserMacros">
+    <GenerateAppInstallerFile>True</GenerateAppInstallerFile>
+    <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
+    <PackageCertificateThumbprint>09B8B0DF1298CC4D606818DA97064CADE7C53167</PackageCertificateThumbprint>
+    <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
+    <AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
+    <GenerateTestArtifacts>True</GenerateTestArtifacts>
+    <AppxBundle>Never</AppxBundle>
+    <AppInstallerUri>E:\</AppInstallerUri>
+    <HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
+  </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -152,6 +162,9 @@
       <DependentUpon>PlayerCreationPage.xaml</DependentUpon>
     </ClInclude>
     <ClInclude Include="PlayerData.h" />
+    <ClInclude Include="RetirementPage.xaml.h">
+      <DependentUpon>RetirementPage.xaml</DependentUpon>
+    </ClInclude>
     <ClInclude Include="SaveGameService.h" />
     <ClInclude Include="SquadService.h" />
     <ClInclude Include="TeamAssignmentPage.xaml.h">
@@ -176,6 +189,7 @@
     <Page Include="PlayerCreationPage.xaml">
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="RetirementPage.xaml" />
     <Page Include="TeamAssignmentPage.xaml" />
     <Page Include="XFactorPage.xaml" />
   </ItemGroup>
@@ -215,6 +229,9 @@
     <ClCompile Include="PlayerCreationPage.xaml.cpp">
       <DependentUpon>PlayerCreationPage.xaml</DependentUpon>
     </ClCompile>
+    <ClCompile Include="RetirementPage.xaml.cpp">
+      <DependentUpon>RetirementPage.xaml</DependentUpon>
+    </ClCompile>
     <ClCompile Include="SaveGameService.cpp" />
     <ClCompile Include="SquadService.cpp" />
     <ClCompile Include="TeamAssignmentPage.xaml.cpp">
@@ -237,6 +254,7 @@
     </Midl>
     <Midl Include="MyCareerPage.idl" />
     <Midl Include="PlayerCreationPage.idl" />
+    <Midl Include="RetirementPage.idl" />
     <Midl Include="TeamAssignmentPage.idl" />
     <Midl Include="XFactorPage.idl" />
   </ItemGroup>
@@ -260,7 +278,16 @@
   </ItemGroup>
   <!-- packages.config for NuGet restore into packages\ folder -->
   <ItemGroup>
+    <None Include="Assets\Data\aflteams.csv" />
+    <None Include="Assets\Data\Events.csv" />
+    <None Include="Assets\Data\localteams.csv" />
+    <None Include="Assets\Data\season_structure.csv" />
+    <None Include="Assets\Data\stateteams.csv" />
+    <None Include="Assets\Data\talentleagueteams.csv" />
+    <None Include="Assets\Data\teammatenames.csv" />
+    <None Include="Assets\Data\xfactors.csv" />
     <None Include="packages.config" />
+    <None Include="thefootballife_TemporaryKey.pfx" />
   </ItemGroup>
   <PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
     <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>

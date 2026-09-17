@@ -79,6 +79,10 @@ namespace winrt::thefootballife::implementation
 			winrt::Windows::Foundation::IInspectable const& sender,
 			winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
 
+		void RetireButton_Click(
+			winrt::Windows::Foundation::IInspectable const& sender,
+			winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
+
 	private:
 		struct LadderEntry
 		{
@@ -125,8 +129,23 @@ namespace winrt::thefootballife::implementation
 		BestAndFairestResult DetermineBestAndFairestWinner() const;
 		bool IsEligibleForPromotion() const;
 
-		// Real-world AFL pathway: Local -> Talent League -> VFL/SANFL/WAFL -> AFL
+		// Builds a PersonalStats snapshot from the page's own live member
+		// values - shared by SaveGameButton_Click (writing to a save slot)
+		// and RetireButton_Click (writing to GameState before navigating to
+		// the retirement screen), so the two don't duplicate the same
+		// field-by-field assignment.
+		SaveGameService::PersonalStats BuildCurrentPersonalStats() const;
 
+		// Real-world AFL pathway: Local -> Talent League -> VFL/SANFL/WAFL
+		// -> AFL, each with a realistic Overall ceiling. Determined from
+		// PlayerData::originalTeamLeague via best-effort string matching -
+		// there's no explicit tier field yet (a known gap), so this only
+		// recognises league names seen in the data so far (VPL for Local;
+		// add more local-league names here as other states' CSVs are
+		// built). Since tier promotion isn't wired up yet either, a given
+		// career stays on whichever tier it started on for its whole run -
+		// this is forward-looking groundwork that'll click into place
+		// automatically once promotion exists.
 		enum class CompetitionTier { Local, TalentLeague, StateLeague, Afl };
 		struct OverallRange { int Min{ 0 }; int Max{ 0 }; };
 		CompetitionTier DetermineTier(std::wstring const& league) const;
@@ -224,7 +243,15 @@ namespace winrt::thefootballife::implementation
 		int m_gamesPlayed{ 0 };
 		int m_seasonVotes{ 0 };
 
+		// Set when Season Complete fires (see CheckForFinalsProgression),
+		// consumed by IsEligibleForPromotion. Resets false each new season
+		// alongside m_seasonVotes.
 		bool m_wonBestAndFairestThisSeason{ false };
+
+		// Career totals for the retirement/legacy screen - never reset by
+		// season rollover or Draft Night, unlike m_seasonVotes.
+		int m_careerSeasonsPlayed{ 1 };
+		int m_careerBestAndFairestWins{ 0 };
 
 		static constexpr int kDayEventChancePercent{ 20 }; // per Mon-Fri day advance
 		std::vector<DayEventService::DayEvent> m_dayEvents;
