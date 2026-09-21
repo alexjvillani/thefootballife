@@ -6,6 +6,7 @@
 #include "SquadService.h"
 #include <winrt/Windows.UI.h>
 #include <vector>
+#include <functional>
 #include <string>
 #include <unordered_map>
 #include <random>
@@ -83,6 +84,19 @@ namespace winrt::thefootballife::implementation
 			winrt::Windows::Foundation::IInspectable const& sender,
 			winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
 
+		// Debug-only tools for quickly skipping ahead during testing.
+		// Always compiled (so XAML codegen never breaks in Release, since
+		// the buttons' Click attributes reference these unconditionally),
+		// but the buttons themselves are only made visible in Debug builds
+		// - see the constructor.
+		void DebugSkipToFinalsButton_Click(
+			winrt::Windows::Foundation::IInspectable const& sender,
+			winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
+
+		void DebugSkipToSeasonEndButton_Click(
+			winrt::Windows::Foundation::IInspectable const& sender,
+			winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
+
 	private:
 		struct LadderEntry
 		{
@@ -113,6 +127,8 @@ namespace winrt::thefootballife::implementation
 		void ResolveMatchday(int playerClubBonus, int opponentPenalty, winrt::hstring const& hintMessage, bool isPlayerMatch);
 		void AdjustBlockByTag(winrt::hstring const& tag, int delta);
 		int  BlocksUsed() const;
+		void DebugAutoFillRemainingBlocks();
+		void DebugSkipUntil(std::function<bool()> const& stopCondition);
 		winrt::hstring FormatHeightFeet(int totalCm);
 		void LoadLadderFromCsv();
 		void RenderLadder();
@@ -182,7 +198,7 @@ namespace winrt::thefootballife::implementation
 			SeasonOver,              // Season Over marker present - calendar is frozen until Start Next Season
 			Continue                 // Nothing needed player attention - safe to keep auto-advancing
 		};
-		DayStepResult AdvanceSingleDayStep();
+		DayStepResult AdvanceSingleDayStep(bool debugAutoResolve = false);
 		bool IsSeasonOver() const;
 		void UpdateSeasonRolloverUI();
 
@@ -240,6 +256,8 @@ namespace winrt::thefootballife::implementation
 		std::vector<SquadService::SquadMember> m_squad;
 
 		// Career-total games played and this season's Best & Fairest vote
+		// tally. Sourced from/written back to GameState::CurrentPersonalStats
+		// the same way the other personal stats are.
 		int m_gamesPlayed{ 0 };
 		int m_seasonVotes{ 0 };
 

@@ -27,6 +27,32 @@
                        Margin="0,6,0,0"/>
         </StackPanel>
 
+        <!-- Debug-only tools for quickly skipping ahead during testing.
+             Collapsed by default; only shown in Debug builds (see the
+             constructor). Never intended to reach a build handed to
+             testers. -->
+        <StackPanel x:Name="DebugToolsPanel"
+                    Grid.Row="0"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Spacing="8"
+                    Visibility="Collapsed">
+            <TextBlock Text="DEBUG"
+                       Foreground="#FF6B6B"
+                       FontWeight="Bold"
+                       FontSize="12"
+                       VerticalAlignment="Center"/>
+            <Button Content="Skip to Finals"
+                    Click="DebugSkipToFinalsButton_Click"
+                    FontSize="12"
+                    Padding="10,6"/>
+            <Button Content="Skip to Season End"
+                    Click="DebugSkipToSeasonEndButton_Click"
+                    FontSize="12"
+                    Padding="10,6"/>
+        </StackPanel>
+
         <!-- Main columns -->
         <Grid Grid.Row="1" ColumnSpacing="20">
             <Grid.ColumnDefinitions>

@@ -11,6 +11,7 @@
 #include "DayEventService.h"
 
 #include <algorithm>
+#include <functional>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -207,6 +208,10 @@ namespace winrt::thefootballife::implementation
 		RenderFixtures();
 		RenderSquad();
 		UpdateSeasonRolloverUI();
+
+#if defined(_DEBUG)
+		DebugToolsPanel().Visibility(Visibility::Visible);
+#endif
 	}
 
 	hstring CareerHubPage::PageTitle() { return m_pageTitle; }
@@ -221,6 +226,56 @@ namespace winrt::thefootballife::implementation
 	int CareerHubPage::BlocksUsed() const
 	{
 		return m_trainingBlocks + m_schoolBlocks + m_workBlocks + m_socialBlocks + m_recoveryBlocks;
+	}
+
+	void CareerHubPage::DebugAutoFillRemainingBlocks()
+	{
+		// Dumps whatever's left of the week's 14 blocks into Recovery -
+		// arbitrary choice, balance doesn't matter for a debug/test
+		// playthrough, this just exists so debug skip never gets stuck on
+		// the Friday allocation gate.
+		int remaining = kTotalBlocks - BlocksUsed();
+		if (remaining > 0)
+		{
+			m_recoveryBlocks += remaining;
+			UpdateBlockUI();
+		}
+	}
+
+	void CareerHubPage::DebugSkipUntil(std::function<bool()> const& stopCondition)
+	{
+		// Also stops immediately after any finals-progression dialog might
+		// have fired (a new finals-labelled fixture appeared). Those
+		// dialogs are fire-and-forget ShowAsync() calls, and WinUI only
+		// allows one ContentDialog open at a time - a tight synchronous
+		// skip loop must never risk running through two of them back to
+		// back. This means "Skip to Season End" may take a couple of
+		// clicks to walk through Finals Week 1 -> Preliminary -> Grand
+		// Final -> Season Complete, but each click is still instant and
+		// it's safe.
+		int finalsFixtureCountAtStart = static_cast<int>(std::count_if(m_fixtures.begin(), m_fixtures.end(),
+			[](FixtureService::Fixture const& f) { return !f.FinalsLabel.empty(); }));
+
+		// Generous safety cap - a full season plus finals is nowhere near
+		// this many day-steps, so hitting it means the stop condition is
+		// never becoming true (a bug) rather than a legitimately long skip.
+		constexpr int maxIterations = 1000;
+		for (int i = 0; i < maxIterations; ++i)
+		{
+			if (IsSeasonOver() || stopCondition())
+			{
+				break;
+			}
+
+			AdvanceSingleDayStep(/*debugAutoResolve*/ true);
+
+			int finalsFixtureCountNow = static_cast<int>(std::count_if(m_fixtures.begin(), m_fixtures.end(),
+				[](FixtureService::Fixture const& f) { return !f.FinalsLabel.empty(); }));
+			if (finalsFixtureCountNow != finalsFixtureCountAtStart)
+			{
+				break;
+			}
+		}
 	}
 
 	// ── Ladder ───────────────────────────────────────────────────────────────
@@ -1207,7 +1262,7 @@ namespace winrt::thefootballife::implementation
 		AdjustBlockByTag(unbox_value_or<hstring>(button.Tag(), L""), -1);
 	}
 
-	CareerHubPage::DayStepResult CareerHubPage::AdvanceSingleDayStep()
+	CareerHubPage::DayStepResult CareerHubPage::AdvanceSingleDayStep(bool debugAutoResolve)
 	{
 		// Once the season is over, the calendar is frozen - clicking Advance
 		// Week further would just quietly march the date past SeasonEndDate
@@ -1223,8 +1278,15 @@ namespace winrt::thefootballife::implementation
 		// spent today, since there's no catch-up day after Saturday's match.
 		if (GameState::CurrentDay == DayPhase::Friday && BlocksUsed() != kTotalBlocks)
 		{
-			BottomHintText().Text(L"You must allocate all 14 blocks for the week before Saturday.");
-			return DayStepResult::NeedsBlocksBeforeFriday;
+			if (debugAutoResolve)
+			{
+				DebugAutoFillRemainingBlocks();
+			}
+			else
+			{
+				BottomHintText().Text(L"You must allocate all 14 blocks for the week before Saturday.");
+				return DayStepResult::NeedsBlocksBeforeFriday;
+			}
 		}
 
 		bool isMatchday = CareerDayService::AdvanceDay();
@@ -1250,7 +1312,16 @@ namespace winrt::thefootballife::implementation
 
 			if (hasFixtureThisRound)
 			{
-				ShowPreMatchDialog();
+				if (debugAutoResolve)
+				{
+					// No strategic pre-match choice in debug skip - resolve
+					// with a neutral 0/0 bonus/penalty, same as a bye.
+					ResolveMatchday(0, 0, L"[Debug] Match auto-resolved.", true);
+				}
+				else
+				{
+					ShowPreMatchDialog();
+				}
 			}
 			else
 			{
@@ -1270,6 +1341,10 @@ namespace winrt::thefootballife::implementation
 			// Saturday always halts auto-advance, whether it produced a
 			// dialog (fixture) or resolved immediately (bye week) - the
 			// player should see the week's match outcome before skipping on.
+			// Debug skip ignores this and keeps going regardless (see
+			// DebugSkipUntil), since ResolveMatchday/CheckForFinalsProgression
+			// already show their own dialogs at genuine stopping points
+			// (Finals Week 1, Season Complete) which aren't suppressed here.
 			stepResult = DayStepResult::StoppedAtKeyDay;
 		}
 		else if (GameState::CurrentDay == DayPhase::Sunday)
@@ -1299,8 +1374,17 @@ namespace winrt::thefootballife::implementation
 			auto const* triggeredEvent = DayEventService::RollForEvent(m_dayEvents, kDayEventChancePercent, GameState::StoryFlags);
 			if (triggeredEvent)
 			{
-				ShowDayEventDialog(*triggeredEvent);
-				stepResult = DayStepResult::StoppedAtKeyDay;
+				if (debugAutoResolve)
+				{
+					// Auto-pick the first choice rather than showing a
+					// dialog, so debug skip never has to stop for input.
+					ApplyEventChoice(triggeredEvent->Choices[0]);
+				}
+				else
+				{
+					ShowDayEventDialog(*triggeredEvent);
+					stepResult = DayStepResult::StoppedAtKeyDay;
+				}
 			}
 		}
 
@@ -1333,6 +1417,23 @@ namespace winrt::thefootballife::implementation
 		{
 			result = AdvanceSingleDayStep();
 		} while (autoAdvance && result == DayStepResult::Continue);
+	}
+
+	// Debug-only tools for quickly skipping ahead during testing. Always
+	// compiled (see the .h comment), but the buttons that trigger these are
+	// only made visible in Debug builds - see the constructor.
+	void CareerHubPage::DebugSkipToFinalsButton_Click(IInspectable const&, RoutedEventArgs const&)
+	{
+		DebugSkipUntil([this]()
+			{
+				return std::any_of(m_fixtures.begin(), m_fixtures.end(),
+					[](FixtureService::Fixture const& f) { return !f.FinalsLabel.empty(); });
+			});
+	}
+
+	void CareerHubPage::DebugSkipToSeasonEndButton_Click(IInspectable const&, RoutedEventArgs const&)
+	{
+		DebugSkipUntil([this]() { return IsSeasonOver(); });
 	}
 
 	int CareerHubPage::RollMatchVotes() const
@@ -1463,7 +1564,10 @@ namespace winrt::thefootballife::implementation
 
 		// When eligible, Draft Night replaces Start Next Season entirely -
 		// a strong enough season earns a promotion shot, and taking it is
-		// the only way forward from here (no "decline and stay" option)
+		// the only way forward from here (no "decline and stay" option in
+		// this first pass). Retire is offered alongside either one - ending
+		// the career is always the player's choice, independent of how the
+		// season went.
 		NextSeasonButton().Visibility((seasonOver && !eligible) ? Visibility::Visible : Visibility::Collapsed);
 		DraftNightButton().Visibility(eligible ? Visibility::Visible : Visibility::Collapsed);
 		RetireButton().Visibility(seasonOver ? Visibility::Visible : Visibility::Collapsed);
