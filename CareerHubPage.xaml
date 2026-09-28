@@ -206,6 +206,11 @@
                                    Text="14/14 blocks allocated"
                                    Foreground="#DDDDDD"/>
 
+                        <TextBlock x:Name="TodayBlocksText"
+                                   Text="Today: 0/3 spent"
+                                   FontSize="13"
+                                   Foreground="#999999"/>
+
                         <TextBlock x:Name="BlockWarningText"
                                    Text=""
                                    TextWrapping="Wrap"

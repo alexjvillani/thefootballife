@@ -857,7 +857,22 @@ namespace winrt::thefootballife::implementation
 
 		int used = BlocksUsed();
 		int remaining = kTotalBlocks - used;
-		BlockSummaryText().Text(to_hstring(used) + L"/" + to_hstring(kTotalBlocks) + L" blocks allocated");
+		BlockSummaryText().Text(to_hstring(used) + L"/" + to_hstring(kTotalBlocks) +
+			L" blocks allocated this week (" + to_hstring((std::max)(0, remaining)) + L" remaining)");
+
+		// Surfaces what was previously only tracked internally
+		// (m_blocksSpentToday) - it already resets to 0 on every new day
+		// (see AdvanceSingleDayStep), this just makes that visible so the
+		// daily 3-block cap isn't a mystery when the + button stops working.
+		bool isFriday = (GameState::CurrentDay == DayPhase::Friday);
+		if (isFriday)
+		{
+			TodayBlocksText().Text(L"Friday - no daily cap, catch up on whatever's left for the week.");
+		}
+		else
+		{
+			TodayBlocksText().Text(L"Today: " + to_hstring(m_blocksSpentToday) + L"/" + to_hstring(kBlocksPerDay) + L" spent");
+		}
 
 		if (remaining == 0)
 			BlockWarningText().Text(L"Allocation is valid. You can advance the week.");
@@ -1393,6 +1408,50 @@ namespace winrt::thefootballife::implementation
 	}
 
 	void CareerHubPage::AdvanceWeekButton_Click(IInspectable const&, RoutedEventArgs const&)
+	{
+		// Friday is the real commitment moment - once Saturday's match
+		// resolves, this week's allocation can't be changed. Confirm it
+		// explicitly before locking it in, rather than advancing straight
+		// through on the same click that finished allocating.
+		bool isFriday = (GameState::CurrentDay == DayPhase::Friday);
+		bool blocksComplete = (BlocksUsed() == kTotalBlocks);
+
+		if (isFriday && blocksComplete)
+		{
+			ContentDialog dlg;
+			dlg.Title(box_value(L"Confirm This Week's Schedule"));
+
+			std::wstring summary =
+				L"Training: " + std::to_wstring(m_trainingBlocks) +
+				L"\nSchool: " + std::to_wstring(m_schoolBlocks) +
+				L"\nWork: " + std::to_wstring(m_workBlocks) +
+				L"\nSocial: " + std::to_wstring(m_socialBlocks) +
+				L"\nRecovery: " + std::to_wstring(m_recoveryBlocks) +
+				L"\n\nOnce confirmed, this week's allocation is locked in before Saturday's match.";
+			dlg.Content(box_value(hstring(summary)));
+			dlg.PrimaryButtonText(L"Confirm & Advance");
+			dlg.CloseButtonText(L"Cancel");
+			dlg.XamlRoot(this->XamlRoot());
+
+			auto weakThis = get_weak();
+			dlg.ShowAsync().Completed(
+				[weakThis](auto const& operation, auto const&)
+				{
+					if (auto self = weakThis.get())
+					{
+						if (operation.GetResults() == ContentDialogResult::Primary)
+						{
+							self->RunAdvanceWeekSteps();
+						}
+					}
+				});
+			return;
+		}
+
+		RunAdvanceWeekSteps();
+	}
+
+	void CareerHubPage::RunAdvanceWeekSteps()
 	{
 		// With auto-advance off this is just a single day step, same as
 		// before. With it on, keep stepping until something needs the

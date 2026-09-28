@@ -199,6 +199,7 @@ namespace winrt::thefootballife::implementation
 			Continue                 // Nothing needed player attention - safe to keep auto-advancing
 		};
 		DayStepResult AdvanceSingleDayStep(bool debugAutoResolve = false);
+		void RunAdvanceWeekSteps();
 		bool IsSeasonOver() const;
 		void UpdateSeasonRolloverUI();
 
