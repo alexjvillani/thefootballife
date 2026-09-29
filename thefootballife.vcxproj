@@ -38,6 +38,15 @@
     <!-- Tell NuGet where to restore packages so the Imports above can find them -->
     <RestorePackagesPath>$(MSBuildProjectDirectory)\packages\</RestorePackagesPath>
   </PropertyGroup>
+  <!-- Set PublishUnpackaged to false to go back to the MSIX sideload workflow. -->
+  <PropertyGroup>
+    <PublishUnpackaged>true</PublishUnpackaged>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(PublishUnpackaged)'=='true'">
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <AppxPackage>false</AppxPackage>
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -278,14 +287,14 @@
   </ItemGroup>
   <!-- packages.config for NuGet restore into packages\ folder -->
   <ItemGroup>
-    <None Include="Assets\Data\aflteams.csv" />
-    <None Include="Assets\Data\Events.csv" />
-    <None Include="Assets\Data\localteams.csv" />
-    <None Include="Assets\Data\season_structure.csv" />
-    <None Include="Assets\Data\stateteams.csv" />
-    <None Include="Assets\Data\talentleagueteams.csv" />
-    <None Include="Assets\Data\teammatenames.csv" />
-    <None Include="Assets\Data\xfactors.csv" />
+    <None Include="Assets\Data\aflteams.csv"><DeploymentContent>true</DeploymentContent></None>
+    <None Include="Assets\Data\Events.csv"><DeploymentContent>true</DeploymentContent></None>
+    <None Include="Assets\Data\localteams.csv"><DeploymentContent>true</DeploymentContent></None>
+    <None Include="Assets\Data\season_structure.csv"><DeploymentContent>true</DeploymentContent></None>
+    <None Include="Assets\Data\stateteams.csv"><DeploymentContent>true</DeploymentContent></None>
+    <None Include="Assets\Data\talentleagueteams.csv"><DeploymentContent>true</DeploymentContent></None>
+    <None Include="Assets\Data\teammatenames.csv"><DeploymentContent>true</DeploymentContent></None>
+    <None Include="Assets\Data\xfactors.csv"><DeploymentContent>true</DeploymentContent></None>
     <None Include="packages.config" />
     <None Include="thefootballife_TemporaryKey.pfx" />
   </ItemGroup>
@@ -322,5 +331,12 @@
     </PropertyGroup>
     <Error Condition="$(NuGetExePath)=='' " Text="Could not locate NuGet.exe inside Visual Studio. Please run 'Restore NuGet Packages' from the Solution Explorer context menu." />
     <Exec Command="&quot;$(NuGetExePath)&quot; restore &quot;$(MSBuildProjectDirectory)\packages.config&quot; -PackagesDirectory &quot;$(MSBuildProjectDirectory)\packages&quot;" Condition="$(NuGetExePath)!=''" />
+  </Target>
+  <!-- Unpackaged builds: copy the whole Assets folder (CSVs + images) next to the exe. -->
+  <Target Name="CopyAssetsForUnpackaged" AfterTargets="Build" Condition="'$(PublishUnpackaged)'=='true'">
+    <ItemGroup>
+      <_GameAssets Include="$(MSBuildProjectDirectory)\Assets\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_GameAssets)" DestinationFiles="@(_GameAssets->'$(OutDir)Assets\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
   </Target>
 </Project>
