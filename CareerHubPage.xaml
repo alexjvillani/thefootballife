@@ -51,6 +51,10 @@
                     Click="DebugSkipToSeasonEndButton_Click"
                     FontSize="12"
                     Padding="10,6"/>
+            <Button Content="Skip to Season End (Win B&amp;F)"
+                    Click="DebugSkipToSeasonEndWinBnFButton_Click"
+                    FontSize="12"
+                    Padding="10,6"/>
         </StackPanel>
 
         <!-- Main columns -->

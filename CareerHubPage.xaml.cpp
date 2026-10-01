@@ -242,6 +242,20 @@ namespace winrt::thefootballife::implementation
 		}
 	}
 
+	void CareerHubPage::DebugSkipToSeasonEndWinBnFButton_Click(IInspectable const&, RoutedEventArgs const&)
+	{
+		// Debug only: forces the player to win this season's Best & Fairest
+		m_debugForceBestAndFairest = true;
+
+		DebugSkipUntil([this]() { return IsSeasonOver(); });
+
+		// B&F is decided the moment the season ends, so the override can be cleared
+		if (IsSeasonOver())
+		{
+			m_debugForceBestAndFairest = false;
+		}
+	}
+
 	void CareerHubPage::DebugSkipUntil(std::function<bool()> const& stopCondition)
 	{
 		// Also stops immediately after any finals-progression dialog might
@@ -1532,6 +1546,11 @@ namespace winrt::thefootballife::implementation
 		result.winnerName = GameState::CurrentPlayer.firstName + L" " + GameState::CurrentPlayer.lastName;
 		result.winnerVotes = m_seasonVotes;
 		result.playerWon = true;
+
+		if (m_debugForceBestAndFairest)
+		{
+			return result; // debug override: player wins outright
+		}
 
 		for (auto const& member : m_squad)
 		{

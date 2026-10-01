@@ -93,6 +93,10 @@ namespace winrt::thefootballife::implementation
 			winrt::Windows::Foundation::IInspectable const& sender,
 			winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
 
+		void DebugSkipToSeasonEndWinBnFButton_Click(
+			winrt::Windows::Foundation::IInspectable const& sender,
+			winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
+
 		void DebugSkipToSeasonEndButton_Click(
 			winrt::Windows::Foundation::IInspectable const& sender,
 			winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
@@ -266,6 +270,7 @@ namespace winrt::thefootballife::implementation
 		// consumed by IsEligibleForPromotion. Resets false each new season
 		// alongside m_seasonVotes.
 		bool m_wonBestAndFairestThisSeason{ false };
+		bool m_debugForceBestAndFairest{ false };
 
 		// Career totals for the retirement/legacy screen - never reset by
 		// season rollover or Draft Night, unlike m_seasonVotes.
