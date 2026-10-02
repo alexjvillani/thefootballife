@@ -292,6 +292,7 @@ namespace winrt::thefootballife::implementation
 		std::unordered_map<std::wstring, bool> leagueClubs;
 		for (auto const& f : m_fixtures)
 		{
+			if (f.FinalsLabel == L"Season Over") continue; // terminal marker has no clubs
 			leagueClubs[f.HomeClub] = true;
 			leagueClubs[f.AwayClub] = true;
 		}
@@ -1111,6 +1112,9 @@ namespace winrt::thefootballife::implementation
 				m_lastMatchHomeClub = f.HomeClub;
 				m_lastMatchAwayClub = f.AwayClub;
 			}
+
+			// Prevent finals from being added to the ladder  
+			if (!f.FinalsLabel.empty()) continue;
 
 			auto& homeStats = m_teamStats[f.HomeClub];
 			auto& awayStats = m_teamStats[f.AwayClub];
