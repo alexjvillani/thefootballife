@@ -269,11 +269,37 @@ namespace winrt::thefootballife::implementation
 			}
 		}
 
-		// Prefer clubs matching the player's state (mirrors how the local
-		// competition is chosen), but if this tier's CSV isn't
-		// state-segmented (e.g. a single national AFL list), fall back to
-		// every club in the file rather than ending up with an empty pool.
-		clubs = !matchedByState.empty() ? matchedByState : allClubs;
+		// Note: 'tier' here is the player's CURRENT tier; the CSV we just
+		// read belongs to the tier above it.
+		if (tier == Tier::StateLeague)
+		{
+			// Promotion to the AFL all clubs take part
+			clubs = allClubs;
+		}
+		else if (tier == Tier::TalentLeague)
+		{
+			// Promotion to a state league (VFL/SANFL/WAFL): find the league
+			// for the player's state, then take every club in that league,
+			// even ones whose state column differs (e.g. interstate sides
+			// playing in the VFL).
+			if (!matchedByState.empty() && !matchedByState.front().league.empty())
+			{
+				std::wstring leagueName = matchedByState.front().league;
+				for (auto const& c : allClubs)
+				{
+					if (c.league == leagueName) clubs.push_back(c);
+				}
+			}
+			if (clubs.empty())
+			{
+				clubs = !matchedByState.empty() ? matchedByState : allClubs;
+			}
+		}
+		else
+		{
+			// Local -> Talent League stays state-filtered, as before.
+			clubs = !matchedByState.empty() ? matchedByState : allClubs;
+		}
 		return clubs;
 	}
 
@@ -319,11 +345,13 @@ namespace winrt::thefootballife::implementation
 		{
 			clubNames.push_back(club.name);
 		}
-		GameState::Fixtures = FixtureService::GenerateDoubleRoundRobin(clubNames, /*startWeek*/ 1);
+		auto plan = FixtureService::SeasonPlanForLeague(m_revealedClub.league);
+		GameState::Fixtures = FixtureService::GenerateDoubleRoundRobin(
+			clubNames, /*startWeek*/ 1, plan.RegularRounds, plan.BreakWeeks);
 		GameState::TeamStats.clear();
 
 		int nextYear = GameState::SeasonStartDate.Year + 1;
-		CareerDayService::InitializeSeason(nextYear);
+		CareerDayService::InitializeSeason(nextYear, m_revealedClub.league);
 		GameState::CurrentWeek = 1;
 
 		// Fresh personal stats for the new tier, same baseline reset as a

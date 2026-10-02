@@ -93,11 +93,11 @@ namespace winrt::thefootballife::implementation
 			winrt::Windows::Foundation::IInspectable const& sender,
 			winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
 
-		void DebugSkipToSeasonEndWinBnFButton_Click(
+		void DebugSkipToSeasonEndButton_Click(
 			winrt::Windows::Foundation::IInspectable const& sender,
 			winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
 
-		void DebugSkipToSeasonEndButton_Click(
+		void DebugSkipToSeasonEndWinBnFButton_Click(
 			winrt::Windows::Foundation::IInspectable const& sender,
 			winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
 

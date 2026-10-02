@@ -82,16 +82,33 @@ namespace
 
 namespace CareerDayService
 {
-	void InitializeSeason(int startYear)
+	void InitializeSeason(int startYear, const std::wstring& league)
 	{
-		// Season opens on the first Friday on or after 27 March, so the
-		// following day is always a Saturday matchday for Round 1. 
-		GameState::SeasonStartDate = SimpleDate{ startYear, 3, 27 };
+		auto const plan = FixtureService::SeasonPlanForLeague(league);
+
+		// The season opens on the first Friday on/after the league's anchor date
+		GameState::SeasonStartDate = SimpleDate{ startYear, plan.StartMonth, plan.StartDay };
 		while (WeekdayFromDate(GameState::SeasonStartDate) != DayPhase::Friday)
 		{
 			AddOneDay(GameState::SeasonStartDate);
 		}
-		GameState::SeasonEndDate = SimpleDate{ startYear, 8, 30 };
+
+		if (plan.RegularRounds > 0)
+		{
+			// End date = the Sunday after the Grand Final Saturday.
+			int totalWeeks = plan.RegularRounds + plan.BreakWeeks + FixtureService::FinalsWeeksFor(plan.Finals);
+			int daysToEnd = 1 + (totalWeeks - 1) * 7 + 1;
+			SimpleDate end = GameState::SeasonStartDate;
+			for (int i = 0; i < daysToEnd; ++i)
+			{
+				AddOneDay(end);
+			}
+			GameState::SeasonEndDate = end;
+		}
+		else
+		{
+			GameState::SeasonEndDate = SimpleDate{ startYear, 8, 30 };
+		}
 
 		GameState::CurrentDate = GameState::SeasonStartDate;
 		GameState::CurrentDay = WeekdayFromDate(GameState::CurrentDate);

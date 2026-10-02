@@ -20,12 +20,39 @@ namespace FixtureService
 		std::wstring FinalsLabel;
 	};
 
-	// Generates a full home-and-away (double round-robin) fixture list.
-	// Uses the circle method; if clubs.size() is odd, a "BYE" entry is
-	// inserted and omitted from the resulting fixture list.
+	// Which finals system a league uses.
+	//   Top4  - McIntyre Final Four (local leagues, Talent League)
+	//   Top5  - "Final five" (SANFL / WAFL)
+	//   Top10 - Wildcard Round + final eight (AFL / VFL from 2026)
+	enum class FinalsSystem { Top4, Top5, Top10 };
+
+	// How a league's season is laid out. Defaults = the original behaviour
+	// (full double round-robin, top-4 finals, ~27 March start).
+	struct SeasonPlan
+	{
+		int RegularRounds = 0;   // 0 = full double round-robin
+		int BreakWeeks = 0;      // empty competition weeks spread through the home-and-away season
+		FinalsSystem Finals = FinalsSystem::Top4;
+		int StartMonth = 3;      // season opens on the first Friday on/after this date
+		int StartDay = 27;
+	};
+	SeasonPlan SeasonPlanForLeague(const std::wstring& league);
+	int FinalsWeeksFor(FinalsSystem format);   // 3 / 4 / 5
+	int ClubsNeededFor(FinalsSystem format);   // 4 / 5 / 10
+
+	// Generates a double round-robin fixture list. Uses the circle method;
+	// if clubs.size() is odd, a "BYE" entry is inserted and omitted from
+	// the resulting fixture list.
+	//   maxRounds > 0 cuts the list off after that many rounds (leg one
+	//     first, then the start of the reverse leg), so every club still
+	//     plays the same number of games. 0 = full double round-robin.
+	//   breakWeeks inserts that many empty round numbers (competition
+	//     bye weeks), spread evenly through the season.
 	std::vector<Fixture> GenerateDoubleRoundRobin(
 		const std::vector<std::wstring>& clubs,
-		int startWeek);
+		int startWeek,
+		int maxRounds = 0,
+		int breakWeeks = 0);
 
 	// Top-4 McIntyre Final Four system: Qualifying Final (1v2) and
 	// Elimination Final (3v4) in week one. QF winner earns a bye straight
@@ -45,6 +72,13 @@ namespace FixtureService
 		const std::vector<Fixture>& week1Finals,
 		const Fixture& prelimFinal,
 		int round);
+
+	// Next finals week's fixtures for the given format, given everything played so far
+	std::vector<Fixture> GenerateNextFinalsWeek(
+		FinalsSystem format,
+		const std::vector<std::wstring>& ladder,
+		const std::vector<Fixture>& fixtures,
+		int nextRound);
 
 	// Reads [Tier],StartWeek,ByeRounds,FinalsWeeks,FinalsFormat from CSV.
 	struct SeasonStructure

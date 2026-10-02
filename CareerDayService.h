@@ -7,20 +7,20 @@
 // display and when a matchday or the season itself has arrived/ended.
 namespace CareerDayService
 {
-    // Sets up SeasonStartDate/SeasonEndDate/CurrentDate/CurrentDay for a brand
-    // new career. Call this once at career creation (same point where
-    // TeamAssignmentPage resets CurrentWeek/LastChoice), not in a constructor.
-    void InitializeSeason(int startYear);
+	// Sets up SeasonStartDate/SeasonEndDate/CurrentDate/CurrentDay for a brand
+	// new career. Call this once at career creation (same point where
+	// TeamAssignmentPage resets CurrentWeek/LastChoice), not in a constructor.
+	void InitializeSeason(int startYear, const std::wstring& league = L"");
 
-    // Advances exactly one calendar day. Rolls CurrentWeek forward when a new
-    // round begins (Monday). Returns true if the new day is Saturday (matchday).
-    bool AdvanceDay();
+	// Advances exactly one calendar day. Rolls CurrentWeek forward when a new
+	// round begins (Monday). Returns true if the new day is Saturday (matchday).
+	bool AdvanceDay();
 
-    // Display helpers for CareerHubPage
-    std::wstring GetDayPhaseName(DayPhase day);
-    std::wstring GetTodayLabel(); // e.g. "Wednesday, 15 April 2026"
-    std::wstring GetDayFlavorText(DayPhase day); // what a young footballer's week looks like, day by day
+	// Display helpers for CareerHubPage
+	std::wstring GetDayPhaseName(DayPhase day);
+	std::wstring GetTodayLabel(); // e.g. "Wednesday, 15 April 2026"
+	std::wstring GetDayFlavorText(DayPhase day); // what a young footballer's week looks like, day by day
 
-    bool IsMatchday();
-    bool IsSeasonComplete();
+	bool IsMatchday();
+	bool IsSeasonComplete();
 }
