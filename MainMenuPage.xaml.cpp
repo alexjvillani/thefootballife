@@ -10,12 +10,61 @@
 #include "GameState.h"
 #include "SaveGameService.h"
 #include <unordered_set>
+#include <vector>
 #include <winrt/Windows.UI.Xaml.Interop.h>
 
 using namespace winrt;
 using namespace Windows::Foundation;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
+
+namespace
+{
+	// One row in the Load Game list: either a manual slot (1..MaxSaveSlots)
+	// or an autosave (0 = "latest" recovery save, 1..MaxAutosaves = rolling
+	// milestone history, 1 = newest).
+	struct SaveEntry
+	{
+		bool isAutosave{ false };
+		int index{ 0 };
+	};
+
+	std::vector<SaveEntry> BuildSaveEntries()
+	{
+		std::vector<SaveEntry> entries;
+		for (int i = 0; i <= SaveGameService::MaxAutosaves; ++i)
+		{
+			entries.push_back(SaveEntry{ true, i });
+		}
+		for (int slot = 1; slot <= SaveGameService::MaxSaveSlots; ++slot)
+		{
+			entries.push_back(SaveEntry{ false, slot });
+		}
+		return entries;
+	}
+
+	bool EntryExists(SaveEntry const& e)
+	{
+		return e.isAutosave ? SaveGameService::AutosaveExists(e.index)
+			: SaveGameService::SlotExists(e.index);
+	}
+
+	bool EntryPreview(SaveEntry const& e, std::wstring& playerName, int& week)
+	{
+		return e.isAutosave ? SaveGameService::GetAutosavePreview(e.index, playerName, week)
+			: SaveGameService::GetSavePreview(e.index, playerName, week);
+	}
+
+	std::wstring EntryName(SaveEntry const& e)
+	{
+		if (e.isAutosave)
+		{
+			return e.index == 0 ? std::wstring(L"Latest Autosave")
+				: L"Autosave " + std::to_wstring(e.index);
+		}
+		return L"Slot " + std::to_wstring(e.index);
+	}
+}
 
 namespace winrt::thefootballife::implementation
 {
@@ -36,10 +85,12 @@ namespace winrt::thefootballife::implementation
 
 	void MainMenuPage::LoadGame_Click(IInspectable const&, RoutedEventArgs const&)
 	{
+		std::vector<SaveEntry> const entries = BuildSaveEntries();
+
 		bool hasAnySave = false;
-		for (int slot = 1; slot <= SaveGameService::MaxSaveSlots; ++slot)
+		for (auto const& e : entries)
 		{
-			if (SaveGameService::SlotExists(slot))
+			if (EntryExists(e))
 			{
 				hasAnySave = true;
 				break;
@@ -58,44 +109,55 @@ namespace winrt::thefootballife::implementation
 		}
 
 		ComboBox slotComboBox;
+		int firstAvailable = -1;
 
-		for (int slot = 1; slot <= SaveGameService::MaxSaveSlots; ++slot)
+		for (size_t i = 0; i < entries.size(); ++i)
 		{
+			SaveEntry const& e = entries[i];
 			ComboBoxItem item;
-			std::wstring label = L"Slot " + std::to_wstring(slot);
+			std::wstring label = EntryName(e);
+			bool available = false;
 
-			if (SaveGameService::SlotExists(slot))
+			if (EntryExists(e))
 			{
 				std::wstring playerName;
 				int week = 1;
 
-				if (SaveGameService::GetSavePreview(slot, playerName, week))
+				if (EntryPreview(e, playerName, week))
 				{
 					label += L" - " + playerName + L" (Week " + std::to_wstring(week) + L")";
-				}
-				else
-				{
-					label += L" - Not Available";
-					item.IsEnabled(false);
+
+					if (e.isAutosave)
+					{
+						std::wstring when = SaveGameService::GetAutosaveTimeLabel(e.index);
+						if (!when.empty())
+						{
+							label += L" - " + when;
+						}
+					}
+					available = true;
 				}
 			}
-			else
+
+			if (!available)
 			{
 				label += L" - Not Available";
 				item.IsEnabled(false);
+			}
+			else if (firstAvailable < 0)
+			{
+				firstAvailable = static_cast<int>(i);
 			}
 
 			item.Content(box_value(hstring(label)));
 			slotComboBox.Items().Append(item);
 		}
 
-		for (int slot = 1; slot <= SaveGameService::MaxSaveSlots; ++slot)
+		// Defaults to the first available entry - the "Latest Autosave" when
+		// one exists, since it's always the most recent state of the career.
+		if (firstAvailable >= 0)
 		{
-			if (SaveGameService::SlotExists(slot))
-			{
-				slotComboBox.SelectedIndex(slot - 1);
-				break;
-			}
+			slotComboBox.SelectedIndex(firstAvailable);
 		}
 
 		ContentDialog dialog;
@@ -108,15 +170,17 @@ namespace winrt::thefootballife::implementation
 
 		auto weakThis = get_weak();
 		dialog.ShowAsync().Completed(
-			[weakThis, slotComboBox](auto const& operation, auto const&)
+			[weakThis, slotComboBox, entries](auto const& operation, auto const&)
 			{
 				if (auto self = weakThis.get())
 				{
 					ContentDialogResult result = operation.GetResults();
-					int slot = static_cast<int>(slotComboBox.SelectedIndex()) + 1;
+					int selected = static_cast<int>(slotComboBox.SelectedIndex());
 
-					if (slot < 1 || slot > SaveGameService::MaxSaveSlots)
+					if (selected < 0 || selected >= static_cast<int>(entries.size()))
 						return;
+
+					SaveEntry const entry = entries[selected];
 
 					if (result == ContentDialogResult::Primary)
 					{
@@ -129,23 +193,33 @@ namespace winrt::thefootballife::implementation
 						SaveGameService::PersonalStats loadedPersonalStats;
 						std::unordered_set<std::wstring> loadedStoryFlags;
 
-						bool loaded = SaveGameService::LoadFromSlot(
-							slot,
-							loadedPlayer,
-							loadedWeek,
-							loadedChoice,
-							loadedTeamStats,
-							fixtures,
-							loadedCalendar,
-							loadedPersonalStats,
-							loadedStoryFlags
-						);
+						bool loaded = entry.isAutosave
+							? SaveGameService::LoadAutosave(
+								entry.index,
+								loadedPlayer,
+								loadedWeek,
+								loadedChoice,
+								loadedTeamStats,
+								fixtures,
+								loadedCalendar,
+								loadedPersonalStats,
+								loadedStoryFlags)
+							: SaveGameService::LoadFromSlot(
+								entry.index,
+								loadedPlayer,
+								loadedWeek,
+								loadedChoice,
+								loadedTeamStats,
+								fixtures,
+								loadedCalendar,
+								loadedPersonalStats,
+								loadedStoryFlags);
 
 						if (!loaded)
 						{
 							ContentDialog failDialog;
 							failDialog.Title(box_value(L"Load Failed"));
-							failDialog.Content(box_value(L"Could not read the selected save slot."));
+							failDialog.Content(box_value(L"Could not read the selected save."));
 							failDialog.CloseButtonText(L"OK");
 							failDialog.XamlRoot(self->XamlRoot());
 							failDialog.ShowAsync();
@@ -195,14 +269,16 @@ namespace winrt::thefootballife::implementation
 
 						auto weakSelf2 = self->get_weak();
 						confirmDialog.ShowAsync().Completed(
-							[weakSelf2, slot](auto const& confirmOperation, auto const&)
+							[weakSelf2, entry](auto const& confirmOperation, auto const&)
 							{
 								if (auto self2 = weakSelf2.get())
 								{
 									if (confirmOperation.GetResults() != ContentDialogResult::Primary)
 										return;
 
-									bool deleted = SaveGameService::DeleteSlot(slot);
+									bool deleted = entry.isAutosave
+										? SaveGameService::DeleteAutosave(entry.index)
+										: SaveGameService::DeleteSlot(entry.index);
 
 									ContentDialog resultDialog;
 									resultDialog.XamlRoot(self2->XamlRoot());
@@ -210,12 +286,12 @@ namespace winrt::thefootballife::implementation
 									if (deleted)
 									{
 										resultDialog.Title(box_value(L"Save Deleted"));
-										resultDialog.Content(box_value(L"The selected save slot was deleted."));
+										resultDialog.Content(box_value(L"The selected save was deleted."));
 									}
 									else
 									{
 										resultDialog.Title(box_value(L"Delete Failed"));
-										resultDialog.Content(box_value(L"Could not delete the selected save slot."));
+										resultDialog.Content(box_value(L"Could not delete the selected save."));
 									}
 
 									resultDialog.CloseButtonText(L"OK");

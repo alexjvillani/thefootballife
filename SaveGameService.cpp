@@ -91,8 +91,8 @@ namespace SaveGameService
 		return 1;
 	}
 
-	bool SaveToSlot(
-		int slot,
+	bool SaveToPath(
+		std::wstring const& path,
 		PlayerData const& player,
 		int currentWeek,
 		std::wstring const& lastChoice,
@@ -103,9 +103,11 @@ namespace SaveGameService
 		std::unordered_set<std::wstring> const& storyFlags
 	)
 	{
-		if (slot < 1 || slot > MaxSaveSlots) return false;
-
-		std::wofstream file(GetSaveSlotPath(slot));
+		// Write to a temp file first and only swap it into place once the
+		// whole save has been written successfully, so a crash or full disk
+		// mid-save can never leave a half-written (corrupt) save behind.
+		std::wstring const tempPath = path + L".tmp";
+		std::wofstream file(tempPath);
 		if (!file.is_open()) return false;
 
 		file << L"FirstName=" << player.firstName << L"\n";
@@ -218,16 +220,54 @@ namespace SaveGameService
 				{
 					file << L";";
 				}
+				// FinalsLabel is the last field (and may contain spaces) -
+				// without it, finals fixtures and the "Season Over" marker
+				// lose their identity on reload and finals get regenerated.
 				file << f.HomeClub << L"," << f.AwayClub << L","
-					<< f.Played << L"," << f.HomeScore << L"," << f.AwayScore;
+					<< f.Played << L"," << f.HomeScore << L"," << f.AwayScore
+					<< L"," << f.FinalsLabel;
 			}
 			file << L"\n";
+		}
+
+		file.flush();
+		bool const wroteOk = file.good();
+		file.close();
+		if (!wroteOk)
+		{
+			DeleteFileW(tempPath.c_str());
+			return false;
+		}
+
+		if (!MoveFileExW(tempPath.c_str(), path.c_str(),
+			MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+		{
+			DeleteFileW(tempPath.c_str());
+			return false;
 		}
 		return true;
 	}
 
-	bool LoadFromSlot(
+	bool SaveToSlot(
 		int slot,
+		PlayerData const& player,
+		int currentWeek,
+		std::wstring const& lastChoice,
+		std::unordered_map<std::wstring, TeamSeasonStats> const& teamStats,
+		std::vector<FixtureService::Fixture> const& fixtures,
+		CalendarState const& calendar,
+		PersonalStats const& personalStats,
+		std::unordered_set<std::wstring> const& storyFlags
+	)
+	{
+		if (slot < 1 || slot > MaxSaveSlots) return false;
+
+		return SaveToPath(GetSaveSlotPath(slot), player, currentWeek, lastChoice,
+			teamStats, fixtures, calendar, personalStats, storyFlags);
+	}
+
+	bool LoadFromPath(
+		std::wstring const& path,
 		PlayerData& player,
 		int& currentWeek,
 		std::wstring& lastChoice,
@@ -238,9 +278,7 @@ namespace SaveGameService
 		std::unordered_set<std::wstring>& storyFlags
 	)
 	{
-		if (slot < 1 || slot > MaxSaveSlots) return false;
-
-		std::wifstream file(GetSaveSlotPath(slot));
+		std::wifstream file(path);
 		if (!file.is_open()) return false;
 
 		std::unordered_map<std::wstring, std::wstring> values;
@@ -279,10 +317,16 @@ namespace SaveGameService
 					std::getline(fieldStream, hs, L',');
 					std::getline(fieldStream, as, L',');
 
+					// Optional 6th field - absent in saves written before
+					// FinalsLabel was persisted, so it just stays empty.
+					std::wstring finalsLabel;
+					std::getline(fieldStream, finalsLabel);
+
 					FixtureService::Fixture f;
 					f.Round = round;
 					f.HomeClub = home;
 					f.AwayClub = away;
+					f.FinalsLabel = finalsLabel;
 					f.Played = (played == L"1");
 					try { f.HomeScore = std::stoi(hs); }
 					catch (...) { f.HomeScore = 0; }
@@ -411,14 +455,27 @@ namespace SaveGameService
 		return true;
 	}
 
-	bool GetSavePreview(int slot, std::wstring& playerName, int& week)
+	bool LoadFromSlot(
+		int slot,
+		PlayerData& player,
+		int& currentWeek,
+		std::wstring& lastChoice,
+		std::unordered_map<std::wstring, TeamSeasonStats>& teamStats,
+		std::vector<FixtureService::Fixture>& fixtures,
+		CalendarState& calendar,
+		PersonalStats& personalStats,
+		std::unordered_set<std::wstring>& storyFlags
+	)
 	{
-		if (slot < 1 || slot > MaxSaveSlots)
-		{
-			return false;
-		}
+		if (slot < 1 || slot > MaxSaveSlots) return false;
 
-		std::wifstream file(GetSaveSlotPath(slot));
+		return LoadFromPath(GetSaveSlotPath(slot), player, currentWeek, lastChoice,
+			teamStats, fixtures, calendar, personalStats, storyFlags);
+	}
+
+	bool GetSavePreviewFromPath(std::wstring const& path, std::wstring& playerName, int& week)
+	{
+		std::wifstream file(path);
 		if (!file.is_open())
 		{
 			return false;
@@ -458,6 +515,140 @@ namespace SaveGameService
 		}
 
 		return true;
+	}
+
+	bool GetSavePreview(int slot, std::wstring& playerName, int& week)
+	{
+		if (slot < 1 || slot > MaxSaveSlots)
+		{
+			return false;
+		}
+
+		return GetSavePreviewFromPath(GetSaveSlotPath(slot), playerName, week);
+	}
+
+	std::wstring GetAutosavePath(int index)
+	{
+		return GetSaveFolder() + L"\\career_autosave" + std::to_wstring(index) + L".txt";
+	}
+
+	bool AutosaveExists(int index)
+	{
+		if (index < 0 || index > MaxAutosaves) return false;
+
+		std::error_code ec;
+		return fs::exists(GetAutosavePath(index), ec);
+	}
+
+	bool Autosave(
+		PlayerData const& player,
+		int currentWeek,
+		std::wstring const& lastChoice,
+		std::unordered_map<std::wstring, TeamSeasonStats> const& teamStats,
+		std::vector<FixtureService::Fixture> const& fixtures,
+		CalendarState const& calendar,
+		PersonalStats const& personalStats,
+		std::unordered_set<std::wstring> const& storyFlags
+	)
+	{
+		// Write the new save to a pending file first. Nothing in the
+		// existing autosave history is touched unless this succeeds.
+		std::wstring const pending = GetSaveFolder() + L"\\career_autosave_pending.txt";
+		if (!SaveToPath(pending, player, currentWeek, lastChoice,
+			teamStats, fixtures, calendar, personalStats, storyFlags))
+		{
+			return false;
+		}
+
+		// Roll history down: drop the oldest, then 2 -> 3, 1 -> 2.
+		std::error_code ec;
+		fs::remove(GetAutosavePath(MaxAutosaves), ec);
+		for (int i = MaxAutosaves - 1; i >= 1; --i)
+		{
+			ec.clear();
+			if (fs::exists(GetAutosavePath(i), ec))
+			{
+				fs::rename(GetAutosavePath(i), GetAutosavePath(i + 1), ec);
+			}
+		}
+
+		ec.clear();
+		fs::rename(pending, GetAutosavePath(1), ec);
+		return !ec;
+	}
+
+	bool AutosaveLatest(
+		PlayerData const& player,
+		int currentWeek,
+		std::wstring const& lastChoice,
+		std::unordered_map<std::wstring, TeamSeasonStats> const& teamStats,
+		std::vector<FixtureService::Fixture> const& fixtures,
+		CalendarState const& calendar,
+		PersonalStats const& personalStats,
+		std::unordered_set<std::wstring> const& storyFlags
+	)
+	{
+		// SaveToPath is already atomic (temp file + rename), so a crash
+		// mid-write leaves the previous "latest" intact.
+		return SaveToPath(GetAutosavePath(0), player, currentWeek, lastChoice,
+			teamStats, fixtures, calendar, personalStats, storyFlags);
+	}
+
+	bool LoadAutosave(
+		int index,
+		PlayerData& player,
+		int& currentWeek,
+		std::wstring& lastChoice,
+		std::unordered_map<std::wstring, TeamSeasonStats>& teamStats,
+		std::vector<FixtureService::Fixture>& fixtures,
+		CalendarState& calendar,
+		PersonalStats& personalStats,
+		std::unordered_set<std::wstring>& storyFlags
+	)
+	{
+		if (index < 0 || index > MaxAutosaves) return false;
+
+		return LoadFromPath(GetAutosavePath(index), player, currentWeek, lastChoice,
+			teamStats, fixtures, calendar, personalStats, storyFlags);
+	}
+
+	bool GetAutosavePreview(int index, std::wstring& playerName, int& week)
+	{
+		if (index < 0 || index > MaxAutosaves) return false;
+
+		return GetSavePreviewFromPath(GetAutosavePath(index), playerName, week);
+	}
+
+	bool DeleteAutosave(int index)
+	{
+		if (index < 0 || index > MaxAutosaves) return false;
+
+		std::error_code ec;
+		bool removed = fs::remove(GetAutosavePath(index), ec);
+		return removed && !ec;
+	}
+
+	std::wstring GetAutosaveTimeLabel(int index)
+	{
+		if (index < 0 || index > MaxAutosaves) return L"";
+
+		WIN32_FILE_ATTRIBUTE_DATA data{};
+		if (!GetFileAttributesExW(GetAutosavePath(index).c_str(), GetFileExInfoStandard, &data))
+		{
+			return L"";
+		}
+
+		FILETIME local{};
+		SYSTEMTIME st{};
+		if (!FileTimeToLocalFileTime(&data.ftLastWriteTime, &local) ||
+			!FileTimeToSystemTime(&local, &st))
+		{
+			return L"";
+		}
+
+		wchar_t buf[64] = {};
+		swprintf_s(buf, L"%02d/%02d/%04d %02d:%02d", st.wDay, st.wMonth, st.wYear, st.wHour, st.wMinute);
+		return buf;
 	}
 
 	bool DeleteSlot(int slot)

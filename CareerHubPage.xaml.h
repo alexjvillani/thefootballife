@@ -156,6 +156,21 @@ namespace winrt::thefootballife::implementation
 		// field-by-field assignment.
 		SaveGameService::PersonalStats BuildCurrentPersonalStats() const;
 
+		// Same idea for the season calendar - shared by SaveGameButton_Click
+		// and PerformAutosave.
+		SaveGameService::CalendarState BuildCurrentCalendarState() const;
+
+		// Writes a rolling autosave (see SaveGameService::Autosave). With
+		// announce = true, appends "(Autosaved)" / "(Autosave failed)" to the
+		// bottom hint text instead of showing a dialog. Returns success.
+		bool PerformAutosave(bool announce);
+
+		// Quietly overwrites the single "latest" recovery save (autosave
+		// index 0) with the live state - no history rolled, no hint text.
+		// Called after anything that changes the game, so a crash or a
+		// killed process loses at most the last action.
+		bool PerformLatestSave();
+
 		// Real-world AFL pathway: Local -> Talent League -> VFL/SANFL/WAFL
 		// -> AFL, each with a realistic Overall ceiling. Determined from
 		// PlayerData::originalTeamLeague via best-effort string matching -

@@ -686,6 +686,85 @@ namespace winrt::thefootballife::implementation
 		return stats;
 	}
 
+	SaveGameService::CalendarState CareerHubPage::BuildCurrentCalendarState() const
+	{
+		SaveGameService::CalendarState calendar;
+		calendar.currentYear = GameState::CurrentDate.Year;
+		calendar.currentMonth = GameState::CurrentDate.Month;
+		calendar.currentDay = GameState::CurrentDate.Day;
+		calendar.currentDayPhase = static_cast<int>(GameState::CurrentDay);
+		calendar.seasonStartYear = GameState::SeasonStartDate.Year;
+		calendar.seasonStartMonth = GameState::SeasonStartDate.Month;
+		calendar.seasonStartDay = GameState::SeasonStartDate.Day;
+		calendar.seasonEndYear = GameState::SeasonEndDate.Year;
+		calendar.seasonEndMonth = GameState::SeasonEndDate.Month;
+		calendar.seasonEndDay = GameState::SeasonEndDate.Day;
+		return calendar;
+	}
+
+	bool CareerHubPage::PerformLatestSave()
+	{
+		SaveGameService::CalendarState calendar = BuildCurrentCalendarState();
+		SaveGameService::PersonalStats personalStats = BuildCurrentPersonalStats();
+
+		// Must never be able to take the game down (GetSaveFolder can throw).
+		try
+		{
+			return SaveGameService::AutosaveLatest(
+				GameState::CurrentPlayer,
+				m_currentWeek, m_lastChoice.c_str(),
+				m_teamStats,
+				m_fixtures,
+				calendar,
+				personalStats,
+				GameState::StoryFlags);
+		}
+		catch (...)
+		{
+			return false;
+		}
+	}
+
+	bool CareerHubPage::PerformAutosave(bool announce)
+	{
+		SaveGameService::CalendarState calendar = BuildCurrentCalendarState();
+		SaveGameService::PersonalStats personalStats = BuildCurrentPersonalStats();
+
+		// GetSaveFolder() can throw (filesystem error) - an autosave must
+		// never be able to take the game down.
+		bool saved = false;
+		try
+		{
+			saved = SaveGameService::Autosave(
+				GameState::CurrentPlayer,
+				m_currentWeek, m_lastChoice.c_str(),
+				m_teamStats,
+				m_fixtures,
+				calendar,
+				personalStats,
+				GameState::StoryFlags);
+		}
+		catch (...)
+		{
+			saved = false;
+		}
+
+		if (saved)
+		{
+			// Keep the "latest" recovery save in step with the newest milestone.
+			PerformLatestSave();
+		}
+
+		if (announce)
+		{
+			std::wstring hint = BottomHintText().Text().c_str();
+			hint += saved ? L"  (Autosaved)" : L"  (Autosave failed)";
+			BottomHintText().Text(hstring(hint));
+		}
+
+		return saved;
+	}
+
 	winrt::Windows::UI::Color CareerHubPage::OverallColour(int overall, OverallRange const& range) const
 	{
 		// Thresholds are relative to the current tier's own band, not
@@ -974,6 +1053,7 @@ namespace winrt::thefootballife::implementation
 
 		BottomHintText().Text(L"Weekly schedule updated.");
 		UpdateBlockUI();
+		PerformLatestSave();
 	}
 
 	void CareerHubPage::ApplyWeekSimulation()
@@ -1017,7 +1097,9 @@ namespace winrt::thefootballife::implementation
 
 	std::vector<CareerHubPage::QuarterScore> CareerHubPage::GenerateMatchQuarters(std::mt19937& gen) const
 	{
-		// Tune AFL scoring to simulate real life a bit more
+		// --- Tuning knobs --------------------------------------------------
+		// Real AFL averages roughly 23 scoring shots per team per match at
+		// about 54% accuracy, which gives ~12.5 goals / ~10.5 behinds (~85 pts).
 		constexpr double kShotsPerQuarterMean = 5.8;   // ~23 shots per match
 		constexpr double kShotsPerQuarterSd = 1.9;
 		constexpr int    kMinShotsPerQuarter = 2;
@@ -1463,6 +1545,13 @@ namespace winrt::thefootballife::implementation
 		}
 
 		UpdateWeekDisplay();
+
+		// Day advanced - refresh the recovery save. Skipped during debug
+		// fast-forward, which can step through hundreds of days at once.
+		if (!debugAutoResolve)
+		{
+			PerformLatestSave();
+		}
 		return stepResult;
 	}
 
@@ -1677,6 +1766,10 @@ namespace winrt::thefootballife::implementation
 		RenderSquad();
 		CheckForFinalsProgression();
 		UpdateSeasonRolloverUI();
+
+		// Autosave once everything for the matchday has settled (ladder,
+		// finals fixtures, Season Over marker) so a reload resumes cleanly.
+		PerformAutosave(true);
 	}
 
 	void CareerHubPage::ShowFinalsAnnouncementDialog(hstring const& title, hstring const& message)
@@ -1959,6 +2052,7 @@ namespace winrt::thefootballife::implementation
 
 		BottomHintText().Text(L"You chose: " + hstring(choice.Label));
 		UpdateStateUI();
+		PerformLatestSave();
 	}
 
 	void CareerHubPage::SaveGameButton_Click(IInspectable const&, RoutedEventArgs const&)
@@ -1992,17 +2086,7 @@ namespace winrt::thefootballife::implementation
 
 					int slot = static_cast<int>(slotComboBox.SelectedIndex()) + 1;
 
-					SaveGameService::CalendarState calendar;
-					calendar.currentYear = GameState::CurrentDate.Year;
-					calendar.currentMonth = GameState::CurrentDate.Month;
-					calendar.currentDay = GameState::CurrentDate.Day;
-					calendar.currentDayPhase = static_cast<int>(GameState::CurrentDay);
-					calendar.seasonStartYear = GameState::SeasonStartDate.Year;
-					calendar.seasonStartMonth = GameState::SeasonStartDate.Month;
-					calendar.seasonStartDay = GameState::SeasonStartDate.Day;
-					calendar.seasonEndYear = GameState::SeasonEndDate.Year;
-					calendar.seasonEndMonth = GameState::SeasonEndDate.Month;
-					calendar.seasonEndDay = GameState::SeasonEndDate.Day;
+					SaveGameService::CalendarState calendar = self->BuildCurrentCalendarState();
 
 					SaveGameService::PersonalStats personalStats = self->BuildCurrentPersonalStats();
 
@@ -2036,6 +2120,8 @@ namespace winrt::thefootballife::implementation
 
 	void CareerHubPage::ExitToMyCareerButton_Click(IInspectable const&, RoutedEventArgs const&)
 	{
+		PerformLatestSave();
+
 		Frame().Navigate(winrt::Windows::UI::Xaml::Interop::TypeName{
 			L"thefootballife.MyCareerPage",
 			winrt::Windows::UI::Xaml::Interop::TypeKind::Custom });
@@ -2043,6 +2129,8 @@ namespace winrt::thefootballife::implementation
 
 	void CareerHubPage::ExitToMainMenuButton_Click(IInspectable const&, RoutedEventArgs const&)
 	{
+		PerformLatestSave();
+
 		Frame().Navigate(winrt::Windows::UI::Xaml::Interop::TypeName{
 			L"thefootballife.MainMenuPage",
 			winrt::Windows::UI::Xaml::Interop::TypeKind::Custom });
@@ -2118,12 +2206,17 @@ namespace winrt::thefootballife::implementation
 		RenderSquad();
 		UpdateSeasonRolloverUI();
 
+		// Fresh season state is in place - autosave before the dialog.
+		PerformAutosave(false);
+
 		ShowFinalsAnnouncementDialog(L"New Season",
 			L"Season " + to_hstring(nextYear) + L" begins! Fresh fixtures, fresh ladder - good luck.");
 	}
 
 	void CareerHubPage::DraftNightButton_Click(IInspectable const&, RoutedEventArgs const&)
 	{
+		GameState::CurrentPersonalStats = BuildCurrentPersonalStats();
+
 		// DraftNightPage does all of its own GameState mutation (new club,
 		// new league, fresh fixtures/stats) before navigating back here -
 		// this handler is just the doorway in.

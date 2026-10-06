@@ -183,6 +183,55 @@ namespace
 		}
 		return {};
 	}
+
+	// Autosaves straight from GameState - this page holds no live copy of
+	// the season (CareerHubPage reads everything back from GameState when
+	// it's navigated to), so GameState is the source of truth here. A save
+	// failure must never interrupt the promotion flow, hence the catch-all.
+	void AutosaveFromGameState()
+	{
+		SaveGameService::CalendarState calendar;
+		calendar.currentYear = GameState::CurrentDate.Year;
+		calendar.currentMonth = GameState::CurrentDate.Month;
+		calendar.currentDay = GameState::CurrentDate.Day;
+		calendar.currentDayPhase = static_cast<int>(GameState::CurrentDay);
+		calendar.seasonStartYear = GameState::SeasonStartDate.Year;
+		calendar.seasonStartMonth = GameState::SeasonStartDate.Month;
+		calendar.seasonStartDay = GameState::SeasonStartDate.Day;
+		calendar.seasonEndYear = GameState::SeasonEndDate.Year;
+		calendar.seasonEndMonth = GameState::SeasonEndDate.Month;
+		calendar.seasonEndDay = GameState::SeasonEndDate.Day;
+
+		try
+		{
+			bool saved = SaveGameService::Autosave(
+				GameState::CurrentPlayer,
+				GameState::CurrentWeek,
+				GameState::LastChoice,
+				GameState::TeamStats,
+				GameState::Fixtures,
+				calendar,
+				GameState::CurrentPersonalStats,
+				GameState::StoryFlags);
+
+			// Keep the "latest" recovery save in step with the newest milestone.
+			if (saved)
+			{
+				SaveGameService::AutosaveLatest(
+					GameState::CurrentPlayer,
+					GameState::CurrentWeek,
+					GameState::LastChoice,
+					GameState::TeamStats,
+					GameState::Fixtures,
+					calendar,
+					GameState::CurrentPersonalStats,
+					GameState::StoryFlags);
+			}
+		}
+		catch (...)
+		{
+		}
+	}
 }
 
 namespace winrt::thefootballife::implementation
@@ -371,6 +420,10 @@ namespace winrt::thefootballife::implementation
 		if (!m_hasRevealed) return;
 
 		FinalizeSeasonForNewClub();
+
+		// Promotion is a major milestone - autosave the new club/league
+		// and fresh season before heading back to the Career Hub.
+		AutosaveFromGameState();
 
 		Frame().Navigate(
 			winrt::Windows::UI::Xaml::Interop::TypeName{
