@@ -39,6 +39,7 @@
     <ClCompile Include="DayEventService.cpp" />
     <ClCompile Include="XFactorService.cpp" />
     <ClCompile Include="SquadService.cpp" />
+    <ClCompile Include="CrashLogger.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -50,6 +51,7 @@
     <ClInclude Include="DayEventService.h" />
     <ClInclude Include="XFactorService.h" />
     <ClInclude Include="SquadService.h" />
+    <ClInclude Include="CrashLogger.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Wide310x150Logo.scale-200.png">
@@ -87,9 +89,6 @@
   </ItemGroup>
   <ItemGroup>
     <Manifest Include="app.manifest" />
-  </ItemGroup>
-  <ItemGroup>
-    <AppxManifest Include="Package.appxmanifest" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

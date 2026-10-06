@@ -1017,40 +1017,90 @@ namespace winrt::thefootballife::implementation
 
 	std::vector<CareerHubPage::QuarterScore> CareerHubPage::GenerateMatchQuarters(std::mt19937& gen) const
 	{
-		std::uniform_int_distribution<int> goalsDist(1, 5);
-		std::uniform_int_distribution<int> behindsDist(1, 5);
+		// Tune AFL scoring to simulate real life a bit more
+		constexpr double kShotsPerQuarterMean = 5.8;   // ~23 shots per match
+		constexpr double kShotsPerQuarterSd = 1.9;
+		constexpr int    kMinShotsPerQuarter = 2;
+		constexpr int    kMaxShotsPerQuarter = 11;
+		constexpr double kAccuracyMean = 0.54;  // goals / shots
+		constexpr double kAccuracySd = 0.05;  // hot/cold day in front of goal
+		constexpr double kMinAccuracy = 0.40;
+		constexpr double kMaxAccuracy = 0.68;
+		// -------------------------------------------------------------------
+
+		std::normal_distribution<double> shotsDist(kShotsPerQuarterMean, kShotsPerQuarterSd);
+		std::normal_distribution<double> accuracyDist(kAccuracyMean, kAccuracySd);
+
+		// One accuracy per team per match, so a team can have a wayward
+		// day across all four quarters rather than averaging out.
+		double homeAccuracy = std::clamp(accuracyDist(gen), kMinAccuracy, kMaxAccuracy);
+		double awayAccuracy = std::clamp(accuracyDist(gen), kMinAccuracy, kMaxAccuracy);
+
+		auto rollQuarter = [&](double accuracy, int& goals, int& behinds)
+			{
+				double raw = std::clamp(shotsDist(gen),
+					static_cast<double>(kMinShotsPerQuarter),
+					static_cast<double>(kMaxShotsPerQuarter));
+				int shots = static_cast<int>(raw + 0.5);
+
+				std::binomial_distribution<int> goalDist(shots, accuracy);
+				goals = goalDist(gen);
+				behinds = shots - goals;
+			};
 
 		std::vector<QuarterScore> quarters(4);
 		for (auto& q : quarters)
 		{
-			q.homeGoals = goalsDist(gen);
-			q.homeBehinds = behindsDist(gen);
-			q.awayGoals = goalsDist(gen);
-			q.awayBehinds = behindsDist(gen);
+			rollQuarter(homeAccuracy, q.homeGoals, q.homeBehinds);
+			rollQuarter(awayAccuracy, q.awayGoals, q.awayBehinds);
 		}
 		return quarters;
 	}
 
 	void CareerHubPage::ApplyPointAdjustment(int& goals, int& behinds, int delta) const
 	{
-		// Folds an arbitrary point delta into a quarter's behinds count
-		// first - a wayward day in front of goal racking up extra behinds
-		// reads as normal AFL commentary, even for a double-digit bonus. A
-		// large negative delta borrows from goals (converting one back to 0,
-		// losing 6 points) until absorbed. Known limitation: if delta is
-		// more negative than the quarter's own total, this floors at 0
-		// rather than going negative, so an extreme penalty may fall short
-		// of fully applying - opponentPenalty is small enough in practice
-		// that this shouldn't come up.
-		behinds += delta;
-		while (behinds < 0 && goals > 0)
+		// Folds a point delta into a quarter, mostly as goals so a bonus
+		// can't inflate behinds into unrealistic territory.
+		//
+		// Positive: whole goals first. A remainder of 3-5 points becomes
+		// one extra goal minus a few behinds (e.g. +10 -> +2 goals, -2
+		// behinds) when the quarter has enough behinds to give back;
+		// otherwise it's added as behinds.
+		//
+		// Negative: removes whole goals, then behinds, then converts one
+		// more goal into the leftover behinds. Known limitation: if the
+		// quarter's total is smaller than the penalty it floors at 0 and
+		// the penalty falls short - fine for the current +/-10 values.
+		if (delta >= 0)
+		{
+			int extraGoals = delta / 6;
+			int remainder = delta % 6;
+			if (remainder >= 3 && behinds >= 6 - remainder)
+			{
+				extraGoals++;
+				behinds -= (6 - remainder);
+			}
+			else
+			{
+				behinds += remainder;
+			}
+			goals += extraGoals;
+			return;
+		}
+
+		int loss = -delta;
+		int goalsLost = (std::min)(goals, loss / 6);
+		goals -= goalsLost;
+		loss -= goalsLost * 6;
+
+		int behindsLost = (std::min)(behinds, loss);
+		behinds -= behindsLost;
+		loss -= behindsLost;
+
+		if (loss > 0 && goals > 0)
 		{
 			goals--;
-			behinds += 6;
-		}
-		if (behinds < 0)
-		{
-			behinds = 0;
+			behinds += 6 - loss;
 		}
 	}
 

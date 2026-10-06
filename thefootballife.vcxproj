@@ -145,6 +145,7 @@
     <ClInclude Include="ConfirmPlayerPage.xaml.h">
       <DependentUpon>ConfirmPlayerPage.xaml</DependentUpon>
     </ClInclude>
+    <ClInclude Include="CrashLogger.h" />
     <ClInclude Include="CreditPage.xaml.h">
       <DependentUpon>CreditPage.xaml</DependentUpon>
     </ClInclude>
@@ -210,6 +211,7 @@
     <ClCompile Include="ConfirmPlayerPage.xaml.cpp">
       <DependentUpon>ConfirmPlayerPage.xaml</DependentUpon>
     </ClCompile>
+    <ClCompile Include="CrashLogger.cpp" />
     <ClCompile Include="CreditPage.xaml.cpp">
       <DependentUpon>CreditPage.xaml</DependentUpon>
     </ClCompile>
@@ -287,14 +289,30 @@
   </ItemGroup>
   <!-- packages.config for NuGet restore into packages\ folder -->
   <ItemGroup>
-    <None Include="Assets\Data\aflteams.csv"><DeploymentContent>true</DeploymentContent></None>
-    <None Include="Assets\Data\Events.csv"><DeploymentContent>true</DeploymentContent></None>
-    <None Include="Assets\Data\localteams.csv"><DeploymentContent>true</DeploymentContent></None>
-    <None Include="Assets\Data\season_structure.csv"><DeploymentContent>true</DeploymentContent></None>
-    <None Include="Assets\Data\stateteams.csv"><DeploymentContent>true</DeploymentContent></None>
-    <None Include="Assets\Data\talentleagueteams.csv"><DeploymentContent>true</DeploymentContent></None>
-    <None Include="Assets\Data\teammatenames.csv"><DeploymentContent>true</DeploymentContent></None>
-    <None Include="Assets\Data\xfactors.csv"><DeploymentContent>true</DeploymentContent></None>
+    <None Include="Assets\Data\aflteams.csv">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\Data\Events.csv">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\Data\localteams.csv">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\Data\season_structure.csv">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\Data\stateteams.csv">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\Data\talentleagueteams.csv">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\Data\teammatenames.csv">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\Data\xfactors.csv">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
     <None Include="packages.config" />
     <None Include="thefootballife_TemporaryKey.pfx" />
   </ItemGroup>
