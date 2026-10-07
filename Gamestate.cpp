@@ -8,7 +8,7 @@ std::unordered_map<std::wstring, SaveGameService::TeamSeasonStats> GameState::Te
 std::vector<FixtureService::Fixture> GameState::Fixtures;
 std::unordered_map<std::wstring, int> GameState::XFactorStatModifiers;
 SaveGameService::PersonalStats GameState::CurrentPersonalStats;
-std::unordered_set<std::wstring> GameState::StoryFlags;
+NarrativeState GameState::Narrative;
 
 DayPhase GameState::CurrentDay = DayPhase::Monday;
 SimpleDate GameState::CurrentDate;

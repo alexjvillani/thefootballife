@@ -100,7 +100,7 @@ namespace SaveGameService
 		std::vector<FixtureService::Fixture> const& fixtures,
 		CalendarState const& calendar,
 		PersonalStats const& personalStats,
-		std::unordered_set<std::wstring> const& storyFlags
+		NarrativeState const& narrative
 	)
 	{
 		// Write to a temp file first and only swap it into place once the
@@ -178,14 +178,35 @@ namespace SaveGameService
 		// Branching-narrative flags - a flat comma-separated list rather
 		// than a bracketed section, since it's just a set of short
 		// identifiers, not a keyed collection like TeamStats/Fixtures.
+		// (Kept in this exact form so saves from before counters and the
+		// event log existed still load.)
 		{
 			std::wstring flagsLine;
-			for (auto const& flag : storyFlags)
+			for (auto const& flag : narrative.Flags)
 			{
 				if (!flagsLine.empty()) flagsLine += L",";
 				flagsLine += flag;
 			}
 			file << L"StoryFlags=" << flagsLine << L"\n";
+		}
+
+		// Narrative counters and the event decision log. Must stay above the
+		// other bracketed sections: everything after a section header is read
+		// as part of that section. Omitted entirely when both are empty.
+		//   Counter.<name>=<value>
+		//   Log.<eventId>=<season>,<week>,<choiceIndex>   (one line per decision, in order)
+		if (!narrative.Counters.empty() || !narrative.Log.empty())
+		{
+			file << L"[Narrative]\n";
+			for (auto const& [name, value] : narrative.Counters)
+			{
+				file << L"Counter." << name << L"=" << value << L"\n";
+			}
+			for (auto const& entry : narrative.Log)
+			{
+				file << L"Log." << entry.EventId << L"="
+					<< entry.Season << L"," << entry.Week << L"," << entry.Choice << L"\n";
+			}
 		}
 
 		// Team stats section
@@ -257,13 +278,13 @@ namespace SaveGameService
 		std::vector<FixtureService::Fixture> const& fixtures,
 		CalendarState const& calendar,
 		PersonalStats const& personalStats,
-		std::unordered_set<std::wstring> const& storyFlags
+		NarrativeState const& narrative
 	)
 	{
 		if (slot < 1 || slot > MaxSaveSlots) return false;
 
 		return SaveToPath(GetSaveSlotPath(slot), player, currentWeek, lastChoice,
-			teamStats, fixtures, calendar, personalStats, storyFlags);
+			teamStats, fixtures, calendar, personalStats, narrative);
 	}
 
 	bool LoadFromPath(
@@ -275,7 +296,7 @@ namespace SaveGameService
 		std::vector<FixtureService::Fixture>& fixtures,
 		CalendarState& calendar,
 		PersonalStats& personalStats,
-		std::unordered_set<std::wstring>& storyFlags
+		NarrativeState& narrative
 	)
 	{
 		std::wifstream file(path);
@@ -284,14 +305,46 @@ namespace SaveGameService
 		std::unordered_map<std::wstring, std::wstring> values;
 		teamStats.clear();
 		fixtures.clear();
+		narrative.Clear();
 
 		bool inTeamStats = false;
 		bool inFixtures = false;
+		bool inNarrative = false;
 		std::wstring line;
 		while (std::getline(file, line))
 		{
-			if (line == L"[TeamStats]") { inTeamStats = true; inFixtures = false; continue; }
-			if (line == L"[Fixtures]") { inFixtures = true; inTeamStats = false; continue; }
+			if (line == L"[TeamStats]") { inTeamStats = true; inFixtures = false; inNarrative = false; continue; }
+			if (line == L"[Fixtures]") { inFixtures = true; inTeamStats = false; inNarrative = false; continue; }
+			if (line == L"[Narrative]") { inNarrative = true; inTeamStats = false; inFixtures = false; continue; }
+
+			if (inNarrative)
+			{
+				size_t eq = line.find(L'=');
+				if (eq == std::wstring::npos) continue;
+				std::wstring key = line.substr(0, eq);
+				std::wstring val = line.substr(eq + 1);
+
+				if (key.rfind(L"Counter.", 0) == 0)
+				{
+					int v = 0;
+					if (TryParseInt(val, v)) narrative.Counters[key.substr(8)] = v; // 8 = len("Counter.")
+				}
+				else if (key.rfind(L"Log.", 0) == 0)
+				{
+					NarrativeLogEntry entry;
+					entry.EventId = key.substr(4); // 4 = len("Log.")
+					std::wistringstream logStream(val);
+					std::wstring season, week, choice;
+					std::getline(logStream, season, L',');
+					std::getline(logStream, week, L',');
+					std::getline(logStream, choice, L',');
+					TryParseInt(season, entry.Season);
+					TryParseInt(week, entry.Week);
+					TryParseInt(choice, entry.Choice);
+					if (!entry.EventId.empty()) narrative.Log.push_back(std::move(entry));
+				}
+				continue;
+			}
 
 			if (inFixtures)
 			{
@@ -438,14 +491,13 @@ namespace SaveGameService
 		if (!TryParseInt(values[L"CareerSeasonsPlayed"], personalStats.careerSeasonsPlayed))         personalStats.careerSeasonsPlayed = 1;
 		if (!TryParseInt(values[L"CareerBestAndFairestWins"], personalStats.careerBestAndFairestWins)) personalStats.careerBestAndFairestWins = 0;
 
-		storyFlags.clear();
 		{
 			std::wstring flagsLine = values[L"StoryFlags"];
 			std::wistringstream flagStream(flagsLine);
 			std::wstring flag;
 			while (std::getline(flagStream, flag, L','))
 			{
-				if (!flag.empty()) storyFlags.insert(flag);
+				if (!flag.empty()) narrative.Flags.insert(flag);
 			}
 		}
 
@@ -464,13 +516,13 @@ namespace SaveGameService
 		std::vector<FixtureService::Fixture>& fixtures,
 		CalendarState& calendar,
 		PersonalStats& personalStats,
-		std::unordered_set<std::wstring>& storyFlags
+		NarrativeState& narrative
 	)
 	{
 		if (slot < 1 || slot > MaxSaveSlots) return false;
 
 		return LoadFromPath(GetSaveSlotPath(slot), player, currentWeek, lastChoice,
-			teamStats, fixtures, calendar, personalStats, storyFlags);
+			teamStats, fixtures, calendar, personalStats, narrative);
 	}
 
 	bool GetSavePreviewFromPath(std::wstring const& path, std::wstring& playerName, int& week)
@@ -548,14 +600,14 @@ namespace SaveGameService
 		std::vector<FixtureService::Fixture> const& fixtures,
 		CalendarState const& calendar,
 		PersonalStats const& personalStats,
-		std::unordered_set<std::wstring> const& storyFlags
+		NarrativeState const& narrative
 	)
 	{
 		// Write the new save to a pending file first. Nothing in the
 		// existing autosave history is touched unless this succeeds.
 		std::wstring const pending = GetSaveFolder() + L"\\career_autosave_pending.txt";
 		if (!SaveToPath(pending, player, currentWeek, lastChoice,
-			teamStats, fixtures, calendar, personalStats, storyFlags))
+			teamStats, fixtures, calendar, personalStats, narrative))
 		{
 			return false;
 		}
@@ -585,13 +637,13 @@ namespace SaveGameService
 		std::vector<FixtureService::Fixture> const& fixtures,
 		CalendarState const& calendar,
 		PersonalStats const& personalStats,
-		std::unordered_set<std::wstring> const& storyFlags
+		NarrativeState const& narrative
 	)
 	{
 		// SaveToPath is already atomic (temp file + rename), so a crash
 		// mid-write leaves the previous "latest" intact.
 		return SaveToPath(GetAutosavePath(0), player, currentWeek, lastChoice,
-			teamStats, fixtures, calendar, personalStats, storyFlags);
+			teamStats, fixtures, calendar, personalStats, narrative);
 	}
 
 	bool LoadAutosave(
@@ -603,13 +655,13 @@ namespace SaveGameService
 		std::vector<FixtureService::Fixture>& fixtures,
 		CalendarState& calendar,
 		PersonalStats& personalStats,
-		std::unordered_set<std::wstring>& storyFlags
+		NarrativeState& narrative
 	)
 	{
 		if (index < 0 || index > MaxAutosaves) return false;
 
 		return LoadFromPath(GetAutosavePath(index), player, currentWeek, lastChoice,
-			teamStats, fixtures, calendar, personalStats, storyFlags);
+			teamStats, fixtures, calendar, personalStats, narrative);
 	}
 
 	bool GetAutosavePreview(int index, std::wstring& playerName, int& week)

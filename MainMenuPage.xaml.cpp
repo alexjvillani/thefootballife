@@ -191,7 +191,7 @@ namespace winrt::thefootballife::implementation
 						std::vector<FixtureService::Fixture> fixtures;
 						SaveGameService::CalendarState loadedCalendar;
 						SaveGameService::PersonalStats loadedPersonalStats;
-						std::unordered_set<std::wstring> loadedStoryFlags;
+						NarrativeState loadedNarrative;
 
 						bool loaded = entry.isAutosave
 							? SaveGameService::LoadAutosave(
@@ -203,7 +203,7 @@ namespace winrt::thefootballife::implementation
 								fixtures,
 								loadedCalendar,
 								loadedPersonalStats,
-								loadedStoryFlags)
+								loadedNarrative)
 							: SaveGameService::LoadFromSlot(
 								entry.index,
 								loadedPlayer,
@@ -213,7 +213,7 @@ namespace winrt::thefootballife::implementation
 								fixtures,
 								loadedCalendar,
 								loadedPersonalStats,
-								loadedStoryFlags);
+								loadedNarrative);
 
 						if (!loaded)
 						{
@@ -232,7 +232,7 @@ namespace winrt::thefootballife::implementation
 						GameState::TeamStats = loadedTeamStats;
 						GameState::Fixtures = fixtures;
 						GameState::CurrentPersonalStats = loadedPersonalStats;
-						GameState::StoryFlags = loadedStoryFlags;
+						GameState::Narrative = loadedNarrative;
 
 						GameState::CurrentDate = SimpleDate{
 							loadedCalendar.currentYear,

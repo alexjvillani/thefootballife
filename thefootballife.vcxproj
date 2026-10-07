@@ -161,6 +161,7 @@
     <ClInclude Include="MyCareerPage.xaml.h">
       <DependentUpon>MyCareerPage.xaml</DependentUpon>
     </ClInclude>
+    <ClInclude Include="NarrativeState.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="App.xaml.h">
       <DependentUpon>App.xaml</DependentUpon>

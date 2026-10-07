@@ -154,7 +154,7 @@ namespace winrt::thefootballife::implementation
 		BestAndFairestText().Text(hstring(std::to_wstring(stats.careerBestAndFairestWins)));
 		FinalOverallText().Text(hstring(std::to_wstring(ComputeFinalOverall(stats, tier))));
 
-		EpilogueText().Text(hstring(GenerateEpilogue(GameState::StoryFlags)));
+		EpilogueText().Text(hstring(GenerateEpilogue(GameState::Narrative.Flags)));
 	}
 
 	hstring RetirementPage::PageTitle() { return m_pageTitle; }

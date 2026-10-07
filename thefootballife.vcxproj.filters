@@ -52,6 +52,7 @@
     <ClInclude Include="XFactorService.h" />
     <ClInclude Include="SquadService.h" />
     <ClInclude Include="CrashLogger.h" />
+    <ClInclude Include="NarrativeState.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Wide310x150Logo.scale-200.png">

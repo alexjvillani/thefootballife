@@ -717,7 +717,7 @@ namespace winrt::thefootballife::implementation
 				m_fixtures,
 				calendar,
 				personalStats,
-				GameState::StoryFlags);
+				GameState::Narrative);
 		}
 		catch (...)
 		{
@@ -742,7 +742,7 @@ namespace winrt::thefootballife::implementation
 				m_fixtures,
 				calendar,
 				personalStats,
-				GameState::StoryFlags);
+				GameState::Narrative);
 		}
 		catch (...)
 		{
@@ -1527,14 +1527,14 @@ namespace winrt::thefootballife::implementation
 
 			// Only Monday-Friday roll for events - Saturday/Sunday already
 			// have their own fixed identity (matchday / free recovery).
-			auto const* triggeredEvent = DayEventService::RollForEvent(m_dayEvents, kDayEventChancePercent, GameState::StoryFlags);
+			auto const* triggeredEvent = DayEventService::RollForEvent(m_dayEvents, kDayEventChancePercent, GameState::Narrative);
 			if (triggeredEvent)
 			{
 				if (debugAutoResolve)
 				{
 					// Auto-pick the first choice rather than showing a
 					// dialog, so debug skip never has to stop for input.
-					ApplyEventChoice(triggeredEvent->Choices[0]);
+					ApplyEventChoice(triggeredEvent->EventId, 0, triggeredEvent->Choices[0]);
 				}
 				else
 				{
@@ -2003,8 +2003,9 @@ namespace winrt::thefootballife::implementation
 
 		auto weakThis = get_weak();
 		auto choicesCopy = event.Choices; // copy - event ties to m_dayEvents' lifetime, dialog is async
+		auto eventId = event.EventId;
 		dlg.ShowAsync().Completed(
-			[weakThis, choicesCopy](auto const& op, auto const&)
+			[weakThis, choicesCopy, eventId](auto const& op, auto const&)
 			{
 				if (auto self = weakThis.get())
 				{
@@ -2020,12 +2021,12 @@ namespace winrt::thefootballife::implementation
 
 					if (index < 0 || index >= static_cast<int>(choicesCopy.size())) return;
 
-					self->ApplyEventChoice(choicesCopy[index]);
+					self->ApplyEventChoice(eventId, index, choicesCopy[index]);
 				}
 			});
 	}
 
-	void CareerHubPage::ApplyEventChoice(DayEventService::EventChoice const& choice)
+	void CareerHubPage::ApplyEventChoice(std::wstring const& eventId, int choiceIndex, DayEventService::EventChoice const& choice)
 	{
 		auto applyDelta = [](int& stat, int delta) { stat = std::clamp(stat + delta, 0, 100); };
 
@@ -2042,13 +2043,11 @@ namespace winrt::thefootballife::implementation
 			else if (statName == L"Relationships") applyDelta(m_relationships, delta);
 		}
 
-		// Branching narrative: this choice may mark a story flag, gating
-		// which later events (a different stage of the same arc, or an
-		// alternate branch) are eligible to roll from here on.
-		if (!choice.SetFlag.empty())
-		{
-			GameState::StoryFlags.insert(choice.SetFlag);
-		}
+		// Branching narrative: apply this choice's flag changes and counter
+		// deltas, then log the decision. The log is what keeps one-shot
+		// events from rolling again and lets later events look back.
+		DayEventService::ApplyNarrativeEffects(choice, GameState::Narrative);
+		GameState::Narrative.Record(eventId, m_careerSeasonsPlayed, m_currentWeek, choiceIndex);
 
 		BottomHintText().Text(L"You chose: " + hstring(choice.Label));
 		UpdateStateUI();
@@ -2097,7 +2096,7 @@ namespace winrt::thefootballife::implementation
 						self->m_fixtures,
 						calendar,
 						personalStats,
-						GameState::StoryFlags
+						GameState::Narrative
 					);
 
 					ContentDialog result;

@@ -212,7 +212,7 @@ namespace
 				GameState::Fixtures,
 				calendar,
 				GameState::CurrentPersonalStats,
-				GameState::StoryFlags);
+				GameState::Narrative);
 
 			// Keep the "latest" recovery save in step with the newest milestone.
 			if (saved)
@@ -225,7 +225,7 @@ namespace
 					GameState::Fixtures,
 					calendar,
 					GameState::CurrentPersonalStats,
-					GameState::StoryFlags);
+					GameState::Narrative);
 			}
 		}
 		catch (...)

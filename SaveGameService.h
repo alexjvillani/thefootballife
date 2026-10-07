@@ -1,6 +1,7 @@
 #pragma once
 #include "PlayerData.h"
 #include "FixtureService.h"
+#include "NarrativeState.h"
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -92,7 +93,7 @@ namespace SaveGameService
 		std::vector<FixtureService::Fixture> const& fixtures = {},
 		CalendarState const& calendar = {},
 		PersonalStats const& personalStats = {},
-		std::unordered_set<std::wstring> const& storyFlags = {}
+		NarrativeState const& narrative = {}
 	);
 
 	bool LoadFromSlot(
@@ -104,7 +105,7 @@ namespace SaveGameService
 		std::vector<FixtureService::Fixture>& fixtures,
 		CalendarState& calendar,
 		PersonalStats& personalStats,
-		std::unordered_set<std::wstring>& storyFlags
+		NarrativeState& narrative
 	);
 
 	bool GetSavePreview(int slot, std::wstring& playerName, int& week);
@@ -122,7 +123,7 @@ namespace SaveGameService
 		std::vector<FixtureService::Fixture> const& fixtures,
 		CalendarState const& calendar,
 		PersonalStats const& personalStats,
-		std::unordered_set<std::wstring> const& storyFlags
+		NarrativeState const& narrative
 	);
 
 	bool LoadFromPath(
@@ -134,7 +135,7 @@ namespace SaveGameService
 		std::vector<FixtureService::Fixture>& fixtures,
 		CalendarState& calendar,
 		PersonalStats& personalStats,
-		std::unordered_set<std::wstring>& storyFlags
+		NarrativeState& narrative
 	);
 
 	bool GetSavePreviewFromPath(std::wstring const& path, std::wstring& playerName, int& week);
@@ -154,7 +155,7 @@ namespace SaveGameService
 		std::vector<FixtureService::Fixture> const& fixtures,
 		CalendarState const& calendar,
 		PersonalStats const& personalStats,
-		std::unordered_set<std::wstring> const& storyFlags
+		NarrativeState const& narrative
 	);
 
 	// Overwrites the "latest" recovery save (index 0) in place. Cheap and
@@ -167,7 +168,7 @@ namespace SaveGameService
 		std::vector<FixtureService::Fixture> const& fixtures,
 		CalendarState const& calendar,
 		PersonalStats const& personalStats,
-		std::unordered_set<std::wstring> const& storyFlags
+		NarrativeState const& narrative
 	);
 
 	// Same shape as LoadFromSlot, so the load screen can treat an autosave
@@ -181,7 +182,7 @@ namespace SaveGameService
 		std::vector<FixtureService::Fixture>& fixtures,
 		CalendarState& calendar,
 		PersonalStats& personalStats,
-		std::unordered_set<std::wstring>& storyFlags
+		NarrativeState& narrative
 	);
 
 	bool GetAutosavePreview(int index, std::wstring& playerName, int& week);

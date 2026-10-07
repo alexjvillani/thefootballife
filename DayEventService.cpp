@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "DayEventService.h"
 
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 #include <random>
@@ -158,6 +159,68 @@ namespace
 		}
 	}
 
+	// Splits "a;b;c" into trimmed, non-empty entries.
+	std::vector<std::wstring> ParseList(std::string const& raw)
+	{
+		std::vector<std::wstring> out;
+		std::istringstream ss(raw);
+		std::string item;
+		while (std::getline(ss, item, ';'))
+		{
+			item = TrimA(item);
+			if (!item.empty()) out.push_back(ToW(item));
+		}
+		return out;
+	}
+
+	// Parses "FamilyBond>=2;Ambition<3" into counter conditions. Supported
+	// operators: >=  <=  >  <  ==  =  !=  ("=" is treated as "=="). Malformed
+	// terms are skipped rather than failing the whole event.
+	void ParseConditions(std::string const& raw, std::vector<DayEventService::CounterCondition>& out)
+	{
+		std::istringstream ss(raw);
+		std::string part;
+		while (std::getline(ss, part, ';'))
+		{
+			part = TrimA(part);
+			if (part.empty()) continue;
+
+			auto p = part.find_first_of("<>=!");
+			if (p == std::string::npos || p == 0) continue;
+
+			std::string op(1, part[p]);
+			size_t valueStart = p + 1;
+			if (valueStart < part.size() && part[valueStart] == '=')
+			{
+				op += '=';
+				++valueStart;
+			}
+			if (op == "=") op = "==";
+			if (op == "!") continue; // a lone '!' isn't an operator
+
+			try
+			{
+				DayEventService::CounterCondition c;
+				c.Name = ToW(TrimA(part.substr(0, p)));
+				c.Op = ToW(op);
+				c.Value = std::stoi(TrimA(part.substr(valueStart)));
+				if (!c.Name.empty()) out.push_back(std::move(c));
+			}
+			catch (...) { /* skip malformed condition */ }
+		}
+	}
+
+	bool CompareCounter(int lhs, std::wstring const& op, int rhs)
+	{
+		if (op == L">=") return lhs >= rhs;
+		if (op == L"<=") return lhs <= rhs;
+		if (op == L">")  return lhs > rhs;
+		if (op == L"<")  return lhs < rhs;
+		if (op == L"==") return lhs == rhs;
+		if (op == L"!=") return lhs != rhs;
+		return false;
+	}
+
 	std::mt19937& Rng()
 	{
 		static std::mt19937 rng{ std::random_device{}() };
@@ -191,17 +254,22 @@ namespace DayEventService
 		int iId = HdrIdx(hmap, "eventid");
 		int iTitle = HdrIdx(hmap, "title");
 		int iDesc = HdrIdx(hmap, "description");
-		int iC1Label = HdrIdx(hmap, "choice1label");
-		int iC1Fx = HdrIdx(hmap, "choice1effects");
-		int iC2Label = HdrIdx(hmap, "choice2label");
-		int iC2Fx = HdrIdx(hmap, "choice2effects");
-		int iC3Label = HdrIdx(hmap, "choice3label");
-		int iC3Fx = HdrIdx(hmap, "choice3effects");
 		int iRequiresFlag = HdrIdx(hmap, "requiresflag");
 		int iExcludesFlag = HdrIdx(hmap, "excludesflag");
-		int iC1Flag = HdrIdx(hmap, "choice1setflag");
-		int iC2Flag = HdrIdx(hmap, "choice2setflag");
-		int iC3Flag = HdrIdx(hmap, "choice3setflag");
+		int iRequiresAny = HdrIdx(hmap, "requiresany");
+		int iRequiresCounters = HdrIdx(hmap, "requirescounters");
+		int iRepeatable = HdrIdx(hmap, "repeatable");
+		int iWeight = HdrIdx(hmap, "weight");
+
+		// Columns for each of the (up to) 3 choices. Header-name driven, so
+		// the new Clear/Counters columns are optional - an older events.csv
+		// without them still loads (those fields just come back empty).
+		struct ChoiceCols { int Label; int Effects; int SetFlag; int ClearFlag; int Counters; };
+		const ChoiceCols choiceCols[3] = {
+			{ HdrIdx(hmap, "choice1label"), HdrIdx(hmap, "choice1effects"), HdrIdx(hmap, "choice1setflag"), HdrIdx(hmap, "choice1clearflag"), HdrIdx(hmap, "choice1counters") },
+			{ HdrIdx(hmap, "choice2label"), HdrIdx(hmap, "choice2effects"), HdrIdx(hmap, "choice2setflag"), HdrIdx(hmap, "choice2clearflag"), HdrIdx(hmap, "choice2counters") },
+			{ HdrIdx(hmap, "choice3label"), HdrIdx(hmap, "choice3effects"), HdrIdx(hmap, "choice3setflag"), HdrIdx(hmap, "choice3clearflag"), HdrIdx(hmap, "choice3counters") },
+		};
 
 		auto field = [](std::vector<std::string> const& p, int idx) -> std::string
 			{
@@ -220,36 +288,38 @@ namespace DayEventService
 			ev.EventId = ToW(field(p, iId));
 			ev.Title = ToW(field(p, iTitle));
 			ev.Description = ToW(field(p, iDesc));
-			ev.RequiresFlag = ToW(field(p, iRequiresFlag));
-			ev.ExcludesFlag = ToW(field(p, iExcludesFlag));
 			if (ev.EventId.empty()) continue;
 
-			std::string c1Label = field(p, iC1Label);
-			std::string c2Label = field(p, iC2Label);
-			std::string c3Label = field(p, iC3Label);
+			// RequiresFlag / ExcludesFlag accept "a;b" lists. A single
+			// flag name works exactly as it did before lists existed.
+			ev.RequiresFlags = ParseList(field(p, iRequiresFlag));
+			ev.ExcludesFlags = ParseList(field(p, iExcludesFlag));
+			ev.RequiresAnyFlags = ParseList(field(p, iRequiresAny));
+			ParseConditions(field(p, iRequiresCounters), ev.RequiresCounters);
 
-			if (!c1Label.empty())
+			// Blank/absent = repeatable (the pre-existing behaviour).
+			std::string repeatable = NormHdr(field(p, iRepeatable));
+			ev.Repeatable = !(repeatable == "0" || repeatable == "false" || repeatable == "no");
+
+			// Blank, malformed or non-positive = 1 (a normal ambient event).
+			try
 			{
-				EventChoice c;
-				c.Label = ToW(c1Label);
-				ParseEffects(field(p, iC1Fx), c.StatDeltas);
-				c.SetFlag = ToW(field(p, iC1Flag));
-				ev.Choices.push_back(std::move(c));
+				std::string weight = field(p, iWeight);
+				ev.Weight = weight.empty() ? 1 : (std::max)(1, std::stoi(weight));
 			}
-			if (!c2Label.empty())
+			catch (...) { ev.Weight = 1; }
+
+			for (auto const& cols : choiceCols)
 			{
+				std::string label = field(p, cols.Label);
+				if (label.empty()) continue;
+
 				EventChoice c;
-				c.Label = ToW(c2Label);
-				ParseEffects(field(p, iC2Fx), c.StatDeltas);
-				c.SetFlag = ToW(field(p, iC2Flag));
-				ev.Choices.push_back(std::move(c));
-			}
-			if (!c3Label.empty())
-			{
-				EventChoice c;
-				c.Label = ToW(c3Label);
-				ParseEffects(field(p, iC3Fx), c.StatDeltas);
-				c.SetFlag = ToW(field(p, iC3Flag));
+				c.Label = ToW(label);
+				ParseEffects(field(p, cols.Effects), c.StatDeltas);
+				c.SetFlags = ParseList(field(p, cols.SetFlag));
+				c.ClearFlags = ParseList(field(p, cols.ClearFlag));
+				ParseEffects(field(p, cols.Counters), c.CounterDeltas);
 				ev.Choices.push_back(std::move(c));
 			}
 
@@ -261,19 +331,50 @@ namespace DayEventService
 		return events;
 	}
 
+	bool IsEligible(DayEvent const& ev, NarrativeState const& narrative)
+	{
+		// One-shot events never come back once the player has decided them.
+		if (!ev.Repeatable && narrative.HasSeen(ev.EventId)) return false;
+
+		for (auto const& flag : ev.RequiresFlags)
+		{
+			if (!narrative.HasFlag(flag)) return false;
+		}
+
+		if (!ev.RequiresAnyFlags.empty())
+		{
+			bool any = false;
+			for (auto const& flag : ev.RequiresAnyFlags)
+			{
+				if (narrative.HasFlag(flag)) { any = true; break; }
+			}
+			if (!any) return false;
+		}
+
+		for (auto const& flag : ev.ExcludesFlags)
+		{
+			if (narrative.HasFlag(flag)) return false;
+		}
+
+		for (auto const& cond : ev.RequiresCounters)
+		{
+			if (!CompareCounter(narrative.Counter(cond.Name), cond.Op, cond.Value)) return false;
+		}
+
+		return true;
+	}
+
 	DayEvent const* RollForEvent(
 		std::vector<DayEvent> const& events,
 		int percentChance,
-		std::unordered_set<std::wstring> const& activeFlags)
+		NarrativeState const& narrative)
 	{
 		if (events.empty()) return nullptr;
 
 		std::vector<DayEvent const*> eligible;
 		for (auto const& ev : events)
 		{
-			bool requirementMet = ev.RequiresFlag.empty() || activeFlags.count(ev.RequiresFlag) > 0;
-			bool notExcluded = ev.ExcludesFlag.empty() || activeFlags.count(ev.ExcludesFlag) == 0;
-			if (requirementMet && notExcluded)
+			if (IsEligible(ev, narrative))
 			{
 				eligible.push_back(&ev);
 			}
@@ -283,7 +384,30 @@ namespace DayEventService
 		std::uniform_int_distribution<int> chanceRoll(1, 100);
 		if (chanceRoll(Rng()) > percentChance) return nullptr;
 
-		std::uniform_int_distribution<size_t> pick(0, eligible.size() - 1);
-		return eligible[pick(Rng())];
+		// Weighted pick among the eligible events.
+		int totalWeight = 0;
+		for (auto const* ev : eligible) totalWeight += (std::max)(1, ev->Weight);
+
+		std::uniform_int_distribution<int> pick(1, totalWeight);
+		int target = pick(Rng());
+		for (auto const* ev : eligible)
+		{
+			target -= (std::max)(1, ev->Weight);
+			if (target <= 0) return ev;
+		}
+		return eligible.back(); // not reachable; keeps the compiler happy
+	}
+
+	void ApplyNarrativeEffects(EventChoice const& choice, NarrativeState& narrative)
+	{
+		// Clear before set, so a choice that lists the same flag in both
+		// ends up with it set.
+		for (auto const& flag : choice.ClearFlags) narrative.Flags.erase(flag);
+		for (auto const& flag : choice.SetFlags) narrative.Flags.insert(flag);
+
+		for (auto const& [name, delta] : choice.CounterDeltas)
+		{
+			narrative.Counters[name] = std::clamp(narrative.Counter(name) + delta, -100, 100);
+		}
 	}
 }

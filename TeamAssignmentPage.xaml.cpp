@@ -608,7 +608,7 @@ namespace winrt::thefootballife::implementation
 		GameState::TeamStats.clear(); // otherwise old clubs' W/L records from a
 		// previous career leak into this one, since
 		// TeamStats is only ever written into, never reset
-		GameState::StoryFlags.clear(); // a new career shouldn't inherit an old one's branching-narrative choices
+		GameState::Narrative.Clear(); // a new career shouldn't inherit an old one's flags, counters or event log
 		CareerDayService::InitializeSeason(2026);
 
 		// Personal stats start at their plain baseline (the PersonalStats

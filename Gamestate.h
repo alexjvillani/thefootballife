@@ -2,6 +2,7 @@
 #include "PlayerData.h"
 #include "FixtureService.h"
 #include "SaveGameService.h"
+#include "NarrativeState.h"
 #include <unordered_map>
 #include <unordered_set>
 #include <string>
@@ -49,14 +50,15 @@ struct GameState
 	static std::unordered_map<std::wstring, int> XFactorStatModifiers;
 	static SaveGameService::PersonalStats CurrentPersonalStats;
 
-	// Branching-narrative flags, set when the player makes a key choice in
-	// a multi-stage day-event arc (see DayEventService::EventChoice::SetFlag)
-	// and read to gate which later events are eligible to roll
-	// (DayEvent::RequiresFlag/ExcludesFlag). Career-scoped: cleared at true
+	// Everything the game remembers about the player's story: branching
+	// flags, running trait counters, and a log of every day-event decision
+	// (see NarrativeState.h). Flags/counters gate which later events are
+	// eligible to roll (DayEvent::RequiresFlags/RequiresCounters/...) and the
+	// log keeps one-shot events one-shot. Career-scoped: cleared at true
 	// new-career creation (TeamAssignmentPage), deliberately NOT cleared by
 	// season rollover or Draft Night promotion - a choice made in Local
 	// tier should still matter after being drafted to the AFL.
-	static std::unordered_set<std::wstring> StoryFlags;
+	static NarrativeState Narrative;
 
 	// Season calendar - source of truth for the day-by-day loop
 	static DayPhase CurrentDay;

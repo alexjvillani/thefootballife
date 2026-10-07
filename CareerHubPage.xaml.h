@@ -188,7 +188,7 @@ namespace winrt::thefootballife::implementation
 
 		winrt::Windows::UI::Color OverallColour(int overall, OverallRange const& range) const;
 		void ShowDayEventDialog(DayEventService::DayEvent const& event);
-		void ApplyEventChoice(DayEventService::EventChoice const& choice);
+		void ApplyEventChoice(std::wstring const& eventId, int choiceIndex, DayEventService::EventChoice const& choice);
 		void CheckForFinalsProgression();
 		void ShowFinalsAnnouncementDialog(winrt::hstring const& title, winrt::hstring const& message);
 
@@ -292,7 +292,7 @@ namespace winrt::thefootballife::implementation
 		int m_careerSeasonsPlayed{ 1 };
 		int m_careerBestAndFairestWins{ 0 };
 
-		static constexpr int kDayEventChancePercent{ 20 }; // per Mon-Fri day advance
+		static constexpr int kDayEventChancePercent{ 100 }; // per Mon-Fri day advance
 		std::vector<DayEventService::DayEvent> m_dayEvents;
 
 		// Last match's quarter-by-quarter breakdown, for the "down the
