@@ -10,14 +10,16 @@ namespace SaveGameService
 {
 	constexpr int MaxSaveSlots = 3;
 
-	// Rolling autosave history: index 1 is the newest, MaxAutosaves the oldest.
-	// Kept entirely separate from the manual slots above so an autosave can
-	// never overwrite a save the player made on purpose.
-	//
-	// Index 0 is a separate "latest" recovery save: overwritten in place (no
-	// history) every time something changes, so a crash or a killed process
-	// (e.g. Visual Studio's Stop Debugging) loses at most the last action.
-	constexpr int MaxAutosaves = 3;
+	// A single autosave: index 0, overwritten in place at every milestone
+	// (and after anything that changes the game), so a crash or a killed
+	// process (e.g. Visual Studio's Stop Debugging) loses at most the last
+	// action. Kept entirely separate from the manual slots above so an
+	// autosave can never overwrite a save the player made on purpose.
+	constexpr int MaxAutosaves = 0;
+
+	// Older builds also kept a rolling history (autosave 1..3). Those files
+	// are no longer listed; Autosave() deletes any left over from before.
+	constexpr int LegacyRollingAutosaves = 3;
 
 	struct TeamSeasonStats
 	{
