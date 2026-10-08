@@ -208,6 +208,7 @@ namespace winrt::thefootballife::implementation
 		RenderFixtures();
 		RenderSquad();
 		UpdateSeasonRolloverUI();
+		ShowPage(L"Week");
 
 #if defined(_DEBUG)
 		DebugToolsPanel().Visibility(Visibility::Visible);
@@ -452,6 +453,20 @@ namespace winrt::thefootballife::implementation
 			auto const& e = m_ladder[pos];
 			bool isPlayer = (e.clubName == playerClub);
 
+			if (isPlayer)
+			{
+				int const n = pos + 1;
+				int const m100 = n % 100;
+				int const m10 = n % 10;
+				std::wstring const suffix = (m100 >= 11 && m100 <= 13) ? L"th"
+					: (m10 == 1 ? L"st" : (m10 == 2 ? L"nd" : (m10 == 3 ? L"rd" : L"th")));
+				TeamNameText().Text(hstring(e.clubName));
+				TeamPositionText().Text(hstring(std::to_wstring(n) + suffix));
+				TeamRecordText().Text(hstring(std::to_wstring(e.wins) + L"-" + std::to_wstring(e.losses) + L"-" + std::to_wstring(e.draws)));
+				TeamPointsText().Text(to_hstring(e.ladderPoints()));
+				TeamPercentText().Text(hstring(FormatPct(e.percentage())));
+			}
+
 			Border row;
 			// Highlight the player's club
 			auto bgColour = isPlayer
@@ -607,6 +622,99 @@ namespace winrt::thefootballife::implementation
 		FixturesContentPanel().Visibility(Visibility::Collapsed);
 		SquadContentPanel().Visibility(Visibility::Visible);
 		RenderSquad();
+	}
+
+	// ── Pages ────────────────────────────────────────────────────────────────
+
+	void CareerHubPage::PageTabButton_Click(IInspectable const& sender, RoutedEventArgs const&)
+	{
+		auto button = sender.try_as<Button>();
+		if (!button) return;
+		ShowPage(std::wstring(unbox_value_or<hstring>(button.Tag(), L"Week")));
+	}
+
+	void CareerHubPage::ShowPage(std::wstring const& page)
+	{
+		WeekPagePanel().Visibility(page == L"Week" ? Visibility::Visible : Visibility::Collapsed);
+		TeamPagePanel().Visibility(page == L"Team" ? Visibility::Visible : Visibility::Collapsed);
+		CareerPagePanel().Visibility(page == L"Career" ? Visibility::Visible : Visibility::Collapsed);
+
+		auto const active = winrt::Windows::UI::ColorHelper::FromArgb(255, 45, 108, 223);
+		auto const idle = winrt::Windows::UI::ColorHelper::FromArgb(255, 44, 46, 52);
+		WeekTabButton().Background(SolidColorBrush(page == L"Week" ? active : idle));
+		TeamTabButton().Background(SolidColorBrush(page == L"Team" ? active : idle));
+		CareerTabButton().Background(SolidColorBrush(page == L"Career" ? active : idle));
+
+		if (page == L"Career")
+		{
+			UpdateCareerUI();
+		}
+	}
+
+	void CareerHubPage::RenderDayStrip()
+	{
+		auto grid = DayStripGrid();
+		grid.Children().Clear();
+		grid.ColumnDefinitions().Clear();
+
+		static wchar_t const* const names[7] = { L"Mon", L"Tue", L"Wed", L"Thu", L"Fri", L"Sat", L"Sun" };
+		static wchar_t const* const captions[7] = { L"3 blocks", L"3 blocks", L"3 blocks", L"3 blocks", L"Catch-up", L"Match day", L"Recovery" };
+		int const today = static_cast<int>(GameState::CurrentDay); // Monday = 0 ... Sunday = 6
+
+		auto colour = [](int r, int g, int b) { return winrt::Windows::UI::ColorHelper::FromArgb(255, static_cast<uint8_t>(r), static_cast<uint8_t>(g), static_cast<uint8_t>(b)); };
+
+		for (int i = 0; i < 7; ++i)
+		{
+			ColumnDefinition col;
+			col.Width(GridLength{ 1.0, Microsoft::UI::Xaml::GridUnitType::Star });
+			grid.ColumnDefinitions().Append(col);
+
+			bool const isToday = (i == today);
+
+			Border cell;
+			cell.Margin(Thickness{ i == 0 ? 0.0 : 10.0, 0, 0, 0 });
+			Microsoft::UI::Xaml::CornerRadius cr{};
+			cr.TopLeft = cr.TopRight = cr.BottomRight = cr.BottomLeft = 12;
+			cell.CornerRadius(cr);
+			cell.Padding(Thickness{ 14, 12, 14, 12 });
+			cell.Background(SolidColorBrush(isToday ? colour(45, 108, 223) : colour(27, 28, 31)));
+			cell.BorderBrush(SolidColorBrush(colour(42, 44, 49)));
+			cell.BorderThickness(Thickness{ isToday ? 0.0 : 1.0, isToday ? 0.0 : 1.0, isToday ? 0.0 : 1.0, isToday ? 0.0 : 1.0 });
+
+			StackPanel stack;
+			stack.Spacing(2);
+
+			TextBlock dayName;
+			dayName.Text(names[i]);
+			dayName.FontWeight(winrt::Windows::UI::Text::FontWeights::SemiBold());
+			dayName.Foreground(SolidColorBrush(winrt::Windows::UI::Colors::White()));
+			stack.Children().Append(dayName);
+
+			TextBlock caption;
+			caption.Text(isToday ? L"Today" : captions[i]);
+			caption.FontSize(12);
+			caption.Foreground(SolidColorBrush(isToday ? colour(255, 255, 255) : (i == 5 ? colour(242, 184, 75) : colour(154, 160, 170))));
+			stack.Children().Append(caption);
+
+			cell.Child(stack);
+			Grid::SetColumn(cell, i);
+			grid.Children().Append(cell);
+		}
+	}
+
+	void CareerHubPage::UpdateCareerUI()
+	{
+		CareerGamesText().Text(to_hstring(m_gamesPlayed));
+		CareerSeasonsText().Text(to_hstring(m_careerSeasonsPlayed));
+		CareerBestAndFairestText().Text(to_hstring(m_careerBestAndFairestWins));
+
+		CompetitionTier const tier = DetermineTier(GameState::CurrentPlayer.currentLeague);
+		auto const active = winrt::Windows::UI::ColorHelper::FromArgb(255, 45, 108, 223);
+		auto const idle = winrt::Windows::UI::ColorHelper::FromArgb(255, 44, 46, 52);
+		PathLocalChip().Background(SolidColorBrush(tier == CompetitionTier::Local ? active : idle));
+		PathTalentChip().Background(SolidColorBrush(tier == CompetitionTier::TalentLeague ? active : idle));
+		PathStateChip().Background(SolidColorBrush(tier == CompetitionTier::StateLeague ? active : idle));
+		PathAflChip().Background(SolidColorBrush(tier == CompetitionTier::Afl ? active : idle));
 	}
 
 	// ── Squad ────────────────────────────────────────────────────────────────
@@ -988,20 +1096,29 @@ namespace winrt::thefootballife::implementation
 
 	void CareerHubPage::UpdateStateUI()
 	{
-		PhysicalStateText().Text(
-			L"Fatigue: " + to_hstring(m_fatigue) +
-			L" | Injury Risk: " + to_hstring(m_injuryRisk) +
-			L" | Recovery Quality: " + to_hstring(m_recoveryQuality));
+		auto setBar = [](ProgressBar const& bar, TextBlock const& value, int v)
+			{
+				v = (std::clamp)(v, 0, 100);
+				bar.Value(v);
+				value.Text(to_hstring(v));
+			};
 
-		MentalStateText().Text(
-			L"Confidence: " + to_hstring(m_confidence) +
-			L" | Stress: " + to_hstring(m_stress) +
-			L" | Motivation: " + to_hstring(m_motivation));
+		setBar(FatigueBar(), FatigueValueText(), m_fatigue);
+		setBar(InjuryBar(), InjuryValueText(), m_injuryRisk);
+		setBar(RecoveryBar(), RecoveryValueText(), m_recoveryQuality);
+		setBar(ConfidenceBar(), ConfidenceValueText(), m_confidence);
+		setBar(StressBar(), StressValueText(), m_stress);
+		setBar(MotivationBar(), MotivationValueText(), m_motivation);
+		setBar(DisciplineBar(), DisciplineValueText(), m_discipline);
+		setBar(FinancesBar(), FinancesValueText(), m_finances);
+		setBar(RelationshipsBar(), RelationshipsValueText(), m_relationships);
 
-		LifeStateText().Text(
-			L"Discipline: " + to_hstring(m_discipline) +
-			L" | Finances: " + to_hstring(m_finances) +
-			L" | Relationships: " + to_hstring(m_relationships));
+		// "At a glance" copy shown on every page.
+		setBar(GlanceFatigueBar(), GlanceFatigueValueText(), m_fatigue);
+		setBar(GlanceConfidenceBar(), GlanceConfidenceValueText(), m_confidence);
+		setBar(GlanceStressBar(), GlanceStressValueText(), m_stress);
+
+		OverallText().Text(to_hstring(ComputePlayerOverall()));
 	}
 
 	void CareerHubPage::AdjustBlockByTag(hstring const& tag, int delta)
@@ -1323,31 +1440,34 @@ namespace winrt::thefootballife::implementation
 
 		PlayerNameText().Text(hstring(player.firstName + L" " + player.lastName));
 
-		std::wstring teamLine = player.position + L" | " + player.foot + L" Foot | #" + player.number;
-		if (!player.team.empty())
-			teamLine += L" | " + player.team;
+		std::wstring clubLine = player.team;
 		if (!player.currentLeague.empty())
-			teamLine += L" (" + player.currentLeague + L")";
-		PlayerInfoText().Text(hstring(teamLine));
+			clubLine += (clubLine.empty() ? std::wstring() : std::wstring(L" ")) + L"(" + player.currentLeague + L")";
+		ClubText().Text(hstring(clubLine));
 
-		HeightText().Text(L"Height: " + FormatHeightFeet(player.heightCm));
+		PositionChipText().Text(hstring(player.position));
+		FootChipText().Text(hstring(player.foot + L" Foot"));
+		NumberChipText().Text(hstring(L"#" + player.number));
+		HeightChipText().Text(FormatHeightFeet(player.heightCm));
 
 		MentalityText().Text(player.mentalityXFactor.empty()
-			? L"Mentality: None selected"
-			: L"Mentality: " + hstring(player.mentalityXFactor));
+			? L"None selected"
+			: hstring(player.mentalityXFactor));
 
 		PhysicalText().Text(player.physicalXFactor.empty()
-			? L"Physical: None selected"
-			: L"Physical: " + hstring(player.physicalXFactor));
+			? L"None selected"
+			: hstring(player.physicalXFactor));
 
 		WeaknessesText().Text(player.weaknesses.empty()
-			? L"Weaknesses: None selected"
-			: L"Weaknesses: " + hstring(player.weaknesses));
+			? L"None selected"
+			: hstring(player.weaknesses));
 	}
 
 	void CareerHubPage::UpdateWeekDisplay()
 	{
-		WeekText().Text(L"Week " + to_hstring(m_currentWeek) + L" - " + hstring(CareerDayService::GetTodayLabel()));
+		WeekText().Text(L"Week " + to_hstring(m_currentWeek));
+		DateText().Text(hstring(CareerDayService::GetTodayLabel()));
+		RenderDayStrip();
 		LastChoiceText().Text(m_lastChoice);
 		TodayFocusText().Text(hstring(CareerDayService::GetDayFlavorText(GameState::CurrentDay)));
 

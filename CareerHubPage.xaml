@@ -6,466 +6,587 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    Background="#111111">
+    Background="#111214">
 
-    <Grid Padding="28">
+    <Page.Resources>
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="#1B1C1F"/>
+            <Setter Property="BorderBrush" Value="#2A2C31"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Padding" Value="20"/>
+        </Style>
+        <Style x:Key="TileStyle" TargetType="Border">
+            <Setter Property="Background" Value="#232529"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="14,12"/>
+        </Style>
+        <Style x:Key="ChipStyle" TargetType="Border">
+            <Setter Property="Background" Value="#2C2E34"/>
+            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="Padding" Value="12,5"/>
+        </Style>
+        <Style x:Key="CardTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="17"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+        <Style x:Key="MutedStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="#9AA0AA"/>
+        </Style>
+    </Page.Resources>
+
+    <Grid Padding="28" RowSpacing="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,20">
-            <TextBlock Text="Career Hub"
-                       FontSize="34"
-                       FontWeight="Bold"
-                       Foreground="White"/>
-            <TextBlock Text="Manage your week and shape your future."
-                       Foreground="#BBBBBB"
-                       Margin="0,6,0,0"/>
+        <!-- ── Top bar: week + Mon-Sun strip ── -->
+        <StackPanel Grid.Row="0" Spacing="10">
+            <!-- Debug-only tools; collapsed unless a Debug build (see constructor). -->
+            <StackPanel x:Name="DebugToolsPanel" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Visibility="Collapsed">
+                <TextBlock Text="DEBUG" Foreground="#FF6B6B" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
+                <Button Content="Skip to Finals" Click="DebugSkipToFinalsButton_Click" FontSize="12" Padding="10,6"/>
+                <Button Content="Skip to Season End" Click="DebugSkipToSeasonEndButton_Click" FontSize="12" Padding="10,6"/>
+                <Button Content="Skip to Season End (Win B&amp;F)" Click="DebugSkipToSeasonEndWinBnFButton_Click" FontSize="12" Padding="10,6"/>
+            </StackPanel>
+            <Grid ColumnSpacing="20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="300"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock x:Name="WeekText" Text="Week 1" FontSize="28" FontWeight="Bold" Foreground="White"/>
+                    <TextBlock x:Name="DateText" Text="" Style="{StaticResource MutedStyle}"/>
+                    <TextBlock x:Name="SeasonText" Text="" Style="{StaticResource MutedStyle}" FontSize="12"/>
+                </StackPanel>
+                <!-- Cells are built in RenderDayStrip() -->
+                <Grid x:Name="DayStripGrid" Grid.Column="1"/>
+            </Grid>
         </StackPanel>
 
-        <!-- Debug-only tools for quickly skipping ahead during testing.
-             Collapsed by default; only shown in Debug builds (see the
-             constructor). Never intended to reach a build handed to
-             testers. -->
-        <StackPanel x:Name="DebugToolsPanel"
-                    Grid.Row="0"
-                    Orientation="Horizontal"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Top"
-                    Spacing="8"
-                    Visibility="Collapsed">
-            <TextBlock Text="DEBUG"
-                       Foreground="#FF6B6B"
-                       FontWeight="Bold"
-                       FontSize="12"
-                       VerticalAlignment="Center"/>
-            <Button Content="Skip to Finals"
-                    Click="DebugSkipToFinalsButton_Click"
-                    FontSize="12"
-                    Padding="10,6"/>
-            <Button Content="Skip to Season End"
-                    Click="DebugSkipToSeasonEndButton_Click"
-                    FontSize="12"
-                    Padding="10,6"/>
-            <Button Content="Skip to Season End (Win B&amp;F)"
-                    Click="DebugSkipToSeasonEndWinBnFButton_Click"
-                    FontSize="12"
-                    Padding="10,6"/>
-        </StackPanel>
-
-        <!-- Main columns -->
+        <!-- ── Body: player column | pages ── -->
         <Grid Grid.Row="1" ColumnSpacing="20">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1.0*"/>
-                <ColumnDefinition Width="1.2*"/>
-                <ColumnDefinition Width="1.1*"/>
-                <ColumnDefinition Width="1.1*"/>
+                <ColumnDefinition Width="320"/>
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- ── Column 0: Player Card ── -->
-            <Border Grid.Column="0"
-                    Background="#1C1C1C"
-                    CornerRadius="12"
-                    Padding="20">
-                <StackPanel Spacing="14">
-                    <TextBlock Text="Player Card"
-                               FontSize="22"
-                               FontWeight="SemiBold"
-                               Foreground="White"/>
-
-                    <Border Height="220"
-                            Background="#2A2A2A"
-                            CornerRadius="10">
-                        <Image x:Name="ProfileImage"
-                               Stretch="UniformToFill"/>
-                    </Border>
-
-                    <TextBlock x:Name="PlayerNameText"
-                               Text="Player Name"
-                               FontSize="24"
-                               FontWeight="Bold"
-                               Foreground="White"/>
-
-                    <TextBlock x:Name="PlayerInfoText"
-                               Text="Midfielder | Right Foot | #9"
-                               Foreground="#DDDDDD"
-                               FontSize="16"/>
-
-                    <TextBlock x:Name="HeightText"
-                               Text="Height: —"
-                               Foreground="#DDDDDD"
-                               FontSize="16"/>
-
-                    <TextBlock x:Name="MentalityText"
-                               Text="Mentality: —"
-                               Foreground="#DDDDDD"
-                               FontSize="16"/>
-
-                    <TextBlock x:Name="PhysicalText"
-                               Text="Physical: —"
-                               Foreground="#DDDDDD"
-                               FontSize="16"/>
-
-                    <TextBlock x:Name="WeaknessesText"
-                               Text="Weaknesses: —"
-                               Foreground="#DDDDDD"
-                               FontSize="16"
-                               TextWrapping="Wrap"/>
-                </StackPanel>
-            </Border>
-
-            <!-- ── Column 1: Current Week ── -->
-            <Border Grid.Column="1"
-                    Background="#1C1C1C"
-                    CornerRadius="12"
-                    Padding="20">
-                <StackPanel Spacing="16">
-                    <TextBlock Text="Current Week"
-                               FontSize="22"
-                               FontWeight="SemiBold"
-                               Foreground="White"/>
-
-                    <Border Background="#262626" CornerRadius="10" Padding="16">
-                        <StackPanel Spacing="8">
-                            <TextBlock x:Name="WeekText"
-                                       Text="Week 1"
-                                       FontSize="28"
-                                       FontWeight="Bold"
-                                       Foreground="White"/>
-                            <TextBlock x:Name="StatusText"
-                                       Text="Status: Local League Prospect"
-                                       FontSize="18"
-                                       Foreground="#DDDDDD"/>
-                            <TextBlock x:Name="SeasonText"
-                                       Text="Season Phase: School Season"
-                                       FontSize="16"
-                                       Foreground="#BBBBBB"/>
-                            <TextBlock x:Name="TodayFocusText"
-                                       Text=""
-                                       TextWrapping="Wrap"
-                                       FontSize="14"
-                                       FontStyle="Italic"
-                                       Foreground="#8FCB87"
-                                       Margin="0,4,0,0"/>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Background="#262626" CornerRadius="10" Padding="16">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="Weekly Outlook"
-                                       FontSize="18"
-                                       FontWeight="SemiBold"
-                                       Foreground="White"/>
-                            <TextBlock x:Name="WeeklyOutlookText"
-                                       Text="A fresh week ahead."
-                                       TextWrapping="Wrap"
-                                       Foreground="#DDDDDD"
-                                       FontSize="15"/>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Background="#262626" CornerRadius="10" Padding="16">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="Development Snapshot"
-                                       FontSize="18"
-                                       FontWeight="SemiBold"
-                                       Foreground="White"/>
-                            <TextBlock x:Name="DevelopmentText"
-                                       Text="Training form is steady."
-                                       TextWrapping="Wrap"
-                                       Foreground="#DDDDDD"
-                                       FontSize="15"/>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Background="#262626" CornerRadius="10" Padding="14">
+            <!-- Persistent player column -->
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="20">
+                    <Border Style="{StaticResource CardStyle}">
                         <StackPanel Spacing="6">
-                            <TextBlock Text="Last Choice" Foreground="#BBBBBB"/>
-                            <TextBlock x:Name="LastChoiceText"
-                                       Text="No action chosen yet."
-                                       Foreground="White"
-                                       TextWrapping="Wrap"/>
+                            <Border Width="132" Height="132" CornerRadius="66" Background="#2A2210" BorderBrush="#F2B84B" BorderThickness="6" HorizontalAlignment="Center" Margin="0,4,0,0">
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <TextBlock x:Name="OverallText" Text="--" FontSize="48" FontWeight="Bold" Foreground="#F2B84B" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="OVR" FontSize="11" CharacterSpacing="120" Foreground="#C9A35A" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                            <!-- Portrait is kept (the code still loads it) but hidden in this layout. -->
+                            <Border Visibility="Collapsed">
+                                <Image x:Name="ProfileImage" Stretch="UniformToFill"/>
+                            </Border>
+                            <TextBlock x:Name="PlayerNameText" Text="Player Name" FontSize="28" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                            <TextBlock x:Name="ClubText" Text="" Style="{StaticResource MutedStyle}" FontSize="14" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/>
+                            <StackPanel Spacing="8" HorizontalAlignment="Center" Margin="0,8,0,0">
+                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                    <Border Style="{StaticResource ChipStyle}">
+                                        <TextBlock x:Name="PositionChipText" Text="-" FontSize="13" FontWeight="SemiBold" Foreground="White"/>
+                                    </Border>
+                                    <Border Style="{StaticResource ChipStyle}">
+                                        <TextBlock x:Name="FootChipText" Text="-" FontSize="13" FontWeight="SemiBold" Foreground="White"/>
+                                    </Border>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                    <Border Style="{StaticResource ChipStyle}">
+                                        <TextBlock x:Name="NumberChipText" Text="-" FontSize="13" FontWeight="SemiBold" Foreground="White"/>
+                                    </Border>
+                                    <Border Style="{StaticResource ChipStyle}">
+                                        <TextBlock x:Name="HeightChipText" Text="-" FontSize="13" FontWeight="SemiBold" Foreground="White"/>
+                                    </Border>
+                                </StackPanel>
+                            </StackPanel>
+                            <TextBlock x:Name="StatusText" Text="" Style="{StaticResource MutedStyle}" HorizontalAlignment="Center" Margin="0,4,0,8"/>
+                            <StackPanel Spacing="10">
+                                <Border Style="{StaticResource TileStyle}">
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="MENTALITY" FontSize="11" CharacterSpacing="100" Foreground="#9AA0AA"/>
+                                        <TextBlock x:Name="MentalityText" Text="-" FontSize="17" FontWeight="Bold" Foreground="#7DB4FF" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource TileStyle}">
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="PHYSICAL" FontSize="11" CharacterSpacing="100" Foreground="#9AA0AA"/>
+                                        <TextBlock x:Name="PhysicalText" Text="-" FontSize="17" FontWeight="Bold" Foreground="#F2B84B" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource TileStyle}">
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="WEAKNESSES" FontSize="11" CharacterSpacing="100" Foreground="#9AA0AA"/>
+                                        <TextBlock x:Name="WeaknessesText" Text="-" FontSize="17" FontWeight="Bold" Foreground="White" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource CardStyle}" Padding="20,16">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="At a glance" Style="{StaticResource CardTitleStyle}"/>
+                            <StackPanel Spacing="4">
+                                <Grid>
+                                    <TextBlock Text="Fatigue" Style="{StaticResource MutedStyle}"/>
+                                    <TextBlock x:Name="GlanceFatigueValueText" Text="0" HorizontalAlignment="Right" Foreground="White" FontSize="13"/>
+                                </Grid>
+                                <ProgressBar x:Name="GlanceFatigueBar" Minimum="0" Maximum="100" Value="0" Height="6" MinHeight="6" Foreground="#E5894F" Background="#2C2E34"/>
+                            </StackPanel>
+                            <StackPanel Spacing="4">
+                                <Grid>
+                                    <TextBlock Text="Confidence" Style="{StaticResource MutedStyle}"/>
+                                    <TextBlock x:Name="GlanceConfidenceValueText" Text="0" HorizontalAlignment="Right" Foreground="White" FontSize="13"/>
+                                </Grid>
+                                <ProgressBar x:Name="GlanceConfidenceBar" Minimum="0" Maximum="100" Value="0" Height="6" MinHeight="6" Foreground="#4C8DFF" Background="#2C2E34"/>
+                            </StackPanel>
+                            <StackPanel Spacing="4">
+                                <Grid>
+                                    <TextBlock Text="Stress" Style="{StaticResource MutedStyle}"/>
+                                    <TextBlock x:Name="GlanceStressValueText" Text="0" HorizontalAlignment="Right" Foreground="White" FontSize="13"/>
+                                </Grid>
+                                <ProgressBar x:Name="GlanceStressBar" Minimum="0" Maximum="100" Value="0" Height="6" MinHeight="6" Foreground="#E5894F" Background="#2C2E34"/>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
                 </StackPanel>
-            </Border>
+            </ScrollViewer>
 
-            <!-- ── Column 2: Life Simulation ── -->
-            <Border Grid.Column="2"
-                    Background="#1C1C1C"
-                    CornerRadius="12"
-                    Padding="20">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Spacing="12">
-                        <TextBlock Text="Life Simulation"
-                                   FontSize="22"
-                                   FontWeight="SemiBold"
-                                   Foreground="White"/>
+            <!-- Page switcher + pages -->
+            <Grid Grid.Column="1" RowSpacing="20">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
-                        <TextBlock x:Name="BlockSummaryText"
-                                   Text="14/14 blocks allocated"
-                                   Foreground="#DDDDDD"/>
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
+                    <Button x:Name="WeekTabButton" Content="Week" Tag="Week" Click="PageTabButton_Click" MinWidth="110" MinHeight="40" FontWeight="SemiBold" Foreground="White"/>
+                    <Button x:Name="TeamTabButton" Content="Team" Tag="Team" Click="PageTabButton_Click" MinWidth="110" MinHeight="40" FontWeight="SemiBold" Foreground="White"/>
+                    <Button x:Name="CareerTabButton" Content="Career" Tag="Career" Click="PageTabButton_Click" MinWidth="110" MinHeight="40" FontWeight="SemiBold" Foreground="White"/>
+                </StackPanel>
 
-                        <TextBlock x:Name="TodayBlocksText"
-                                   Text="Today: 0/3 spent"
-                                   FontSize="13"
-                                   Foreground="#999999"/>
+                <Grid Grid.Row="1">
 
-                        <TextBlock x:Name="BlockWarningText"
-                                   Text=""
-                                   TextWrapping="Wrap"
-                                   Foreground="#F6B93B"/>
+                    <!-- ═══ Week page ═══ -->
+                    <ScrollViewer x:Name="WeekPagePanel" VerticalScrollBarVisibility="Auto" Visibility="Visible">
+                        <StackPanel Spacing="20">
+                            <Grid ColumnSpacing="20">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
 
-                        <!-- Block rows -->
-                        <Grid ColumnSpacing="8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Training" Foreground="White" VerticalAlignment="Center"/>
-                            <Button Grid.Column="1" Content="-" Tag="Training" Click="DecrementBlockButton_Click" MinWidth="36"/>
-                            <TextBlock Grid.Column="2" x:Name="TrainingBlocksText" Text="4" Foreground="#DDDDDD" VerticalAlignment="Center" Margin="10,0"/>
-                            <Button Grid.Column="3" Content="+" Tag="Training" Click="IncrementBlockButton_Click" MinWidth="36"/>
-                        </Grid>
+                                <Border Grid.Column="0" Style="{StaticResource CardStyle}">
+                                    <StackPanel Spacing="10">
+                                        <TextBlock Text="Allocate your week" Style="{StaticResource CardTitleStyle}"/>
+                                        <TextBlock x:Name="BlockSummaryText" Text="" Foreground="#DDDDDD" TextWrapping="Wrap"/>
+                                        <TextBlock x:Name="TodayBlocksText" Text="" FontSize="13" Foreground="#999999" TextWrapping="Wrap"/>
+                                        <TextBlock x:Name="BlockWarningText" Text="" TextWrapping="Wrap" Foreground="#F6B93B"/>
+                                        <Grid ColumnSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Training" Foreground="White" FontSize="15" VerticalAlignment="Center"/>
+                                            <Button Grid.Column="1" Content="-" Tag="Training" Click="DecrementBlockButton_Click" MinWidth="36"/>
+                                            <TextBlock Grid.Column="2" x:Name="TrainingBlocksText" Text="0" Foreground="#DDDDDD" VerticalAlignment="Center" Margin="10,0"/>
+                                            <Button Grid.Column="3" Content="+" Tag="Training" Click="IncrementBlockButton_Click" MinWidth="36"/>
+                                        </Grid>
+                                        <Grid ColumnSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="School" Foreground="White" FontSize="15" VerticalAlignment="Center"/>
+                                            <Button Grid.Column="1" Content="-" Tag="School" Click="DecrementBlockButton_Click" MinWidth="36"/>
+                                            <TextBlock Grid.Column="2" x:Name="SchoolBlocksText" Text="0" Foreground="#DDDDDD" VerticalAlignment="Center" Margin="10,0"/>
+                                            <Button Grid.Column="3" Content="+" Tag="School" Click="IncrementBlockButton_Click" MinWidth="36"/>
+                                        </Grid>
+                                        <Grid ColumnSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Work" Foreground="White" FontSize="15" VerticalAlignment="Center"/>
+                                            <Button Grid.Column="1" Content="-" Tag="Work" Click="DecrementBlockButton_Click" MinWidth="36"/>
+                                            <TextBlock Grid.Column="2" x:Name="WorkBlocksText" Text="0" Foreground="#DDDDDD" VerticalAlignment="Center" Margin="10,0"/>
+                                            <Button Grid.Column="3" Content="+" Tag="Work" Click="IncrementBlockButton_Click" MinWidth="36"/>
+                                        </Grid>
+                                        <Grid ColumnSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Social" Foreground="White" FontSize="15" VerticalAlignment="Center"/>
+                                            <Button Grid.Column="1" Content="-" Tag="Social" Click="DecrementBlockButton_Click" MinWidth="36"/>
+                                            <TextBlock Grid.Column="2" x:Name="SocialBlocksText" Text="0" Foreground="#DDDDDD" VerticalAlignment="Center" Margin="10,0"/>
+                                            <Button Grid.Column="3" Content="+" Tag="Social" Click="IncrementBlockButton_Click" MinWidth="36"/>
+                                        </Grid>
+                                        <Grid ColumnSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Recovery" Foreground="White" FontSize="15" VerticalAlignment="Center"/>
+                                            <Button Grid.Column="1" Content="-" Tag="Recovery" Click="DecrementBlockButton_Click" MinWidth="36"/>
+                                            <TextBlock Grid.Column="2" x:Name="RecoveryBlocksText" Text="0" Foreground="#DDDDDD" VerticalAlignment="Center" Margin="10,0"/>
+                                            <Button Grid.Column="3" Content="+" Tag="Recovery" Click="IncrementBlockButton_Click" MinWidth="36"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
 
-                        <Grid ColumnSpacing="8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="School" Foreground="White" VerticalAlignment="Center"/>
-                            <Button Grid.Column="1" Content="-" Tag="School" Click="DecrementBlockButton_Click" MinWidth="36"/>
-                            <TextBlock Grid.Column="2" x:Name="SchoolBlocksText" Text="5" Foreground="#DDDDDD" VerticalAlignment="Center" Margin="10,0"/>
-                            <Button Grid.Column="3" Content="+" Tag="School" Click="IncrementBlockButton_Click" MinWidth="36"/>
-                        </Grid>
+                                <Border Grid.Column="1" Style="{StaticResource CardStyle}">
+                                    <StackPanel Spacing="12">
+                                        <TextBlock Text="Condition" Style="{StaticResource CardTitleStyle}"/>
+                                        <TextBlock Text="Orange bars: lower is better" Style="{StaticResource MutedStyle}" FontSize="12"/>
+                                        <Grid ColumnSpacing="16" RowSpacing="16">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <StackPanel Grid.Column="0" Grid.Row="0" Spacing="4">
+                                                <Grid>
+                                                    <TextBlock Text="Fatigue" Style="{StaticResource MutedStyle}"/>
+                                                    <TextBlock x:Name="FatigueValueText" Text="0" HorizontalAlignment="Right" Foreground="White" FontSize="13"/>
+                                                </Grid>
+                                                <ProgressBar x:Name="FatigueBar" Minimum="0" Maximum="100" Value="0" Height="6" MinHeight="6" Foreground="#E5894F" Background="#2C2E34"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Grid.Row="0" Spacing="4">
+                                                <Grid>
+                                                    <TextBlock Text="Injury Risk" Style="{StaticResource MutedStyle}"/>
+                                                    <TextBlock x:Name="InjuryValueText" Text="0" HorizontalAlignment="Right" Foreground="White" FontSize="13"/>
+                                                </Grid>
+                                                <ProgressBar x:Name="InjuryBar" Minimum="0" Maximum="100" Value="0" Height="6" MinHeight="6" Foreground="#E5894F" Background="#2C2E34"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2" Grid.Row="0" Spacing="4">
+                                                <Grid>
+                                                    <TextBlock Text="Recovery" Style="{StaticResource MutedStyle}"/>
+                                                    <TextBlock x:Name="RecoveryValueText" Text="0" HorizontalAlignment="Right" Foreground="White" FontSize="13"/>
+                                                </Grid>
+                                                <ProgressBar x:Name="RecoveryBar" Minimum="0" Maximum="100" Value="0" Height="6" MinHeight="6" Foreground="#4C8DFF" Background="#2C2E34"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="0" Grid.Row="1" Spacing="4">
+                                                <Grid>
+                                                    <TextBlock Text="Confidence" Style="{StaticResource MutedStyle}"/>
+                                                    <TextBlock x:Name="ConfidenceValueText" Text="0" HorizontalAlignment="Right" Foreground="White" FontSize="13"/>
+                                                </Grid>
+                                                <ProgressBar x:Name="ConfidenceBar" Minimum="0" Maximum="100" Value="0" Height="6" MinHeight="6" Foreground="#4C8DFF" Background="#2C2E34"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Grid.Row="1" Spacing="4">
+                                                <Grid>
+                                                    <TextBlock Text="Stress" Style="{StaticResource MutedStyle}"/>
+                                                    <TextBlock x:Name="StressValueText" Text="0" HorizontalAlignment="Right" Foreground="White" FontSize="13"/>
+                                                </Grid>
+                                                <ProgressBar x:Name="StressBar" Minimum="0" Maximum="100" Value="0" Height="6" MinHeight="6" Foreground="#E5894F" Background="#2C2E34"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2" Grid.Row="1" Spacing="4">
+                                                <Grid>
+                                                    <TextBlock Text="Motivation" Style="{StaticResource MutedStyle}"/>
+                                                    <TextBlock x:Name="MotivationValueText" Text="0" HorizontalAlignment="Right" Foreground="White" FontSize="13"/>
+                                                </Grid>
+                                                <ProgressBar x:Name="MotivationBar" Minimum="0" Maximum="100" Value="0" Height="6" MinHeight="6" Foreground="#4C8DFF" Background="#2C2E34"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="0" Grid.Row="2" Spacing="4">
+                                                <Grid>
+                                                    <TextBlock Text="Discipline" Style="{StaticResource MutedStyle}"/>
+                                                    <TextBlock x:Name="DisciplineValueText" Text="0" HorizontalAlignment="Right" Foreground="White" FontSize="13"/>
+                                                </Grid>
+                                                <ProgressBar x:Name="DisciplineBar" Minimum="0" Maximum="100" Value="0" Height="6" MinHeight="6" Foreground="#4C8DFF" Background="#2C2E34"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Grid.Row="2" Spacing="4">
+                                                <Grid>
+                                                    <TextBlock Text="Finances" Style="{StaticResource MutedStyle}"/>
+                                                    <TextBlock x:Name="FinancesValueText" Text="0" HorizontalAlignment="Right" Foreground="White" FontSize="13"/>
+                                                </Grid>
+                                                <ProgressBar x:Name="FinancesBar" Minimum="0" Maximum="100" Value="0" Height="6" MinHeight="6" Foreground="#4C8DFF" Background="#2C2E34"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2" Grid.Row="2" Spacing="4">
+                                                <Grid>
+                                                    <TextBlock Text="Relationships" Style="{StaticResource MutedStyle}"/>
+                                                    <TextBlock x:Name="RelationshipsValueText" Text="0" HorizontalAlignment="Right" Foreground="White" FontSize="13"/>
+                                                </Grid>
+                                                <ProgressBar x:Name="RelationshipsBar" Minimum="0" Maximum="100" Value="0" Height="6" MinHeight="6" Foreground="#4C8DFF" Background="#2C2E34"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
 
-                        <Grid ColumnSpacing="8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Work" Foreground="White" VerticalAlignment="Center"/>
-                            <Button Grid.Column="1" Content="-" Tag="Work" Click="DecrementBlockButton_Click" MinWidth="36"/>
-                            <TextBlock Grid.Column="2" x:Name="WorkBlocksText" Text="2" Foreground="#DDDDDD" VerticalAlignment="Center" Margin="10,0"/>
-                            <Button Grid.Column="3" Content="+" Tag="Work" Click="IncrementBlockButton_Click" MinWidth="36"/>
-                        </Grid>
+                            <Grid ColumnSpacing="20">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="1.3*"/>
+                                </Grid.ColumnDefinitions>
 
-                        <Grid ColumnSpacing="8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Social" Foreground="White" VerticalAlignment="Center"/>
-                            <Button Grid.Column="1" Content="-" Tag="Social" Click="DecrementBlockButton_Click" MinWidth="36"/>
-                            <TextBlock Grid.Column="2" x:Name="SocialBlocksText" Text="2" Foreground="#DDDDDD" VerticalAlignment="Center" Margin="10,0"/>
-                            <Button Grid.Column="3" Content="+" Tag="Social" Click="IncrementBlockButton_Click" MinWidth="36"/>
-                        </Grid>
+                                <Border Grid.Column="0" Style="{StaticResource CardStyle}" VerticalAlignment="Top">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Text="Consequence preview" Style="{StaticResource CardTitleStyle}"/>
+                                        <TextBlock x:Name="ConsequenceText" Foreground="#DDDDDD" TextWrapping="Wrap"/>
+                                        <TextBlock x:Name="WeeklyOutlookText" Text="" Style="{StaticResource MutedStyle}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                                        <TextBlock x:Name="TodayFocusText" Text="" TextWrapping="Wrap" FontSize="13" FontStyle="Italic" Foreground="#8FCB87"/>
+                                        <TextBlock Text="Last choice" Style="{StaticResource MutedStyle}" FontSize="12" Margin="0,6,0,0"/>
+                                        <TextBlock x:Name="LastChoiceText" Text="No action chosen yet." Foreground="White" FontSize="13" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
 
-                        <Grid ColumnSpacing="8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Recovery" Foreground="White" VerticalAlignment="Center"/>
-                            <Button Grid.Column="1" Content="-" Tag="Recovery" Click="DecrementBlockButton_Click" MinWidth="36"/>
-                            <TextBlock Grid.Column="2" x:Name="RecoveryBlocksText" Text="1" Foreground="#DDDDDD" VerticalAlignment="Center" Margin="10,0"/>
-                            <Button Grid.Column="3" Content="+" Tag="Recovery" Click="IncrementBlockButton_Click" MinWidth="36"/>
-                        </Grid>
+                                <!-- Last match: stays collapsed until the first match is played (RenderLastMatchSummary) -->
+                                <Border x:Name="MatchSummaryPanel" Grid.Column="1" Style="{StaticResource CardStyle}" VerticalAlignment="Top" Visibility="Collapsed">
+                                    <StackPanel Spacing="12">
+                                        <TextBlock x:Name="MatchSummaryTitleText" Text="Last Match" Style="{StaticResource CardTitleStyle}" TextWrapping="Wrap"/>
+                                        <TextBlock x:Name="MatchSummaryScoreText" Text="" FontSize="20" FontWeight="Bold" Foreground="#D4A24C" TextWrapping="Wrap"/>
+                                        <Grid ColumnSpacing="10" RowSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <Border Grid.Column="0" Grid.Row="0" Background="#232529" CornerRadius="8" Padding="10">
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Text="Q1" FontSize="11" Foreground="#888888"/>
+                                                    <TextBlock x:Name="Quarter1Text" Text="" FontSize="13" Foreground="#DDDDDD" TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Grid.Column="1" Grid.Row="0" Background="#232529" CornerRadius="8" Padding="10">
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Text="Q2" FontSize="11" Foreground="#888888"/>
+                                                    <TextBlock x:Name="Quarter2Text" Text="" FontSize="13" Foreground="#DDDDDD" TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Grid.Column="0" Grid.Row="1" Background="#232529" CornerRadius="8" Padding="10">
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Text="Q3" FontSize="11" Foreground="#888888"/>
+                                                    <TextBlock x:Name="Quarter3Text" Text="" FontSize="13" Foreground="#DDDDDD" TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Grid.Column="1" Grid.Row="1" Background="#232529" CornerRadius="8" Padding="10">
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Text="Q4 (Final)" FontSize="11" Foreground="#888888"/>
+                                                    <TextBlock x:Name="Quarter4Text" Text="" FontSize="13" Foreground="#DDDDDD" TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </StackPanel>
+                    </ScrollViewer>
 
-                        <Border Background="#262626" CornerRadius="10" Padding="12" Margin="0,8,0,0">
-                            <StackPanel Spacing="6">
-                                <TextBlock Text="Physical State" Foreground="White" FontWeight="SemiBold"/>
-                                <TextBlock x:Name="PhysicalStateText" Foreground="#DDDDDD" TextWrapping="Wrap"/>
-                                <TextBlock Text="Mental State" Foreground="White" FontWeight="SemiBold" Margin="0,8,0,0"/>
-                                <TextBlock x:Name="MentalStateText" Foreground="#DDDDDD" TextWrapping="Wrap"/>
-                                <TextBlock Text="Life State" Foreground="White" FontWeight="SemiBold" Margin="0,8,0,0"/>
-                                <TextBlock x:Name="LifeStateText" Foreground="#DDDDDD" TextWrapping="Wrap"/>
+                    <!-- ═══ Team page ═══ -->
+                    <Grid x:Name="TeamPagePanel" ColumnSpacing="20" Visibility="Collapsed">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.5*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0" Style="{StaticResource CardStyle}">
+                            <StackPanel Spacing="10">
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0" Content="Ladder" Click="LadderViewButton_Click" HorizontalAlignment="Stretch"/>
+                                    <Button Grid.Column="1" Content="Fixtures" Click="FixturesViewButton_Click" HorizontalAlignment="Stretch"/>
+                                    <Button Grid.Column="2" Content="Squad" Click="SquadViewButton_Click" HorizontalAlignment="Stretch"/>
+                                </Grid>
+
+                                <StackPanel x:Name="LadderContentPanel" Spacing="10" Visibility="Visible">
+                                    <TextBlock x:Name="LadderTitleText" Text="League Ladder" Style="{StaticResource CardTitleStyle}"/>
+                                    <Grid Margin="0,4,0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="22"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="26"/>
+                                            <ColumnDefinition Width="26"/>
+                                            <ColumnDefinition Width="26"/>
+                                            <ColumnDefinition Width="26"/>
+                                            <ColumnDefinition Width="48"/>
+                                            <ColumnDefinition Width="32"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="#"    FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
+                                        <TextBlock Grid.Column="1" Text="Club" FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
+                                        <TextBlock Grid.Column="2" Text="P"    FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
+                                        <TextBlock Grid.Column="3" Text="W"    FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
+                                        <TextBlock Grid.Column="4" Text="L"    FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
+                                        <TextBlock Grid.Column="5" Text="D"    FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
+                                        <TextBlock Grid.Column="6" Text="%"    FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
+                                        <TextBlock Grid.Column="7" Text="Pts"  FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
+                                    </Grid>
+                                    <Rectangle Height="1" Fill="#333333"/>
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="480">
+                                        <StackPanel x:Name="LadderRowsPanel" Spacing="2"/>
+                                    </ScrollViewer>
+                                </StackPanel>
+
+                                <StackPanel x:Name="FixturesContentPanel" Spacing="10" Visibility="Collapsed">
+                                    <TextBlock Text="Fixtures" Style="{StaticResource CardTitleStyle}"/>
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="520">
+                                        <StackPanel x:Name="FixtureRowsPanel" Spacing="6"/>
+                                    </ScrollViewer>
+                                </StackPanel>
+
+                                <StackPanel x:Name="SquadContentPanel" Spacing="10" Visibility="Collapsed">
+                                    <TextBlock Text="Squad" Style="{StaticResource CardTitleStyle}"/>
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="520">
+                                        <StackPanel x:Name="SquadRowsPanel" Spacing="6"/>
+                                    </ScrollViewer>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
 
-                        <Border Background="#262626" CornerRadius="10" Padding="12">
-                            <StackPanel Spacing="6">
-                                <TextBlock Text="Consequence Preview" Foreground="White" FontWeight="SemiBold"/>
-                                <TextBlock x:Name="ConsequenceText" Foreground="#DDDDDD" TextWrapping="Wrap"/>
+                        <Border Grid.Column="1" Style="{StaticResource CardStyle}" VerticalAlignment="Top">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Team stats" Style="{StaticResource CardTitleStyle}"/>
+                                <TextBlock x:Name="TeamNameText" Text="" Style="{StaticResource MutedStyle}" TextWrapping="Wrap"/>
+                                <Grid ColumnSpacing="10" RowSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Border Grid.Column="0" Grid.Row="0" Style="{StaticResource TileStyle}">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock x:Name="TeamPositionText" Text="-" FontSize="24" FontWeight="Bold" Foreground="White"/>
+                                            <TextBlock Text="Ladder position" Style="{StaticResource MutedStyle}" FontSize="12"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Column="1" Grid.Row="0" Style="{StaticResource TileStyle}">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock x:Name="TeamRecordText" Text="-" FontSize="24" FontWeight="Bold" Foreground="White"/>
+                                            <TextBlock Text="Record (W-L-D)" Style="{StaticResource MutedStyle}" FontSize="12"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Column="0" Grid.Row="1" Style="{StaticResource TileStyle}">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock x:Name="TeamPointsText" Text="-" FontSize="24" FontWeight="Bold" Foreground="White"/>
+                                            <TextBlock Text="Ladder points" Style="{StaticResource MutedStyle}" FontSize="12"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Column="1" Grid.Row="1" Style="{StaticResource TileStyle}">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock x:Name="TeamPercentText" Text="-" FontSize="24" FontWeight="Bold" Foreground="White"/>
+                                            <TextBlock Text="Percentage" Style="{StaticResource MutedStyle}" FontSize="12"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
                             </StackPanel>
                         </Border>
-                    </StackPanel>
-                </ScrollViewer>
-            </Border>
+                    </Grid>
 
-            <!-- ── Column 3: League Ladder / Fixtures ── -->
-            <Border Grid.Column="3"
-                    Background="#1C1C1C"
-                    CornerRadius="12"
-                    Padding="20">
-                <StackPanel Spacing="10">
-
-                    <!-- View toggle -->
-                    <Grid ColumnSpacing="8">
+                    <!-- ═══ Career page ═══ -->
+                    <Grid x:Name="CareerPagePanel" ColumnSpacing="20" Visibility="Collapsed">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0"
-                                Content="Ladder"
-                                Click="LadderViewButton_Click"
-                                HorizontalAlignment="Stretch"/>
-                        <Button Grid.Column="1"
-                                Content="Fixtures"
-                                Click="FixturesViewButton_Click"
-                                HorizontalAlignment="Stretch"/>
-                        <Button Grid.Column="2"
-                                Content="Squad"
-                                Click="SquadViewButton_Click"
-                                HorizontalAlignment="Stretch"/>
+
+                        <StackPanel Grid.Column="0" Spacing="20">
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="Career story" Style="{StaticResource CardTitleStyle}"/>
+                                    <TextBlock Text="Your story choices will be tracked here as your career unfolds." Style="{StaticResource MutedStyle}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel Spacing="12">
+                                    <TextBlock Text="Career totals" Style="{StaticResource CardTitleStyle}"/>
+                                    <Grid ColumnSpacing="10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Style="{StaticResource TileStyle}">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock x:Name="CareerGamesText" Text="-" FontSize="24" FontWeight="Bold" Foreground="White"/>
+                                                <TextBlock Text="Games played" Style="{StaticResource MutedStyle}" FontSize="12"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource TileStyle}">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock x:Name="CareerSeasonsText" Text="-" FontSize="24" FontWeight="Bold" Foreground="White"/>
+                                                <TextBlock Text="Seasons" Style="{StaticResource MutedStyle}" FontSize="12"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Grid.Column="2" Style="{StaticResource TileStyle}">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock x:Name="CareerBestAndFairestText" Text="-" FontSize="24" FontWeight="Bold" Foreground="White"/>
+                                                <TextBlock Text="Best &amp; Fairest wins" Style="{StaticResource MutedStyle}" FontSize="12"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Spacing="20">
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="Career pathway" Style="{StaticResource CardTitleStyle}"/>
+                                    <TextBlock Text="Your current level is highlighted." Style="{StaticResource MutedStyle}" FontSize="12"/>
+                                    <Border x:Name="PathLocalChip" Background="#2C2E34" CornerRadius="10" Padding="14,10">
+                                        <TextBlock Text="Local" Foreground="White" FontSize="15" FontWeight="SemiBold"/>
+                                    </Border>
+                                    <Border x:Name="PathTalentChip" Background="#2C2E34" CornerRadius="10" Padding="14,10">
+                                        <TextBlock Text="Talent League" Foreground="White" FontSize="15" FontWeight="SemiBold"/>
+                                    </Border>
+                                    <Border x:Name="PathStateChip" Background="#2C2E34" CornerRadius="10" Padding="14,10">
+                                        <TextBlock Text="State League" Foreground="White" FontSize="15" FontWeight="SemiBold"/>
+                                    </Border>
+                                    <Border x:Name="PathAflChip" Background="#2C2E34" CornerRadius="10" Padding="14,10">
+                                        <TextBlock Text="AFL" Foreground="White" FontSize="15" FontWeight="SemiBold"/>
+                                    </Border>
+                                    <TextBlock x:Name="DevelopmentText" Text="" Style="{StaticResource MutedStyle}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="Journal" Style="{StaticResource CardTitleStyle}"/>
+                                    <TextBlock Text="Your decisions will appear here as the story unfolds." Style="{StaticResource MutedStyle}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
                     </Grid>
-
-                    <!-- Ladder view -->
-                    <StackPanel x:Name="LadderContentPanel" Spacing="10" Visibility="Visible">
-                        <TextBlock x:Name="LadderTitleText"
-                                   Text="League Ladder"
-                                   FontSize="22"
-                                   FontWeight="SemiBold"
-                                   Foreground="White"/>
-
-                        <!-- Column headers -->
-                        <Grid Margin="0,4,0,2">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="22"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="26"/>
-                                <ColumnDefinition Width="26"/>
-                                <ColumnDefinition Width="26"/>
-                                <ColumnDefinition Width="26"/>
-                                <ColumnDefinition Width="48"/>
-                                <ColumnDefinition Width="32"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="#"   FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
-                            <TextBlock Grid.Column="1" Text="Club" FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
-                            <TextBlock Grid.Column="2" Text="P"   FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
-                            <TextBlock Grid.Column="3" Text="W"   FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
-                            <TextBlock Grid.Column="4" Text="L"   FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
-                            <TextBlock Grid.Column="5" Text="D"   FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
-                            <TextBlock Grid.Column="6" Text="%"   FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
-                            <TextBlock Grid.Column="7" Text="Pts" FontSize="11" FontWeight="SemiBold" Foreground="#888888"/>
-                        </Grid>
-
-                        <Rectangle Height="1" Fill="#333333"/>
-
-                        <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                      HorizontalScrollBarVisibility="Disabled"
-                                      MaxHeight="480">
-                            <StackPanel x:Name="LadderRowsPanel" Spacing="2"/>
-                        </ScrollViewer>
-                    </StackPanel>
-
-                    <!-- Fixtures view -->
-                    <StackPanel x:Name="FixturesContentPanel" Spacing="10" Visibility="Collapsed">
-                        <TextBlock Text="Fixtures"
-                                   FontSize="22"
-                                   FontWeight="SemiBold"
-                                   Foreground="White"/>
-
-                        <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                      HorizontalScrollBarVisibility="Disabled"
-                                      MaxHeight="520">
-                            <StackPanel x:Name="FixtureRowsPanel" Spacing="6"/>
-                        </ScrollViewer>
-                    </StackPanel>
-
-                    <!-- Squad view -->
-                    <StackPanel x:Name="SquadContentPanel" Spacing="10" Visibility="Collapsed">
-                        <TextBlock Text="Squad"
-                                   FontSize="22"
-                                   FontWeight="SemiBold"
-                                   Foreground="White"/>
-
-                        <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                      HorizontalScrollBarVisibility="Disabled"
-                                      MaxHeight="520">
-                            <StackPanel x:Name="SquadRowsPanel" Spacing="6"/>
-                        </ScrollViewer>
-                    </StackPanel>
-
-                </StackPanel>
-            </Border>
+                </Grid>
+            </Grid>
         </Grid>
 
-        <!-- Last match summary -->
-        <Border x:Name="MatchSummaryPanel"
-                Grid.Row="2"
-                Background="#1C1C1C"
-                CornerRadius="12"
-                Padding="20"
-                Margin="0,16,0,0"
-                Visibility="Collapsed">
-            <StackPanel Spacing="12">
-                <TextBlock x:Name="MatchSummaryTitleText"
-                           Text="Last Match"
-                           FontSize="20"
-                           FontWeight="SemiBold"
-                           Foreground="White"/>
-
-                <TextBlock x:Name="MatchSummaryScoreText"
-                           Text=""
-                           FontSize="22"
-                           FontWeight="Bold"
-                           Foreground="#D4A24C"
-                           TextWrapping="Wrap"/>
-
-                <Grid ColumnSpacing="12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <Border Grid.Column="0" Background="#262626" CornerRadius="8" Padding="10">
-                        <StackPanel Spacing="2">
-                            <TextBlock Text="Q1" FontSize="11" Foreground="#888888"/>
-                            <TextBlock x:Name="Quarter1Text" Text="" FontSize="13" Foreground="#DDDDDD" TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </Border>
-                    <Border Grid.Column="1" Background="#262626" CornerRadius="8" Padding="10">
-                        <StackPanel Spacing="2">
-                            <TextBlock Text="Q2" FontSize="11" Foreground="#888888"/>
-                            <TextBlock x:Name="Quarter2Text" Text="" FontSize="13" Foreground="#DDDDDD" TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </Border>
-                    <Border Grid.Column="2" Background="#262626" CornerRadius="8" Padding="10">
-                        <StackPanel Spacing="2">
-                            <TextBlock Text="Q3" FontSize="11" Foreground="#888888"/>
-                            <TextBlock x:Name="Quarter3Text" Text="" FontSize="13" Foreground="#DDDDDD" TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </Border>
-                    <Border Grid.Column="3" Background="#262626" CornerRadius="8" Padding="10">
-                        <StackPanel Spacing="2">
-                            <TextBlock Text="Q4 (Final)" FontSize="11" Foreground="#888888"/>
-                            <TextBlock x:Name="Quarter4Text" Text="" FontSize="13" Foreground="#DDDDDD" TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </Border>
-                </Grid>
-            </StackPanel>
-        </Border>
-
-        <!-- Footer -->
-        <Grid Grid.Row="3" Margin="0,20,0,0">
+        <!-- ── Footer ── -->
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -476,76 +597,21 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <TextBlock x:Name="BottomHintText"
-                       Grid.Column="0"
-                       Text="Allocate all 14 blocks, then advance week."
-                       Foreground="#AAAAAA"
-                       VerticalAlignment="Center"/>
+            <TextBlock x:Name="BottomHintText" Grid.Column="0" Text="Allocate all 14 blocks, then advance week." Foreground="#AAAAAA" VerticalAlignment="Center"/>
 
-            <ToggleSwitch x:Name="AutoAdvanceToggle"
-                          Grid.Column="1"
-                          Header=""
-                          OnContent="Auto-Advance: On"
-                          OffContent="Auto-Advance: Off"
-                          IsOn="False"
-                          Foreground="White"
-                          VerticalAlignment="Center"
-                          Margin="0,0,10,0"/>
+            <ToggleSwitch x:Name="AutoAdvanceToggle" Grid.Column="1" Header="" OnContent="Auto-Advance: On" OffContent="Auto-Advance: Off" IsOn="False" Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0"/>
 
-            <Button Grid.Column="2"
-                    Content="Save Game"
-                    Click="SaveGameButton_Click"
-                    MinWidth="140"
-                    MinHeight="44"
-                    Margin="0,0,10,0"/>
+            <Button Grid.Column="2" Content="Save Game" Click="SaveGameButton_Click" MinWidth="140" MinHeight="44" Margin="0,0,10,0"/>
 
-            <Button x:Name="AdvanceWeekButton"
-                    Grid.Column="3"
-                    Content="Advance Week"
-                    Click="AdvanceWeekButton_Click"
-                    MinWidth="160"
-                    MinHeight="44"
-                    Margin="0,0,10,0"/>
+            <Button x:Name="AdvanceWeekButton" Grid.Column="3" Content="Advance Week" Click="AdvanceWeekButton_Click" MinWidth="160" MinHeight="44" Margin="0,0,10,0"/>
 
-            <Button x:Name="NextSeasonButton"
-                    Grid.Column="4"
-                    Content="Start Next Season"
-                    Click="NextSeasonButton_Click"
-                    Background="#2E7D32"
-                    Foreground="White"
-                    MinWidth="170"
-                    MinHeight="44"
-                    Margin="0,0,10,0"
-                    Visibility="Collapsed"/>
+            <Button x:Name="NextSeasonButton" Grid.Column="4" Content="Start Next Season" Click="NextSeasonButton_Click" Background="#2E7D32" Foreground="White" MinWidth="170" MinHeight="44" Margin="0,0,10,0" Visibility="Collapsed"/>
 
-            <Button x:Name="DraftNightButton"
-                    Grid.Column="4"
-                    Content="Draft Night"
-                    Click="DraftNightButton_Click"
-                    Background="#D4A24C"
-                    Foreground="#111111"
-                    FontWeight="Bold"
-                    MinWidth="170"
-                    MinHeight="44"
-                    Margin="0,0,10,0"
-                    Visibility="Collapsed"/>
+            <Button x:Name="DraftNightButton" Grid.Column="4" Content="Draft Night" Click="DraftNightButton_Click" Background="#D4A24C" Foreground="#111111" FontWeight="Bold" MinWidth="170" MinHeight="44" Margin="0,0,10,0" Visibility="Collapsed"/>
 
-            <Button x:Name="RetireButton"
-                    Grid.Column="5"
-                    Content="Retire"
-                    Click="RetireButton_Click"
-                    Background="#5C2E2E"
-                    Foreground="White"
-                    MinWidth="110"
-                    MinHeight="44"
-                    Margin="0,0,10,0"
-                    Visibility="Collapsed"/>
+            <Button x:Name="RetireButton" Grid.Column="5" Content="Retire" Click="RetireButton_Click" Background="#5C2E2E" Foreground="White" MinWidth="110" MinHeight="44" Margin="0,0,10,0" Visibility="Collapsed"/>
 
-            <Button Grid.Column="6"
-                    Content="Exit to Main Menu"
-                    Click="ExitToMainMenuButton_Click"
-                    MinWidth="170"
-                    MinHeight="44"/>
+            <Button Grid.Column="6" Content="Exit to Main Menu" Click="ExitToMainMenuButton_Click" MinWidth="170" MinHeight="44"/>
         </Grid>
     </Grid>
 </Page>
