@@ -41,6 +41,11 @@ namespace SaveGameService
 		int finances{ 35 };
 		int relationships{ 50 };
 
+		// Long-term achievement rather than a weekly condition: carries over
+		// seasons and promotions (it is NOT reset like the stats above) and
+		// gates things like job quality and exam results.
+		int academics{ 50 };
+
 		int trainingBlocks{ 4 };
 		int schoolBlocks{ 5 };
 		int workBlocks{ 2 };

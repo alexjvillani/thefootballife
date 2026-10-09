@@ -236,8 +236,12 @@ namespace winrt::thefootballife::implementation
 			int discipline{ 0 };
 			int finances{ 0 };
 			int relationships{ 0 };
+			int academics{ 0 };
 		};
 		ProjectedStats ComputeProjectedStats() const;
+
+		// Live personal stats by name, for gating events on how the player is doing.
+		DayEventService::StatMap CurrentStatMap() const;
 
 	private:
 		winrt::hstring m_pageTitle{ L"Career Hub" };
@@ -264,6 +268,7 @@ namespace winrt::thefootballife::implementation
 		int m_discipline{ 60 };
 		int m_finances{ 35 };
 		int m_relationships{ 50 };
+		int m_academics{ 50 }; // long-term: not reset by season rollover or promotion
 
 		std::unordered_map<std::wstring, SaveGameService::TeamSeasonStats> m_teamStats;
 		std::vector<LadderEntry> m_ladder;
@@ -292,7 +297,7 @@ namespace winrt::thefootballife::implementation
 		int m_careerSeasonsPlayed{ 1 };
 		int m_careerBestAndFairestWins{ 0 };
 
-		static constexpr int kDayEventChancePercent{ 100 }; // per Mon-Fri day advance
+		static constexpr int kDayEventChancePercent{ 20 }; // per Mon-Fri day advance
 		std::vector<DayEventService::DayEvent> m_dayEvents;
 
 		// Last match's quarter-by-quarter breakdown, for the "down the

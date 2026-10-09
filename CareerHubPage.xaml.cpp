@@ -184,6 +184,7 @@ namespace winrt::thefootballife::implementation
 		m_discipline = GameState::CurrentPersonalStats.discipline;
 		m_finances = GameState::CurrentPersonalStats.finances;
 		m_relationships = GameState::CurrentPersonalStats.relationships;
+		m_academics = GameState::CurrentPersonalStats.academics;
 		m_trainingBlocks = GameState::CurrentPersonalStats.trainingBlocks;
 		m_schoolBlocks = GameState::CurrentPersonalStats.schoolBlocks;
 		m_workBlocks = GameState::CurrentPersonalStats.workBlocks;
@@ -662,6 +663,15 @@ namespace winrt::thefootballife::implementation
 		return std::clamp(baseline + formModifier - fatigueStressPenalty + talentBonus, range.Min, range.Max);
 	}
 
+	DayEventService::StatMap CareerHubPage::CurrentStatMap() const
+	{
+		return DayEventService::StatMap{
+			{ L"Fatigue", m_fatigue }, { L"InjuryRisk", m_injuryRisk }, { L"RecoveryQuality", m_recoveryQuality },
+			{ L"Confidence", m_confidence }, { L"Stress", m_stress }, { L"Motivation", m_motivation },
+			{ L"Discipline", m_discipline }, { L"Finances", m_finances }, { L"Relationships", m_relationships },
+			{ L"Academics", m_academics } };
+	}
+
 	SaveGameService::PersonalStats CareerHubPage::BuildCurrentPersonalStats() const
 	{
 		SaveGameService::PersonalStats stats;
@@ -674,6 +684,7 @@ namespace winrt::thefootballife::implementation
 		stats.discipline = m_discipline;
 		stats.finances = m_finances;
 		stats.relationships = m_relationships;
+		stats.academics = m_academics;
 		stats.trainingBlocks = m_trainingBlocks;
 		stats.schoolBlocks = m_schoolBlocks;
 		stats.workBlocks = m_workBlocks;
@@ -912,8 +923,17 @@ namespace winrt::thefootballife::implementation
 		p.stress = std::clamp(m_stress + (m_schoolBlocks * 2) + (m_workBlocks * 3) - (m_recoveryBlocks * 4), 0, 100);
 		p.motivation = std::clamp(m_motivation + m_trainingBlocks + m_socialBlocks - (p.fatigue / 20), 0, 100);
 		p.discipline = std::clamp(m_discipline + (m_schoolBlocks * 2) + m_trainingBlocks - (m_socialBlocks * 2), 0, 100);
-		p.finances = std::clamp(m_finances + (m_workBlocks * 6) - m_recoveryBlocks, 0, 100);
+		// Pay per Work block is 6 by default; once the player has earned a job,
+		// that job's rate (jobs.csv) applies instead.
+		int workPay = 6;
+		if (auto const* job = DayEventService::FindJobByTitle(GameState::Narrative.Fact(L"job"))) workPay = job->PayPerBlock;
+		p.finances = std::clamp(m_finances + (m_workBlocks * workPay) - m_recoveryBlocks, 0, 100);
 		p.relationships = std::clamp(m_relationships + (m_socialBlocks * 4) - m_workBlocks, 0, 100);
+
+		// Academics moves slowly: a genuinely school-heavy week (6+ blocks)
+		// builds it, a middling week holds it, and neglecting school lets it slip.
+		int const academicsChange = (m_schoolBlocks >= 6) ? 1 : (m_schoolBlocks <= 2 ? -1 : 0);
+		p.academics = std::clamp(m_academics + academicsChange, 0, 100);
 
 		// Too much idle recovery breeds complacency - a single threshold
 		// motivation hit once Recovery dominates the week. Deliberately not
@@ -982,6 +1002,7 @@ namespace winrt::thefootballife::implementation
 		preview += delta(L"Discipline", m_discipline, p.discipline);
 		preview += delta(L"Finances", m_finances, p.finances);
 		preview += delta(L"Relationships", m_relationships, p.relationships);
+		preview += delta(L"Academics", m_academics, p.academics);
 
 		ConsequenceText().Text(hstring(preview));
 	}
@@ -1001,7 +1022,8 @@ namespace winrt::thefootballife::implementation
 		LifeStateText().Text(
 			L"Discipline: " + to_hstring(m_discipline) +
 			L" | Finances: " + to_hstring(m_finances) +
-			L" | Relationships: " + to_hstring(m_relationships));
+			L" | Relationships: " + to_hstring(m_relationships) +
+			L" | Academics: " + to_hstring(m_academics));
 	}
 
 	void CareerHubPage::AdjustBlockByTag(hstring const& tag, int delta)
@@ -1068,6 +1090,7 @@ namespace winrt::thefootballife::implementation
 		m_discipline = result.discipline;
 		m_finances = result.finances;
 		m_relationships = result.relationships;
+		m_academics = result.academics;
 
 		std::wstring consequence;
 		if (m_recoveryBlocks == 0)
@@ -1527,7 +1550,7 @@ namespace winrt::thefootballife::implementation
 
 			// Only Monday-Friday roll for events - Saturday/Sunday already
 			// have their own fixed identity (matchday / free recovery).
-			auto const* triggeredEvent = DayEventService::RollForEvent(m_dayEvents, kDayEventChancePercent, GameState::Narrative);
+			auto const* triggeredEvent = DayEventService::RollForEvent(m_dayEvents, kDayEventChancePercent, GameState::Narrative, m_careerSeasonsPlayed, CurrentStatMap());
 			if (triggeredEvent)
 			{
 				if (debugAutoResolve)
@@ -1990,16 +2013,18 @@ namespace winrt::thefootballife::implementation
 	void CareerHubPage::ShowDayEventDialog(DayEventService::DayEvent const& event)
 	{
 		ContentDialog dlg;
-		dlg.Title(box_value(hstring(event.Title)));
-		dlg.Content(box_value(hstring(event.Description)));
+		// {partner}, {sponsor} etc. are filled in from what the story remembers.
+		auto const& narrative = GameState::Narrative;
+		dlg.Title(box_value(hstring(narrative.Format(event.Title))));
+		dlg.Content(box_value(hstring(narrative.Format(event.Description))));
 		dlg.XamlRoot(this->XamlRoot());
 
 		// ContentDialog only supports 3 buttons total (Primary/Secondary/
 		// Close). Every event has exactly 2-3 real choices and no generic
 		// "cancel" - the Close button doubles as choice 3 when present.
-		if (event.Choices.size() >= 1) dlg.PrimaryButtonText(hstring(event.Choices[0].Label));
-		if (event.Choices.size() >= 2) dlg.SecondaryButtonText(hstring(event.Choices[1].Label));
-		if (event.Choices.size() >= 3) dlg.CloseButtonText(hstring(event.Choices[2].Label));
+		if (event.Choices.size() >= 1) dlg.PrimaryButtonText(hstring(narrative.Format(event.Choices[0].Label)));
+		if (event.Choices.size() >= 2) dlg.SecondaryButtonText(hstring(narrative.Format(event.Choices[1].Label)));
+		if (event.Choices.size() >= 3) dlg.CloseButtonText(hstring(narrative.Format(event.Choices[2].Label)));
 
 		auto weakThis = get_weak();
 		auto choicesCopy = event.Choices; // copy - event ties to m_dayEvents' lifetime, dialog is async
@@ -2041,12 +2066,13 @@ namespace winrt::thefootballife::implementation
 			else if (statName == L"Discipline") applyDelta(m_discipline, delta);
 			else if (statName == L"Finances") applyDelta(m_finances, delta);
 			else if (statName == L"Relationships") applyDelta(m_relationships, delta);
+			else if (statName == L"Academics") applyDelta(m_academics, delta);
 		}
 
 		// Branching narrative: apply this choice's flag changes and counter
 		// deltas, then log the decision. The log is what keeps one-shot
 		// events from rolling again and lets later events look back.
-		DayEventService::ApplyNarrativeEffects(choice, GameState::Narrative);
+		DayEventService::ApplyNarrativeEffects(choice, GameState::Narrative, CurrentStatMap());
 		GameState::Narrative.Record(eventId, m_careerSeasonsPlayed, m_currentWeek, choiceIndex);
 
 		BottomHintText().Text(L"You chose: " + hstring(choice.Label));
@@ -2177,6 +2203,7 @@ namespace winrt::thefootballife::implementation
 		m_discipline = 60;
 		m_finances = 35;
 		m_relationships = 50;
+		// m_academics is deliberately NOT reset: it's a long-term achievement.
 
 		// Best & Fairest votes reset per season - gamesPlayed is
 		// deliberately left untouched, it's a career total.

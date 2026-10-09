@@ -409,10 +409,12 @@ namespace winrt::thefootballife::implementation
 		int previousGamesPlayed = GameState::CurrentPersonalStats.gamesPlayed;
 		int previousCareerSeasonsPlayed = GameState::CurrentPersonalStats.careerSeasonsPlayed;
 		int previousCareerBestAndFairestWins = GameState::CurrentPersonalStats.careerBestAndFairestWins;
+		int previousAcademics = GameState::CurrentPersonalStats.academics;
 		GameState::CurrentPersonalStats = SaveGameService::PersonalStats{};
 		GameState::CurrentPersonalStats.gamesPlayed = previousGamesPlayed;
 		GameState::CurrentPersonalStats.careerSeasonsPlayed = previousCareerSeasonsPlayed + 1; // this promotion starts a new season
 		GameState::CurrentPersonalStats.careerBestAndFairestWins = previousCareerBestAndFairestWins;
+		GameState::CurrentPersonalStats.academics = previousAcademics; // long-term: survives promotion
 	}
 
 	void DraftNightPage::ContinueButton_Click(IInspectable const&, RoutedEventArgs const&)

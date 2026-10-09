@@ -293,10 +293,37 @@
     <None Include="Assets\Data\aflteams.csv">
       <DeploymentContent>true</DeploymentContent>
     </None>
-    <None Include="Assets\Data\Events.csv">
+    <None Include="Assets\Data\epilogue.csv">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\Data\events_arcs.csv">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\Data\events_core.csv">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\Data\events_relationships.csv">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\Data\events_school.csv">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\Data\events_sponsor_media.csv">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\Data\events_training.csv">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\Data\events_work.csv">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\Data\jobs.csv">
       <DeploymentContent>true</DeploymentContent>
     </None>
     <None Include="Assets\Data\localteams.csv">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\Data\names.csv">
       <DeploymentContent>true</DeploymentContent>
     </None>
     <None Include="Assets\Data\season_structure.csv">

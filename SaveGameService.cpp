@@ -165,6 +165,7 @@ namespace SaveGameService
 		file << L"Discipline=" << personalStats.discipline << L"\n";
 		file << L"PersonalFinances=" << personalStats.finances << L"\n";
 		file << L"Relationships=" << personalStats.relationships << L"\n";
+		file << L"Academics=" << personalStats.academics << L"\n";
 		file << L"TrainingBlocks=" << personalStats.trainingBlocks << L"\n";
 		file << L"SchoolBlocks=" << personalStats.schoolBlocks << L"\n";
 		file << L"WorkBlocks=" << personalStats.workBlocks << L"\n";
@@ -194,13 +195,18 @@ namespace SaveGameService
 		// other bracketed sections: everything after a section header is read
 		// as part of that section. Omitted entirely when both are empty.
 		//   Counter.<name>=<value>
+//   Fact.<name>=<text>
 		//   Log.<eventId>=<season>,<week>,<choiceIndex>   (one line per decision, in order)
-		if (!narrative.Counters.empty() || !narrative.Log.empty())
+		if (!narrative.Counters.empty() || !narrative.Facts.empty() || !narrative.Log.empty())
 		{
 			file << L"[Narrative]\n";
 			for (auto const& [name, value] : narrative.Counters)
 			{
 				file << L"Counter." << name << L"=" << value << L"\n";
+			}
+			for (auto const& [key, value] : narrative.Facts)
+			{
+				file << L"Fact." << key << L"=" << value << L"\n";
 			}
 			for (auto const& entry : narrative.Log)
 			{
@@ -328,6 +334,10 @@ namespace SaveGameService
 				{
 					int v = 0;
 					if (TryParseInt(val, v)) narrative.Counters[key.substr(8)] = v; // 8 = len("Counter.")
+				}
+				else if (key.rfind(L"Fact.", 0) == 0)
+				{
+					if (key.size() > 5 && !val.empty()) narrative.Facts[key.substr(5)] = val; // 5 = len("Fact.")
 				}
 				else if (key.rfind(L"Log.", 0) == 0)
 				{
@@ -481,6 +491,7 @@ namespace SaveGameService
 		if (!TryParseInt(values[L"Discipline"], personalStats.discipline))           personalStats.discipline = 60;
 		if (!TryParseInt(values[L"PersonalFinances"], personalStats.finances))       personalStats.finances = 35;
 		if (!TryParseInt(values[L"Relationships"], personalStats.relationships))     personalStats.relationships = 50;
+		if (!TryParseInt(values[L"Academics"], personalStats.academics))             personalStats.academics = 50;
 		if (!TryParseInt(values[L"TrainingBlocks"], personalStats.trainingBlocks))   personalStats.trainingBlocks = 4;
 		if (!TryParseInt(values[L"SchoolBlocks"], personalStats.schoolBlocks))       personalStats.schoolBlocks = 5;
 		if (!TryParseInt(values[L"WorkBlocks"], personalStats.workBlocks))           personalStats.workBlocks = 2;

@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "RetirementPage.xaml.h"
 #include "GameState.h"
+#include "DayEventService.h"
 #if __has_include("RetirementPage.g.cpp")
 #include "RetirementPage.g.cpp"
 #include <winrt/Windows.UI.Xaml.Interop.h>
@@ -73,6 +74,16 @@ namespace
 		case Tier::Local:
 		default:                 return bfWins > 0 ? L"Local Legend" : L"Local Footballer";
 		}
+	}
+
+	// Live stat names -> values for the epilogue's stat conditions.
+	DayEventService::StatMap EpilogueStats(SaveGameService::PersonalStats const& s)
+	{
+		return DayEventService::StatMap{
+			{ L"Fatigue", s.fatigue }, { L"InjuryRisk", s.injuryRisk }, { L"RecoveryQuality", s.recoveryQuality },
+			{ L"Confidence", s.confidence }, { L"Stress", s.stress }, { L"Motivation", s.motivation },
+			{ L"Discipline", s.discipline }, { L"Finances", s.finances }, { L"Relationships", s.relationships },
+			{ L"Academics", s.academics } };
 	}
 
 	// The payoff of the branching-narrative system: reads whichever story
@@ -154,7 +165,11 @@ namespace winrt::thefootballife::implementation
 		BestAndFairestText().Text(hstring(std::to_wstring(stats.careerBestAndFairestWins)));
 		FinalOverallText().Text(hstring(std::to_wstring(ComputeFinalOverall(stats, tier))));
 
-		EpilogueText().Text(hstring(GenerateEpilogue(GameState::Narrative.Flags)));
+		// Built from epilogue.csv; the hard-coded version below is only the
+		// fallback for when that file is missing.
+		std::wstring epilogue = DayEventService::BuildEpilogue(GameState::Narrative, EpilogueStats(stats));
+		if (epilogue.empty()) epilogue = GenerateEpilogue(GameState::Narrative.Flags);
+		EpilogueText().Text(hstring(epilogue));
 	}
 
 	hstring RetirementPage::PageTitle() { return m_pageTitle; }

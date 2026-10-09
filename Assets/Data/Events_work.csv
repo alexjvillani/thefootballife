@@ -1,0 +1,5 @@
+EventIdTitleDescriptionChoice1LabelChoice1EffectsChoice2LabelChoice2EffectsRequiresFlagExcludesFlagChoice1SetFlagChoice1ClearFlagChoice2ClearFlagRepeatableWeightRequiresFactExcludesFactChoice1SetFactRequiresStats
+job_opportunityA Job OpeningA local business has a part-time opening, and they're taking applications.Apply for itStress:+2Not right nowDiscipline:+1job_newseason4jobjob=@jobs:bestAcademics>=35
+job_startYour New JobYou're starting as a {job} at {employer}. The first week is a lot to take in.Throw yourself into itStress:+2;Finances:+3Take it one shift at a timeStress:-1job_newjob_newjob_new020job
+job_shift_clashShift Clash at {employer}{employer} needs you for an extra shift on a training night.Take the shiftFinances:+6;Fatigue:+3;Discipline:-1Say no and trainDiscipline:+2;Finances:-1season4job
+job_promotionMore Responsibility at {employer}Your boss has noticed how reliable you are and offers you more hours and a bit more pay.Accept the extra responsibilityFinances:+5;Fatigue:+2;Stress:+2Keep things as they areRecoveryQuality:+2;Motivation:+1promotedpromoted05jobDiscipline>=70
