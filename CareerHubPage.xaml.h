@@ -72,6 +72,11 @@ namespace winrt::thefootballife::implementation
 			winrt::Windows::Foundation::IInspectable const& sender,
 			winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
 
+		// Week / Team / Career page switcher (Tag = page name).
+		void PageTabButton_Click(
+			winrt::Windows::Foundation::IInspectable const& sender,
+			winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
+
 		void NextSeasonButton_Click(
 			winrt::Windows::Foundation::IInspectable const& sender,
 			winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
@@ -122,6 +127,9 @@ namespace winrt::thefootballife::implementation
 		};
 
 		void LoadPlayerData();
+		void ShowPage(std::wstring const& page);   // L"Week", L"Team" or L"Career"
+		void RenderDayStrip();                     // Mon-Sun strip across the top
+		void UpdateCareerUI();                     // Career page totals + pathway highlight
 		void UpdateWeekDisplay();
 		void UpdateBlockUI();
 		void UpdateStateUI();

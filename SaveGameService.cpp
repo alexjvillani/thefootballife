@@ -614,6 +614,7 @@ namespace SaveGameService
 		NarrativeState const& narrative
 	)
 	{
+<<<<<<< HEAD
 		// Write the new save to a pending file first. Nothing in the
 		// existing autosave history is touched unless this succeeds.
 		std::wstring const pending = GetSaveFolder() + L"\\career_autosave_pending.txt";
@@ -622,22 +623,28 @@ namespace SaveGameService
 		{
 			return false;
 		}
+=======
+		// Single autosave: write straight over index 0. SaveToPath is
+		// already atomic (temp file + rename), so a crash mid-write leaves
+		// the previous autosave intact.
+		bool const saved = AutosaveLatest(
+			player, currentWeek, lastChoice, teamStats, fixtures, calendar, personalStats, storyFlags);
+>>>>>>> features/new-ui
 
-		// Roll history down: drop the oldest, then 2 -> 3, 1 -> 2.
-		std::error_code ec;
-		fs::remove(GetAutosavePath(MaxAutosaves), ec);
-		for (int i = MaxAutosaves - 1; i >= 1; --i)
+		if (saved)
 		{
-			ec.clear();
-			if (fs::exists(GetAutosavePath(i), ec))
+			// One-off tidy-up of the rolling history older builds left behind.
+			std::error_code ec;
+			for (int i = 1; i <= LegacyRollingAutosaves; ++i)
 			{
-				fs::rename(GetAutosavePath(i), GetAutosavePath(i + 1), ec);
+				ec.clear();
+				fs::remove(GetAutosavePath(i), ec);
 			}
+			ec.clear();
+			fs::remove(GetSaveFolder() + L"\\career_autosave_pending.txt", ec);
 		}
 
-		ec.clear();
-		fs::rename(pending, GetAutosavePath(1), ec);
-		return !ec;
+		return saved;
 	}
 
 	bool AutosaveLatest(
