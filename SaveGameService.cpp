@@ -614,22 +614,11 @@ namespace SaveGameService
 		NarrativeState const& narrative
 	)
 	{
-<<<<<<< HEAD
-		// Write the new save to a pending file first. Nothing in the
-		// existing autosave history is touched unless this succeeds.
-		std::wstring const pending = GetSaveFolder() + L"\\career_autosave_pending.txt";
-		if (!SaveToPath(pending, player, currentWeek, lastChoice,
-			teamStats, fixtures, calendar, personalStats, narrative))
-		{
-			return false;
-		}
-=======
 		// Single autosave: write straight over index 0. SaveToPath is
 		// already atomic (temp file + rename), so a crash mid-write leaves
 		// the previous autosave intact.
 		bool const saved = AutosaveLatest(
-			player, currentWeek, lastChoice, teamStats, fixtures, calendar, personalStats, storyFlags);
->>>>>>> features/new-ui
+			player, currentWeek, lastChoice, teamStats, fixtures, calendar, personalStats, narrative);
 
 		if (saved)
 		{

@@ -1134,20 +1134,12 @@ namespace winrt::thefootballife::implementation
 		setBar(FinancesBar(), FinancesValueText(), m_finances);
 		setBar(RelationshipsBar(), RelationshipsValueText(), m_relationships);
 
-<<<<<<< HEAD
-		LifeStateText().Text(
-			L"Discipline: " + to_hstring(m_discipline) +
-			L" | Finances: " + to_hstring(m_finances) +
-			L" | Relationships: " + to_hstring(m_relationships) +
-			L" | Academics: " + to_hstring(m_academics));
-=======
 		// "At a glance" copy shown on every page.
 		setBar(GlanceFatigueBar(), GlanceFatigueValueText(), m_fatigue);
 		setBar(GlanceConfidenceBar(), GlanceConfidenceValueText(), m_confidence);
 		setBar(GlanceStressBar(), GlanceStressValueText(), m_stress);
 
 		OverallText().Text(to_hstring(ComputePlayerOverall()));
->>>>>>> features/new-ui
 	}
 
 	void CareerHubPage::AdjustBlockByTag(hstring const& tag, int delta)
