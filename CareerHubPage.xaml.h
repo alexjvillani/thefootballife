@@ -72,7 +72,7 @@ namespace winrt::thefootballife::implementation
 			winrt::Windows::Foundation::IInspectable const& sender,
 			winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
 
-		// Week / Team / Career page switcher (Tag = page name).
+		// Week / Team / Personal / Career page switcher (Tag = page name).
 		void PageTabButton_Click(
 			winrt::Windows::Foundation::IInspectable const& sender,
 			winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
@@ -127,7 +127,10 @@ namespace winrt::thefootballife::implementation
 		};
 
 		void LoadPlayerData();
-		void ShowPage(std::wstring const& page);   // L"Week", L"Team" or L"Career"
+		void ShowPage(std::wstring const& page);   // L"Week", L"Team", L"Personal" or L"Career"
+		void SetTeamSubTab(int index);             // 0 = Ladder, 1 = Fixtures, 2 = Squad (highlights the active button)
+		void UpdateNextMatchUI();                  // "Next match" cards on the Week and Team pages
+		void UpdatePersonalUI();                   // Personal page cards
 		void RenderDayStrip();                     // Mon-Sun strip across the top
 		void UpdateCareerUI();                     // Career page totals + pathway highlight
 		void UpdateWeekDisplay();
@@ -247,6 +250,44 @@ namespace winrt::thefootballife::implementation
 		};
 		ProjectedStats ComputeProjectedStats() const;
 
+
+		// green = beneficial (Fatigue / Injury Risk / Stress are "lower is
+		// better", everything else is "higher is better").
+		void RenderConsequencePills(ProjectedStats const& projected);
+
+		// Everything the Personal page shows, as plain display values
+		struct PersonalSnapshot
+		{
+			bool hasPartner{ false };
+			std::wstring partnerName;
+			std::wstring partnerDetail;       // e.g. "Together since Season 1 - Week 6"
+			int relationshipStrength{ 0 };    // 0-100
+
+			bool hasJob{ false };
+			std::wstring jobTitle;
+			std::wstring jobDetail;           // e.g. "Part-time - Seaview Cafe"
+			std::wstring jobNote;             // optional, e.g. how the job was earned
+
+			bool hasSponsor{ false };
+			std::wstring sponsorName;
+			std::wstring sponsorDetail;       // e.g. "Boots deal - signed Season 1"
+			int sponsorTrust{ 0 };            // 0-100
+
+			bool hasCar{ false };
+			std::wstring carName;
+
+			bool hasExamResult{ false };
+			std::wstring examVerdict;         // e.g. "Strong results"
+			std::wstring examBadge;           // e.g. "Last exams: strong"
+			std::wstring examDetail;          // e.g. "Season 1 - studied hard"
+			int academics{ 0 };               // 0-100
+
+			std::wstring mediaSummary;        // empty = nothing to show yet
+			std::wstring trainingSummary;
+			std::wstring familyBondSummary;
+		};
+		PersonalSnapshot BuildPersonalSnapshot() const;
+
 	private:
 		winrt::hstring m_pageTitle{ L"Career Hub" };
 
@@ -310,6 +351,7 @@ namespace winrt::thefootballife::implementation
 		std::vector<QuarterScore> m_lastMatchQuarters;
 		std::wstring m_lastMatchHomeClub;
 		std::wstring m_lastMatchAwayClub;
+		std::wstring m_lastMatchRoundLabel; // "Round 3" or the finals label; shown in the Last match card header
 	};
 }
 

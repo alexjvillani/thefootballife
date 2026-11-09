@@ -29,6 +29,8 @@
 #include <winrt/Windows.UI.Xaml.Interop.h>
 #include <winrt/Windows.UI.h>
 #include <winrt/Windows.UI.Text.h>
+#include <winrt/Microsoft.UI.Xaml.Documents.h>
+#include <cstdlib>
 
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
@@ -162,6 +164,63 @@ namespace
 		ss << std::fixed << std::setprecision(1) << pct;
 		return ss.str();
 	}
+
+	// ── UI helpers (UI E) ────────────────────────────────────────────────
+
+	static winrt::Windows::UI::Color Rgb(int r, int g, int b)
+	{
+		return winrt::Windows::UI::ColorHelper::FromArgb(255, static_cast<uint8_t>(r), static_cast<uint8_t>(g), static_cast<uint8_t>(b));
+	}
+
+	// Rounded "pill" label used by the consequence preview, "You are here"
+	// marker and the Personal page badges.
+	static Border MakePill(std::wstring const& text, winrt::Windows::UI::Color bg, winrt::Windows::UI::Color fg, double fontSize = 12.0)
+	{
+		Border pill;
+		pill.Background(SolidColorBrush(bg));
+		Microsoft::UI::Xaml::CornerRadius cr{};
+		cr.TopLeft = cr.TopRight = cr.BottomRight = cr.BottomLeft = 12;
+		pill.CornerRadius(cr);
+		pill.Padding(Thickness{ 12, 5, 12, 5 });
+
+		TextBlock label;
+		label.Text(hstring(text));
+		label.FontSize(fontSize);
+		label.FontWeight(winrt::Windows::UI::Text::FontWeights::SemiBold());
+		label.Foreground(SolidColorBrush(fg));
+		pill.Child(label);
+		return pill;
+	}
+
+	static bool IsLeapYear(int y) { return (y % 4 == 0 && y % 100 != 0) || (y % 400 == 0); }
+
+	static int DaysInMonth(int y, int m)
+	{
+		static int const days[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+		m = (std::clamp)(m, 1, 12);
+		return (m == 2 && IsLeapYear(y)) ? 29 : days[m - 1];
+	}
+
+	static SimpleDate AddDaysToDate(SimpleDate date, int days)
+	{
+		while (days-- > 0)
+		{
+			if (++date.Day > DaysInMonth(date.Year, date.Month))
+			{
+				date.Day = 1;
+				if (++date.Month > 12) { date.Month = 1; ++date.Year; }
+			}
+		}
+		return date;
+	}
+
+	static wchar_t const* MonthName(int m)
+	{
+		static wchar_t const* const names[12] = {
+			L"January", L"February", L"March", L"April", L"May", L"June",
+			L"July", L"August", L"September", L"October", L"November", L"December" };
+		return names[(std::clamp)(m, 1, 12) - 1];
+	}
 }
 
 namespace winrt::thefootballife::implementation
@@ -208,6 +267,7 @@ namespace winrt::thefootballife::implementation
 		RenderFixtures();
 		RenderSquad();
 		UpdateSeasonRolloverUI();
+		SetTeamSubTab(0);
 		ShowPage(L"Week");
 
 #if defined(_DEBUG)
@@ -530,6 +590,7 @@ namespace winrt::thefootballife::implementation
 
 	void CareerHubPage::RenderFixtures()
 	{
+		UpdateNextMatchUI();
 		FixtureRowsPanel().Children().Clear();
 
 		const std::wstring playerClub = GameState::CurrentPlayer.team;
@@ -604,6 +665,7 @@ namespace winrt::thefootballife::implementation
 
 	void CareerHubPage::LadderViewButton_Click(IInspectable const&, RoutedEventArgs const&)
 	{
+		SetTeamSubTab(0);
 		LadderContentPanel().Visibility(Visibility::Visible);
 		FixturesContentPanel().Visibility(Visibility::Collapsed);
 		SquadContentPanel().Visibility(Visibility::Collapsed);
@@ -611,6 +673,7 @@ namespace winrt::thefootballife::implementation
 
 	void CareerHubPage::FixturesViewButton_Click(IInspectable const&, RoutedEventArgs const&)
 	{
+		SetTeamSubTab(1);
 		LadderContentPanel().Visibility(Visibility::Collapsed);
 		FixturesContentPanel().Visibility(Visibility::Visible);
 		SquadContentPanel().Visibility(Visibility::Collapsed);
@@ -618,6 +681,7 @@ namespace winrt::thefootballife::implementation
 
 	void CareerHubPage::SquadViewButton_Click(IInspectable const&, RoutedEventArgs const&)
 	{
+		SetTeamSubTab(2);
 		LadderContentPanel().Visibility(Visibility::Collapsed);
 		FixturesContentPanel().Visibility(Visibility::Collapsed);
 		SquadContentPanel().Visibility(Visibility::Visible);
@@ -637,18 +701,34 @@ namespace winrt::thefootballife::implementation
 	{
 		WeekPagePanel().Visibility(page == L"Week" ? Visibility::Visible : Visibility::Collapsed);
 		TeamPagePanel().Visibility(page == L"Team" ? Visibility::Visible : Visibility::Collapsed);
+		PersonalPagePanel().Visibility(page == L"Personal" ? Visibility::Visible : Visibility::Collapsed);
 		CareerPagePanel().Visibility(page == L"Career" ? Visibility::Visible : Visibility::Collapsed);
 
-		auto const active = winrt::Windows::UI::ColorHelper::FromArgb(255, 45, 108, 223);
-		auto const idle = winrt::Windows::UI::ColorHelper::FromArgb(255, 44, 46, 52);
+		auto const active = Rgb(45, 108, 223);
+		auto const idle = Rgb(44, 46, 52);
 		WeekTabButton().Background(SolidColorBrush(page == L"Week" ? active : idle));
 		TeamTabButton().Background(SolidColorBrush(page == L"Team" ? active : idle));
+		PersonalTabButton().Background(SolidColorBrush(page == L"Personal" ? active : idle));
 		CareerTabButton().Background(SolidColorBrush(page == L"Career" ? active : idle));
 
-		if (page == L"Career")
+		if (page == L"Personal")
+		{
+			UpdatePersonalUI();
+		}
+		else if (page == L"Career")
 		{
 			UpdateCareerUI();
 		}
+	}
+
+	// Highlights the active Ladder / Fixtures / Squad button on the Team page.
+	void CareerHubPage::SetTeamSubTab(int index)
+	{
+		auto const active = Rgb(45, 108, 223);
+		auto const idle = Rgb(44, 46, 52);
+		LadderSubTabButton().Background(SolidColorBrush(index == 0 ? active : idle));
+		FixturesSubTabButton().Background(SolidColorBrush(index == 1 ? active : idle));
+		SquadSubTabButton().Background(SolidColorBrush(index == 2 ? active : idle));
 	}
 
 	void CareerHubPage::RenderDayStrip()
@@ -704,17 +784,325 @@ namespace winrt::thefootballife::implementation
 
 	void CareerHubPage::UpdateCareerUI()
 	{
-		CareerGamesText().Text(to_hstring(m_gamesPlayed));
-		CareerSeasonsText().Text(to_hstring(m_careerSeasonsPlayed));
-		CareerBestAndFairestText().Text(to_hstring(m_careerBestAndFairestWins));
+		auto dashIfZero = [](int v) -> hstring { return v > 0 ? to_hstring(v) : hstring{ L"\u2013" }; };
+		CareerGamesText().Text(dashIfZero(m_gamesPlayed));
+		CareerSeasonsText().Text(dashIfZero(m_careerSeasonsPlayed));
+		CareerBestAndFairestText().Text(dashIfZero(m_careerBestAndFairestWins));
 
+		// Career pathway: a dot + label per tier, with the current tier
+		// highlighted and tagged "You are here".
 		CompetitionTier const tier = DetermineTier(GameState::CurrentPlayer.currentLeague);
-		auto const active = winrt::Windows::UI::ColorHelper::FromArgb(255, 45, 108, 223);
-		auto const idle = winrt::Windows::UI::ColorHelper::FromArgb(255, 44, 46, 52);
-		PathLocalChip().Background(SolidColorBrush(tier == CompetitionTier::Local ? active : idle));
-		PathTalentChip().Background(SolidColorBrush(tier == CompetitionTier::TalentLeague ? active : idle));
-		PathStateChip().Background(SolidColorBrush(tier == CompetitionTier::StateLeague ? active : idle));
-		PathAflChip().Background(SolidColorBrush(tier == CompetitionTier::Afl ? active : idle));
+
+		struct Step { wchar_t const* label; CompetitionTier tier; };
+		Step const steps[4] = {
+			{ L"Local",         CompetitionTier::Local },
+			{ L"Talent League", CompetitionTier::TalentLeague },
+			{ L"State League",  CompetitionTier::StateLeague },
+			{ L"AFL",           CompetitionTier::Afl } };
+
+		auto panel = PathwayRowsPanel();
+		panel.Children().Clear();
+
+		for (auto const& step : steps)
+		{
+			bool const isHere = (step.tier == tier);
+
+			StackPanel row;
+			row.Orientation(Microsoft::UI::Xaml::Controls::Orientation::Horizontal);
+			row.Spacing(12);
+
+			Border dot;
+			dot.Width(14);
+			dot.Height(14);
+			Microsoft::UI::Xaml::CornerRadius cr{};
+			cr.TopLeft = cr.TopRight = cr.BottomRight = cr.BottomLeft = 7;
+			dot.CornerRadius(cr);
+			dot.Background(SolidColorBrush(isHere ? Rgb(45, 108, 223) : Rgb(44, 46, 52)));
+			dot.VerticalAlignment(VerticalAlignment::Center);
+			row.Children().Append(dot);
+
+			TextBlock label;
+			label.Text(step.label);
+			label.FontSize(15);
+			label.VerticalAlignment(VerticalAlignment::Center);
+			label.FontWeight(isHere ? winrt::Windows::UI::Text::FontWeights::SemiBold() : winrt::Windows::UI::Text::FontWeights::Normal());
+			label.Foreground(SolidColorBrush(isHere ? Rgb(255, 255, 255) : Rgb(154, 160, 170)));
+			row.Children().Append(label);
+
+			if (isHere)
+			{
+				row.Children().Append(MakePill(L"You are here", Rgb(27, 42, 74), Rgb(156, 194, 255)));
+			}
+
+			panel.Children().Append(row);
+		}
+	}
+
+	// ── Next match cards (Week + Team pages) ─────────────────────────────────
+
+	void CareerHubPage::UpdateNextMatchUI()
+	{
+		std::wstring const playerClub = GameState::CurrentPlayer.team;
+
+		// Earliest unplayed fixture involving the player's club (regular
+		// season or finals).
+		FixtureService::Fixture const* next = nullptr;
+		for (auto const& f : m_fixtures)
+		{
+			if (f.Played) continue;
+			if (f.HomeClub != playerClub && f.AwayClub != playerClub) continue;
+			if (next == nullptr || f.Round < next->Round) next = &f;
+		}
+
+		hstring dateText;
+		hstring opponentText;
+		hstring detailText;
+		bool hasMatch = false;
+
+		if (next != nullptr)
+		{
+			hasMatch = true;
+			bool const isHome = (next->HomeClub == playerClub);
+			std::wstring const& opponent = isHome ? next->AwayClub : next->HomeClub;
+
+			// Matches are played on Saturday (DayPhase index 5). A fixture
+			// in a later round is that many weeks further out.
+			int const todayIndex = static_cast<int>(GameState::CurrentDay); // Monday = 0 ... Sunday = 6
+			int const weeksAhead = (std::max)(0, next->Round - m_currentWeek);
+			int const daysAway = (std::max)(0, weeksAhead * 7 + (5 - todayIndex));
+
+			SimpleDate const matchDate = AddDaysToDate(GameState::CurrentDate, daysAway);
+			dateText = hstring(L"Saturday " + std::to_wstring(matchDate.Day) + L" " + MonthName(matchDate.Month));
+			opponentText = hstring(L"vs " + opponent);
+
+			std::wstring detail;
+			if (next->FinalsLabel.empty())
+				detail = L"Round " + std::to_wstring(next->Round);
+			else
+				detail = next->FinalsLabel;
+
+			detail += isHome ? L" \u00B7 Home" : L" \u00B7 Away";
+
+			if (daysAway == 0)
+				detail += L" \u00B7 Today";
+			else if (daysAway == 1)
+				detail += L" \u00B7 1 day away";
+			else
+				detail += L" \u00B7 " + std::to_wstring(daysAway) + L" days away";
+
+			detailText = hstring(detail);
+		}
+		else
+		{
+			opponentText = L"No match scheduled";
+		}
+
+		auto const pillVisibility = hasMatch ? Visibility::Visible : Visibility::Collapsed;
+
+		WeekNextMatchDateText().Text(dateText);
+		WeekNextMatchOpponentText().Text(opponentText);
+		WeekNextMatchDetailText().Text(detailText);
+		WeekNextMatchPill().Visibility(pillVisibility);
+
+		TeamNextMatchDateText().Text(dateText);
+		TeamNextMatchOpponentText().Text(opponentText);
+		TeamNextMatchDetailText().Text(detailText);
+		TeamNextMatchPill().Visibility(pillVisibility);
+	}
+
+	// ── Consequence preview pills (Week page) ────────────────────────────────
+
+	void CareerHubPage::RenderConsequencePills(ProjectedStats const& p)
+	{
+		struct Row { wchar_t const* label; int oldValue; int newValue; bool lowerIsBetter; };
+		Row const rows[9] = {
+			{ L"Fatigue",       m_fatigue,         p.fatigue,         true  },
+			{ L"Injury Risk",   m_injuryRisk,      p.injuryRisk,      true  },
+			{ L"Recovery",      m_recoveryQuality, p.recoveryQuality, false },
+			{ L"Confidence",    m_confidence,      p.confidence,      false },
+			{ L"Stress",        m_stress,          p.stress,          true  },
+			{ L"Motivation",    m_motivation,      p.motivation,      false },
+			{ L"Discipline",    m_discipline,      p.discipline,      false },
+			{ L"Finances",      m_finances,        p.finances,        false },
+			{ L"Relationships", m_relationships,   p.relationships,   false } };
+
+		auto blocks = ConsequencePillsText().Blocks();
+		blocks.Clear();
+
+		// The pills sit inside a RichTextBlock paragraph so they wrap onto
+		// new lines like words in a sentence.
+		Microsoft::UI::Xaml::Documents::Paragraph paragraph;
+		int shown = 0;
+
+		for (auto const& r : rows)
+		{
+			int const delta = r.newValue - r.oldValue;
+			if (delta == 0) continue;
+			++shown;
+
+			bool const adverse = r.lowerIsBetter ? (delta > 0) : (delta < 0);
+			std::wstring text = std::wstring(r.label) + L" " + (delta > 0 ? L"+" : L"\u2212") + std::to_wstring(std::abs(delta));
+
+			Border pill = adverse
+				? MakePill(text, Rgb(61, 42, 26), Rgb(240, 160, 96))
+				: MakePill(text, Rgb(22, 56, 42), Rgb(125, 217, 160));
+			pill.Margin(Thickness{ 0, 0, 8, 8 });
+
+			Microsoft::UI::Xaml::Documents::InlineUIContainer container;
+			container.Child(pill);
+			paragraph.Inlines().Append(container);
+		}
+
+		if (shown < 9)
+		{
+			Microsoft::UI::Xaml::Documents::Run note;
+			note.Text(shown == 0 ? L"No changes expected." : L"All other stats unchanged");
+			note.FontSize(12);
+			note.Foreground(SolidColorBrush(Rgb(154, 160, 170)));
+			paragraph.Inlines().Append(note);
+		}
+
+		blocks.Append(paragraph);
+	}
+
+	// ── Personal page ────────────────────────────────────────────────────────
+
+	CareerHubPage::PersonalSnapshot CareerHubPage::BuildPersonalSnapshot() const
+	{
+		PersonalSnapshot d; // everything empty by default
+
+		// Work: until real job facts exist (title, employer, how it was
+		// earned), reflect what the game does track today - the weekly
+		// Work block allocation.
+		if (m_workBlocks > 0)
+		{
+			d.hasJob = true;
+			d.jobTitle = L"Casual work";
+			d.jobDetail = std::to_wstring(m_workBlocks) + (m_workBlocks == 1 ? L" block a week" : L" blocks a week");
+		}
+
+		// Partner, sponsor, car, exam results and the reputation rows have
+		// no data source yet - they render their empty states. Fill the
+		// matching PersonalSnapshot fields here when those facts land.
+		return d;
+	}
+
+	void CareerHubPage::UpdatePersonalUI()
+	{
+		PersonalSnapshot const d = BuildPersonalSnapshot();
+
+		auto const goodBg = Rgb(22, 56, 42);
+		auto const goodFg = Rgb(125, 217, 160);
+		auto const neutralBg = Rgb(44, 46, 52);
+		auto const neutralFg = Rgb(154, 160, 170);
+		auto const bright = Rgb(255, 255, 255);
+		auto const dim = Rgb(110, 116, 126);
+
+		auto setBadge = [&](Border const& badge, TextBlock const& text, std::wstring const& label, bool good)
+			{
+				badge.Background(SolidColorBrush(good ? goodBg : neutralBg));
+				text.Text(hstring(label));
+				text.Foreground(SolidColorBrush(good ? goodFg : neutralFg));
+			};
+
+		auto setHeadline = [&](TextBlock const& headline, std::wstring const& text, bool has)
+			{
+				headline.Text(hstring(text));
+				headline.Foreground(SolidColorBrush(has ? bright : dim));
+			};
+
+		auto setBar = [&](StackPanel const& panel, ProgressBar const& bar, TextBlock const& value, bool show, int pct)
+			{
+				panel.Visibility(show ? Visibility::Visible : Visibility::Collapsed);
+				pct = (std::clamp)(pct, 0, 100);
+				bar.Value(pct);
+				value.Text(hstring(std::to_wstring(pct) + L"%"));
+			};
+
+		// Relationship
+		if (d.hasPartner)
+		{
+			setBadge(PersRelBadge(), PersRelBadgeText(), L"Together", true);
+			setHeadline(PersRelHeadlineText(), d.partnerName, true);
+			PersRelDetailText().Text(hstring(d.partnerDetail));
+		}
+		else
+		{
+			setBadge(PersRelBadge(), PersRelBadgeText(), L"Single", false);
+			setHeadline(PersRelHeadlineText(), L"No one yet", false);
+			PersRelDetailText().Text(L"No one special yet.");
+		}
+		setBar(PersRelBarPanel(), PersRelBar(), PersRelBarValueText(), d.hasPartner, d.relationshipStrength);
+
+		// Work
+		if (d.hasJob)
+		{
+			setBadge(PersWorkBadge(), PersWorkBadgeText(), L"Employed", true);
+			setHeadline(PersWorkHeadlineText(), d.jobTitle, true);
+			PersWorkDetailText().Text(hstring(d.jobDetail));
+		}
+		else
+		{
+			setBadge(PersWorkBadge(), PersWorkBadgeText(), L"No job", false);
+			setHeadline(PersWorkHeadlineText(), L"No work this week", false);
+			PersWorkDetailText().Text(L"Allocate Work blocks to earn money.");
+		}
+		PersWorkNoteText().Text(hstring(d.jobNote));
+		PersWorkNoteText().Visibility((d.hasJob && !d.jobNote.empty()) ? Visibility::Visible : Visibility::Collapsed);
+
+		// Sponsorship
+		if (d.hasSponsor)
+		{
+			setBadge(PersSponsBadge(), PersSponsBadgeText(), L"Sponsored", true);
+			setHeadline(PersSponsHeadlineText(), d.sponsorName, true);
+			PersSponsDetailText().Text(hstring(d.sponsorDetail));
+		}
+		else
+		{
+			setBadge(PersSponsBadge(), PersSponsBadgeText(), L"None", false);
+			setHeadline(PersSponsHeadlineText(), L"No sponsor yet", false);
+			PersSponsDetailText().Text(L"No deal signed.");
+		}
+		setBar(PersSponsBarPanel(), PersSponsBar(), PersSponsBarValueText(), d.hasSponsor, d.sponsorTrust);
+
+		// Transport
+		if (d.hasCar)
+		{
+			setBadge(PersCarBadge(), PersCarBadgeText(), L"Has car", true);
+			setHeadline(PersCarHeadlineText(), d.carName, true);
+			PersCarDetailText().Text(L"");
+		}
+		else
+		{
+			setBadge(PersCarBadge(), PersCarBadgeText(), L"No car", false);
+			setHeadline(PersCarHeadlineText(), L"No car yet", false);
+			PersCarDetailText().Text(L"Earn it: a steady job and some savings.");
+		}
+
+		// Education
+		if (d.hasExamResult)
+		{
+			setBadge(PersEduBadge(), PersEduBadgeText(), d.examBadge, true);
+			setHeadline(PersEduHeadlineText(), d.examVerdict, true);
+			PersEduDetailText().Text(hstring(d.examDetail));
+		}
+		else
+		{
+			setBadge(PersEduBadge(), PersEduBadgeText(), L"No exams yet", false);
+			setHeadline(PersEduHeadlineText(), L"No results yet", false);
+			PersEduDetailText().Text(L"Results show up after exams.");
+		}
+		setBar(PersEduBarPanel(), PersEduBar(), PersEduBarValueText(), d.hasExamResult, d.academics);
+
+		// Reputation & training
+		auto orDash = [](std::wstring const& v) -> hstring { return v.empty() ? hstring{ L"\u2013" } : hstring(v); };
+		bool const anyReputation = !(d.mediaSummary.empty() && d.trainingSummary.empty() && d.familyBondSummary.empty());
+		setBadge(PersRepBadge(), PersRepBadgeText(), anyReputation ? L"Active" : L"Quiet", false);
+		setHeadline(PersRepHeadlineText(), L"Media and training", true);
+		PersRepDetailText().Text(L"Recent coverage and extra work");
+		PersRepMediaText().Text(orDash(d.mediaSummary));
+		PersRepTrainingText().Text(orDash(d.trainingSummary));
+		PersRepFamilyText().Text(orDash(d.familyBondSummary));
 	}
 
 	// ── Squad ────────────────────────────────────────────────────────────────
@@ -1045,8 +1433,7 @@ namespace winrt::thefootballife::implementation
 
 		int used = BlocksUsed();
 		int remaining = kTotalBlocks - used;
-		BlockSummaryText().Text(to_hstring(used) + L"/" + to_hstring(kTotalBlocks) +
-			L" blocks allocated this week (" + to_hstring((std::max)(0, remaining)) + L" remaining)");
+		BlockSummaryText().Text(to_hstring(used) + L" / " + to_hstring(kTotalBlocks) + L" blocks");
 
 		// Surfaces what was previously only tracked internally
 		// (m_blocksSpentToday) - it already resets to 0 on every new day
@@ -1073,25 +1460,9 @@ namespace winrt::thefootballife::implementation
 		// committed right now. Overwritten with the actual narrative
 		// consequence text once ApplyWeekSimulation() commits on Saturday.
 		ProjectedStats p = ComputeProjectedStats();
-		auto delta = [](wchar_t const* label, int oldValue, int newValue) -> std::wstring
-			{
-				int d = newValue - oldValue;
-				std::wstring sign = d > 0 ? L"+" : L"";
-				return std::wstring(label) + L" " + sign + std::to_wstring(d) + L"   ";
-			};
-
-		std::wstring preview = L"If the week ended now: ";
-		preview += delta(L"Fatigue", m_fatigue, p.fatigue);
-		preview += delta(L"Injury Risk", m_injuryRisk, p.injuryRisk);
-		preview += delta(L"Recovery", m_recoveryQuality, p.recoveryQuality);
-		preview += delta(L"Confidence", m_confidence, p.confidence);
-		preview += delta(L"Stress", m_stress, p.stress);
-		preview += delta(L"Motivation", m_motivation, p.motivation);
-		preview += delta(L"Discipline", m_discipline, p.discipline);
-		preview += delta(L"Finances", m_finances, p.finances);
-		preview += delta(L"Relationships", m_relationships, p.relationships);
-
-		ConsequenceText().Text(hstring(preview));
+		RenderConsequencePills(p);
+		ConsequenceText().Text(L"");
+		ConsequenceText().Visibility(Visibility::Collapsed);
 	}
 
 	void CareerHubPage::UpdateStateUI()
@@ -1201,6 +1572,8 @@ namespace winrt::thefootballife::implementation
 			consequence = L"Balanced week. No major penalties triggered.";
 
 		ConsequenceText().Text(hstring(consequence));
+		ConsequenceText().Visibility(Visibility::Visible);
+		ConsequencePillsText().Blocks().Clear();
 
 		m_lastChoice = L"Week simulated with blocks T:" + to_hstring(m_trainingBlocks) +
 			L" S:" + to_hstring(m_schoolBlocks) +
@@ -1360,6 +1733,10 @@ namespace winrt::thefootballife::implementation
 				m_lastMatchQuarters = quarters;
 				m_lastMatchHomeClub = f.HomeClub;
 				m_lastMatchAwayClub = f.AwayClub;
+				if (f.FinalsLabel.empty())
+					m_lastMatchRoundLabel = L"Round " + std::to_wstring(f.Round);
+				else
+					m_lastMatchRoundLabel = f.FinalsLabel;
 			}
 
 			// Prevent finals from being added to the ladder  
@@ -1391,40 +1768,135 @@ namespace winrt::thefootballife::implementation
 		}
 
 		MatchSummaryPanel().Visibility(Visibility::Visible);
-		MatchSummaryTitleText().Text(hstring(m_lastMatchHomeClub + L" vs " + m_lastMatchAwayClub));
 
-		int homeGoals = 0, homeBehinds = 0, awayGoals = 0, awayBehinds = 0;
-		for (auto const& q : m_lastMatchQuarters)
+		// Running (cumulative) goals.behinds after each quarter, per side.
+		struct Running { int goals; int behinds; };
+		Running home[4] = {}, away[4] = {};
 		{
-			homeGoals += q.homeGoals;
-			homeBehinds += q.homeBehinds;
-			awayGoals += q.awayGoals;
-			awayBehinds += q.awayBehinds;
+			int hg = 0, hb = 0, ag = 0, ab = 0;
+			for (int i = 0; i < 4; ++i)
+			{
+				auto const& q = m_lastMatchQuarters[i];
+				hg += q.homeGoals; hb += q.homeBehinds;
+				ag += q.awayGoals; ab += q.awayBehinds;
+				home[i] = { hg, hb };
+				away[i] = { ag, ab };
+			}
 		}
 
-		int homeTotal = homeGoals * 6 + homeBehinds;
-		int awayTotal = awayGoals * 6 + awayBehinds;
-		std::wstring resultWord = (homeTotal == awayTotal) ? L"drew with" : (homeTotal > awayTotal ? L"def." : L"lost to");
+		int const homeTotal = home[3].goals * 6 + home[3].behinds;
+		int const awayTotal = away[3].goals * 6 + away[3].behinds;
 
-		std::wstring scoreLine = m_lastMatchHomeClub + L" " + FormatAflScore(homeGoals, homeBehinds) +
-			L" " + resultWord + L" " +
-			m_lastMatchAwayClub + L" " + FormatAflScore(awayGoals, awayBehinds);
-		MatchSummaryScoreText().Text(hstring(scoreLine));
+		std::wstring const& playerClub = GameState::CurrentPlayer.team;
+		bool const playerIsHome = (m_lastMatchHomeClub == playerClub);
+		bool const playerIsAway = (m_lastMatchAwayClub == playerClub);
 
-		TextBlock quarterTextBlocks[4] = { Quarter1Text(), Quarter2Text(), Quarter3Text(), Quarter4Text() };
-		int runningHomeGoals = 0, runningHomeBehinds = 0, runningAwayGoals = 0, runningAwayBehinds = 0;
-		for (int i = 0; i < 4; ++i)
+		// Header, right-hand side: "Round 1 - Win by 13"
+		std::wstring result = m_lastMatchRoundLabel;
+		if (playerIsHome || playerIsAway)
 		{
-			auto const& q = m_lastMatchQuarters[i];
-			runningHomeGoals += q.homeGoals;
-			runningHomeBehinds += q.homeBehinds;
-			runningAwayGoals += q.awayGoals;
-			runningAwayBehinds += q.awayBehinds;
-
-			std::wstring line = FormatAflScore(runningHomeGoals, runningHomeBehinds) +
-				L" - " + FormatAflScore(runningAwayGoals, runningAwayBehinds);
-			quarterTextBlocks[i].Text(hstring(line));
+			int const mine = playerIsHome ? homeTotal : awayTotal;
+			int const theirs = playerIsHome ? awayTotal : homeTotal;
+			std::wstring outcome;
+			if (mine > theirs)      outcome = L"Win by " + std::to_wstring(mine - theirs);
+			else if (mine < theirs) outcome = L"Loss by " + std::to_wstring(theirs - mine);
+			else                    outcome = L"Draw";
+			if (!result.empty()) result += L" \u00B7 ";
+			result += outcome;
 		}
+		MatchSummaryResultText().Text(hstring(result));
+
+		// ── Table: header row + one row per club ──
+		auto grid = MatchTableGrid();
+		grid.Children().Clear();
+		grid.RowDefinitions().Clear();
+		for (int i = 0; i < 3; ++i)
+		{
+			RowDefinition rd;
+			rd.Height(GridLength{ 0.0, Microsoft::UI::Xaml::GridUnitType::Auto });
+			grid.RowDefinitions().Append(rd);
+		}
+
+		// Same column layout for every row so the quarters line up.
+		auto makeRowGrid = []()
+			{
+				Grid g;
+				ColumnDefinition c0;
+				c0.Width(GridLength{ 1.0, Microsoft::UI::Xaml::GridUnitType::Star });
+				g.ColumnDefinitions().Append(c0);
+				for (int i = 0; i < 4; ++i)
+				{
+					ColumnDefinition c;
+					c.Width(GridLength{ 62.0, Microsoft::UI::Xaml::GridUnitType::Pixel });
+					g.ColumnDefinitions().Append(c);
+				}
+				return g;
+			};
+
+		auto makeText = [](std::wstring const& text, double size, bool bold, winrt::Windows::UI::Color fg)
+			{
+				TextBlock t;
+				t.Text(hstring(text));
+				t.FontSize(size);
+				t.Foreground(SolidColorBrush(fg));
+				if (bold) t.FontWeight(winrt::Windows::UI::Text::FontWeights::SemiBold());
+				return t;
+			};
+
+		// Header
+		{
+			Grid header = makeRowGrid();
+			header.Margin(Thickness{ 10, 0, 10, 4 });
+			static wchar_t const* const labels[5] = { L"Cumulative score", L"Q1", L"Q2", L"Q3", L"Final" };
+			for (int c = 0; c < 5; ++c)
+			{
+				TextBlock t = makeText(labels[c], 12, false, Rgb(154, 160, 170));
+				if (c > 0) t.HorizontalAlignment(HorizontalAlignment::Center);
+				Grid::SetColumn(t, c);
+				header.Children().Append(t);
+			}
+			Grid::SetRow(header, 0);
+			grid.Children().Append(header);
+		}
+
+		auto addClubRow = [&](int gridRow, std::wstring const& club, Running const (&r)[4], bool highlight)
+			{
+				Border rowBorder;
+				Microsoft::UI::Xaml::CornerRadius cr{};
+				cr.TopLeft = cr.TopRight = cr.BottomRight = cr.BottomLeft = 10;
+				rowBorder.CornerRadius(cr);
+				rowBorder.Padding(Thickness{ 10, 8, 10, 8 });
+				if (highlight) rowBorder.Background(SolidColorBrush(Rgb(30, 58, 95)));
+
+				Grid g = makeRowGrid();
+
+				TextBlock name = makeText(club, 14, highlight, Rgb(255, 255, 255));
+				name.TextWrapping(TextWrapping::Wrap);
+				name.VerticalAlignment(VerticalAlignment::Center);
+				Grid::SetColumn(name, 0);
+				g.Children().Append(name);
+
+				for (int q = 0; q < 4; ++q)
+				{
+					bool const isFinal = (q == 3);
+					StackPanel cell;
+					cell.HorizontalAlignment(HorizontalAlignment::Center);
+					cell.Spacing(1);
+					cell.Children().Append(makeText(std::to_wstring(r[q].goals) + L"." + std::to_wstring(r[q].behinds), 15, highlight || isFinal, Rgb(255, 255, 255)));
+					TextBlock total = makeText(std::to_wstring(r[q].goals * 6 + r[q].behinds), 12, false, Rgb(154, 160, 170));
+					total.HorizontalAlignment(HorizontalAlignment::Center);
+					cell.Children().Append(total);
+					Grid::SetColumn(cell, q + 1);
+					g.Children().Append(cell);
+				}
+
+				rowBorder.Child(g);
+				Grid::SetRow(rowBorder, gridRow);
+				grid.Children().Append(rowBorder);
+			};
+
+		addClubRow(1, m_lastMatchHomeClub, home, playerIsHome);
+		addClubRow(2, m_lastMatchAwayClub, away, playerIsAway);
 	}
 
 	void CareerHubPage::LoadPlayerData()
@@ -1466,8 +1938,10 @@ namespace winrt::thefootballife::implementation
 	void CareerHubPage::UpdateWeekDisplay()
 	{
 		WeekText().Text(L"Week " + to_hstring(m_currentWeek));
-		DateText().Text(hstring(CareerDayService::GetTodayLabel()));
+		// Header sub-line: "<today's date> - <season phase>" (SeasonText is kept but hidden).
+		DateText().Text(hstring(CareerDayService::GetTodayLabel()) + L" \u00B7 " + (m_currentWeek <= 4 ? L"School Season" : L"Mid-Season Push"));
 		RenderDayStrip();
+		UpdateNextMatchUI();
 		LastChoiceText().Text(m_lastChoice);
 		TodayFocusText().Text(hstring(CareerDayService::GetDayFlavorText(GameState::CurrentDay)));
 
