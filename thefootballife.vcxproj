@@ -150,6 +150,7 @@
       <DependentUpon>CreditPage.xaml</DependentUpon>
     </ClInclude>
     <ClInclude Include="DayEventService.h" />
+    <ClInclude Include="DisplaySettings.h" />
     <ClInclude Include="DraftNightPage.xaml.h">
       <DependentUpon>DraftNightPage.xaml</DependentUpon>
     </ClInclude>
@@ -176,6 +177,9 @@
       <DependentUpon>RetirementPage.xaml</DependentUpon>
     </ClInclude>
     <ClInclude Include="SaveGameService.h" />
+    <ClInclude Include="SettingsPage.xaml.h">
+      <DependentUpon>SettingsPage.xaml</DependentUpon>
+    </ClInclude>
     <ClInclude Include="SquadService.h" />
     <ClInclude Include="TeamAssignmentPage.xaml.h">
       <DependentUpon>TeamAssignmentPage.xaml</DependentUpon>
@@ -200,6 +204,7 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="RetirementPage.xaml" />
+    <Page Include="SettingsPage.xaml" />
     <Page Include="TeamAssignmentPage.xaml" />
     <Page Include="XFactorPage.xaml" />
   </ItemGroup>
@@ -216,6 +221,7 @@
       <DependentUpon>CreditPage.xaml</DependentUpon>
     </ClCompile>
     <ClCompile Include="DayEventService.cpp" />
+    <ClCompile Include="DisplaySettings.cpp" />
     <ClCompile Include="DraftNightPage.xaml.cpp">
       <DependentUpon>DraftNightPage.xaml</DependentUpon>
     </ClCompile>
@@ -244,6 +250,9 @@
       <DependentUpon>RetirementPage.xaml</DependentUpon>
     </ClCompile>
     <ClCompile Include="SaveGameService.cpp" />
+    <ClCompile Include="SettingsPage.xaml.cpp">
+      <DependentUpon>SettingsPage.xaml</DependentUpon>
+    </ClCompile>
     <ClCompile Include="SquadService.cpp" />
     <ClCompile Include="TeamAssignmentPage.xaml.cpp">
       <DependentUpon>TeamAssignmentPage.xaml</DependentUpon>
@@ -266,6 +275,7 @@
     <Midl Include="MyCareerPage.idl" />
     <Midl Include="PlayerCreationPage.idl" />
     <Midl Include="RetirementPage.idl" />
+    <Midl Include="SettingsPage.idl" />
     <Midl Include="TeamAssignmentPage.idl" />
     <Midl Include="XFactorPage.idl" />
   </ItemGroup>

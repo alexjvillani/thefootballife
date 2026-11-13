@@ -307,12 +307,12 @@ namespace winrt::thefootballife::implementation
 
 	void MainMenuPage::Settings_Click(IInspectable const&, RoutedEventArgs const&)
 	{
-		ContentDialog dialog;
-		dialog.Title(box_value(L"Settings"));
-		dialog.Content(box_value(L"Settings menu coming soon."));
-		dialog.CloseButtonText(L"OK");
-		dialog.XamlRoot(this->XamlRoot());
-		dialog.ShowAsync();
+		Frame().Navigate(
+			winrt::Windows::UI::Xaml::Interop::TypeName{
+				L"thefootballife.SettingsPage",
+				winrt::Windows::UI::Xaml::Interop::TypeKind::Custom
+			}
+		);
 	}
 
 	void MainMenuPage::Credits_Click(IInspectable const&, RoutedEventArgs const&)

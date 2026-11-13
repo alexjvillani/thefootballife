@@ -4,7 +4,11 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:thefootballife">
 
-    <Grid Background="#111111">
-        <Frame x:Name="RootFrame"/>
+    <Grid x:Name="RootHost" Background="#111111" SizeChanged="RootHost_SizeChanged">
+        <!-- DisplaySettings sizes and scales the frame (UI scale). It sits in a
+             Canvas so a scaled-down layout is never clipped to its layout slot. -->
+        <Canvas>
+            <Frame x:Name="RootFrame"/>
+        </Canvas>
     </Grid>
 </Window>

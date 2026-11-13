@@ -1,0 +1,84 @@
+<Page
+    x:Class="thefootballife.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:thefootballife"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="#111214">
+
+    <Page.Resources>
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="#1B1C1F"/>
+            <Setter Property="BorderBrush" Value="#2A2C31"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Padding" Value="24"/>
+        </Style>
+        <Style x:Key="CardTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="17"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+        <Style x:Key="MutedStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="#9AA0AA"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+    </Page.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Padding="28" Spacing="20" MaxWidth="900" HorizontalAlignment="Center">
+
+            <Grid>
+                <TextBlock Text="Settings" FontSize="28" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                <Button Content="Back to menu" HorizontalAlignment="Right" VerticalAlignment="Center" Click="BackButton_Click"/>
+            </Grid>
+
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="20">
+                    <TextBlock Text="Display" Style="{StaticResource CardTitleStyle}"/>
+
+                    <Grid ColumnSpacing="24" RowSpacing="22">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="260"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Text="Window mode" Foreground="White" FontSize="15"/>
+                            <TextBlock Text="Maximised fills the screen with the title bar. Fullscreen hides it." Style="{StaticResource MutedStyle}"/>
+                        </StackPanel>
+                        <ComboBox x:Name="WindowModeComboBox" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                                  SelectionChanged="WindowModeComboBox_SelectionChanged"/>
+
+                        <StackPanel Grid.Row="1" Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Text="Window size" Foreground="White" FontSize="15"/>
+                            <TextBlock x:Name="WindowSizeHintText" Text="Used in Windowed mode. Sizes bigger than your screen are trimmed to fit." Style="{StaticResource MutedStyle}"/>
+                        </StackPanel>
+                        <ComboBox x:Name="WindowSizeComboBox" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+
+                        <StackPanel Grid.Row="2" Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Text="UI scale" Foreground="White" FontSize="15"/>
+                            <TextBlock Text="Auto scales the layout so it fills large screens the way it looks at 1920 x 1080. Pick a fixed percentage to override it." Style="{StaticResource MutedStyle}"/>
+                        </StackPanel>
+                        <ComboBox x:Name="UiScaleComboBox" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Button Content="Apply" Click="ApplyButton_Click" MinWidth="110"/>
+                        <Button Content="Reset to defaults" Click="ResetButton_Click"/>
+                        <TextBlock x:Name="StatusText" Text="" Style="{StaticResource MutedStyle}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>
